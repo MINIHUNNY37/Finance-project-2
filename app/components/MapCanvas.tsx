@@ -18,7 +18,7 @@ interface MapCanvasProps {
 }
 
 const MIN_ZOOM = 0.3;
-const MAX_ZOOM = 4;
+const MAX_ZOOM = 5;
 const ZOOM_STEP = 0.15;
 
 export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasProps) {
@@ -36,6 +36,11 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   const wasPanning = useRef(false);
   const panStartRef = useRef<{ mouseX: number; mouseY: number; panX: number; panY: number } | null>(null);
 
+  // Refs that always hold the latest zoom/pan — used inside wheel handler
+  // to avoid calling setState inside another setState's updater (React anti-pattern)
+  const zoomRef = useRef(1);
+  const panRef = useRef({ x: 0, y: 0 });
+
   // Entity dialog
   const [entityDialogOpen, setEntityDialogOpen] = useState(false);
   const [editingEntity, setEditingEntity] = useState<Entity | undefined>();
@@ -50,6 +55,10 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   const isConnecting = !!connectingFromId;
+
+  // Keep refs in sync with state for sources other than the wheel handler
+  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
+  useEffect(() => { panRef.current = panOffset; }, [panOffset]);
 
   // Track container size
   useEffect(() => {
@@ -81,7 +90,9 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
     return () => window.removeEventListener('keydown', onKey);
   }, [setConnectingFrom, setSelectedEntity]);
 
-  // Mouse wheel zoom (zoom toward cursor)
+  // Mouse wheel zoom toward cursor
+  // Uses refs so rapid scroll events always read the latest accumulated values
+  // without the React anti-pattern of calling setState inside another setState updater.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -93,16 +104,25 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
       const cy = e.clientY - rect.top;
       const hw = rect.width / 2;
       const hh = rect.height / 2;
-      setZoom((prevZoom) => {
-        const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, prevZoom * delta));
-        const ratio = newZoom / prevZoom;
-        // With transformOrigin:center, pan must shift by (cx - hw) not cx
-        setPanOffset((prev) => ({
-          x: (cx - hw) * (1 - ratio) + ratio * prev.x,
-          y: (cy - hh) * (1 - ratio) + ratio * prev.y,
-        }));
-        return newZoom;
-      });
+
+      const prevZoom = zoomRef.current;
+      const prevPan = panRef.current;
+
+      const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, prevZoom * delta));
+      const ratio = newZoom / prevZoom;
+      // With transformOrigin:center, keep map point under cursor fixed:
+      // panX_new = (cx - hw)*(1 - ratio) + ratio*panX_old
+      const newPan = {
+        x: (cx - hw) * (1 - ratio) + ratio * prevPan.x,
+        y: (cy - hh) * (1 - ratio) + ratio * prevPan.y,
+      };
+
+      // Update refs first so the next wheel event sees the new values
+      zoomRef.current = newZoom;
+      panRef.current = newPan;
+
+      setZoom(newZoom);
+      setPanOffset(newPan);
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);

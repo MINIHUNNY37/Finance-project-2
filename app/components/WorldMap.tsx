@@ -162,7 +162,7 @@ export default function WorldMap({ onCountryClick, children, width, height }: Wo
         <g>
           {paths.map(({ id, path, name }, index) => (
             <path
-              key={name || id || `country-${index}`}
+              key={`country-${index}`}
               d={path}
               className="country-path"
               fill={
