@@ -91,13 +91,15 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
       const rect = el.getBoundingClientRect();
       const cx = e.clientX - rect.left;
       const cy = e.clientY - rect.top;
+      const hw = rect.width / 2;
+      const hh = rect.height / 2;
       setZoom((prevZoom) => {
         const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, prevZoom * delta));
         const ratio = newZoom / prevZoom;
-        // Adjust pan so we zoom toward the cursor
+        // With transformOrigin:center, pan must shift by (cx - hw) not cx
         setPanOffset((prev) => ({
-          x: cx - ratio * (cx - prev.x),
-          y: cy - ratio * (cy - prev.y),
+          x: (cx - hw) * (1 - ratio) + ratio * prev.x,
+          y: (cy - hh) * (1 - ratio) + ratio * prev.y,
         }));
         return newZoom;
       });

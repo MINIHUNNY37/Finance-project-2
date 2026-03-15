@@ -71,7 +71,7 @@ export default function WorldMap({ onCountryClick, children, width, height }: Wo
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const countryPaths = (countries as any).features.map((f: any) => {
-          const id = String(f.id).padStart(3, '0');
+          const id = f.id != null ? String(f.id).padStart(3, '0') : null;
           return {
             id,
             path: pathGenerator(f) || '',
@@ -162,7 +162,7 @@ export default function WorldMap({ onCountryClick, children, width, height }: Wo
         <g>
           {paths.map(({ id, path, name }, index) => (
             <path
-              key={id || `country-${index}`}
+              key={name || id || `country-${index}`}
               d={path}
               className="country-path"
               fill={
