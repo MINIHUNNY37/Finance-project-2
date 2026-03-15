@@ -7,7 +7,11 @@ import FolderPanel from './FolderPanel';
 
 type Tab = 'entities' | 'folders' | 'info';
 
-export default function Sidebar() {
+interface SidebarProps {
+  onFocusEntity: (pos: { x: number; y: number }) => void;
+}
+
+export default function Sidebar({ onFocusEntity }: SidebarProps) {
   const { currentMap, selectedEntityId, setSelectedEntity } = useMapStore();
   const [collapsed, setCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('entities');
@@ -136,7 +140,10 @@ export default function Sidebar() {
                   currentMap.entities.map((entity) => (
                     <div
                       key={entity.id}
-                      onClick={() => setSelectedEntity(entity.id)}
+                      onClick={() => {
+                        setSelectedEntity(entity.id);
+                        onFocusEntity(entity.position);
+                      }}
                       style={{
                         display: 'flex',
                         alignItems: 'center',

@@ -214,7 +214,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
       } else {
         addEntity({
           name: data.name || 'New Entity',
-          icon: data.icon || '🏢',
+          icon: data.icon || '🏢', // dialog guarantees icon is set; fallback just in case
           subtitle: data.subtitle || '',
           description: data.description || '',
           color: data.color || '#3B82F6',
@@ -253,6 +253,22 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
     [editingRel, updateRelationship]
   );
 
+  // Pan the view so the given map-coordinate position is centered on screen.
+  // Formula with transformOrigin:center — to center point (px, py):
+  //   screenX = zoom*(px - cw/2) + panX + cw/2 = cw/2
+  //   => panX = zoom*(cw/2 - px)
+  const handleFocusEntity = useCallback(
+    (pos: { x: number; y: number }) => {
+      const newPan = {
+        x: zoom * (dims.width / 2 - pos.x),
+        y: zoom * (dims.height / 2 - pos.y),
+      };
+      panRef.current = newPan;
+      setPanOffset(newPan);
+    },
+    [zoom, dims]
+  );
+
   return (
     <div style={{ width: '100vw', height: '100vh' }}>
       <Toolbar
@@ -274,7 +290,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
         onZoomReset={() => { setZoom(1); setPanOffset({ x: 0, y: 0 }); }}
       />
 
-      <Sidebar />
+      <Sidebar onFocusEntity={handleFocusEntity} />
 
       {/* Outer clip container */}
       <div

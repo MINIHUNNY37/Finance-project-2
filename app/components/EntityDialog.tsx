@@ -49,7 +49,8 @@ export default function EntityDialog({
       setStatistics(initialData.statistics || []);
       setCountry(initialData.country || defaultCountry || '');
     } else {
-      setName(''); setIcon('🏢'); setSubtitle(''); setDescription('');
+      // Empty icon forces the user to explicitly pick one before saving
+      setName(''); setIcon(''); setSubtitle(''); setDescription('');
       setColor(ENTITY_COLORS[0]); setSubItems([]); setStatistics([]);
       setCountry(defaultCountry || '');
     }
@@ -71,7 +72,7 @@ export default function EntityDialog({
   const removeStat = (id: string) => setStatistics(statistics.filter((s) => s.id !== id));
 
   const handleSave = () => {
-    if (!name.trim()) return;
+    if (!name.trim() || !icon) return;
     onSave({
       name: name.trim(), icon, subtitle: subtitle.trim(),
       description: description.trim(), color, subItems, statistics,
@@ -139,7 +140,14 @@ export default function EntityDialog({
             <>
               {/* Icon picker */}
               <div style={{ marginBottom: 16 }}>
-                <label style={labelStyle}>Icon</label>
+                <label style={labelStyle}>
+                  Icon
+                  {!icon && (
+                    <span style={{ marginLeft: 6, color: '#ef4444', fontSize: 10, fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}>
+                      — required
+                    </span>
+                  )}
+                </label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
                   {ENTITY_ICONS.map((ic) => (
                     <button key={ic.value} title={ic.label} onClick={() => setIcon(ic.value)} style={{
@@ -433,7 +441,7 @@ export default function EntityDialog({
         {/* Footer */}
         <div style={{ padding: '14px 24px', borderTop: '1px solid rgba(59,130,246,0.1)', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button className="btn-ghost" onClick={onClose}>Cancel</button>
-          <button className="btn-primary" onClick={handleSave} disabled={!name.trim()}>
+          <button className="btn-primary" onClick={handleSave} disabled={!name.trim() || !icon}>
             {initialData?.id ? 'Save Changes' : 'Create Entity'}
           </button>
         </div>
