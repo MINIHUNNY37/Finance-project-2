@@ -13,6 +13,14 @@ interface MapState {
   connectingFromId: string | null;
   hoveredEntityId: string | null;
   globalLocked: boolean;
+  customStatPresets: string[];
+  customDetailPresets: string[];
+
+  // Custom preset actions
+  addCustomStatPreset: (name: string) => void;
+  removeCustomStatPreset: (name: string) => void;
+  addCustomDetailPreset: (name: string) => void;
+  removeCustomDetailPreset: (name: string) => void;
 
   // Entity actions
   addEntity: (entity: Omit<Entity, 'id' | 'createdAt' | 'updatedAt'>) => string;
@@ -71,6 +79,21 @@ export const useMapStore = create<MapState>()(
       connectingFromId: null,
       hoveredEntityId: null,
       globalLocked: false,
+      customStatPresets: [],
+      customDetailPresets: [],
+
+      addCustomStatPreset: (name) => set((s) => ({
+        customStatPresets: [...new Set([...s.customStatPresets, name.trim()])].filter(Boolean),
+      })),
+      removeCustomStatPreset: (name) => set((s) => ({
+        customStatPresets: s.customStatPresets.filter((p) => p !== name),
+      })),
+      addCustomDetailPreset: (name) => set((s) => ({
+        customDetailPresets: [...new Set([...s.customDetailPresets, name.trim()])].filter(Boolean),
+      })),
+      removeCustomDetailPreset: (name) => set((s) => ({
+        customDetailPresets: s.customDetailPresets.filter((p) => p !== name),
+      })),
 
       addEntity: (entityData) => {
         const id = uuidv4();

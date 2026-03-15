@@ -31,6 +31,11 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   const [dims, setDims] = useState({ width: 1200, height: 800 });
   const [zoom, setZoom] = useState(1);
 
+  // Pan state
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const wasPanning = useRef(false);
+  const panStartRef = useRef<{ mouseX: number; mouseY: number; panX: number; panY: number } | null>(null);
+
   // Entity dialog
   const [entityDialogOpen, setEntityDialogOpen] = useState(false);
   const [editingEntity, setEditingEntity] = useState<Entity | undefined>();
@@ -70,32 +75,44 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
       }
       if ((e.ctrlKey || e.metaKey) && e.key === '=') { e.preventDefault(); setZoom((z) => Math.min(MAX_ZOOM, z + ZOOM_STEP)); }
       if ((e.ctrlKey || e.metaKey) && e.key === '-') { e.preventDefault(); setZoom((z) => Math.max(MIN_ZOOM, z - ZOOM_STEP)); }
-      if ((e.ctrlKey || e.metaKey) && e.key === '0') { e.preventDefault(); setZoom(1); }
+      if ((e.ctrlKey || e.metaKey) && e.key === '0') { e.preventDefault(); setZoom(1); setPanOffset({ x: 0, y: 0 }); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [setConnectingFrom, setSelectedEntity]);
 
-  // Mouse wheel zoom
+  // Mouse wheel zoom (zoom toward cursor)
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const delta = e.deltaY < 0 ? 1 + ZOOM_STEP : 1 - ZOOM_STEP;
-      setZoom((z) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, z * delta)));
+      const rect = el.getBoundingClientRect();
+      const cx = e.clientX - rect.left;
+      const cy = e.clientY - rect.top;
+      setZoom((prevZoom) => {
+        const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, prevZoom * delta));
+        const ratio = newZoom / prevZoom;
+        // Adjust pan so we zoom toward the cursor
+        setPanOffset((prev) => ({
+          x: cx - ratio * (cx - prev.x),
+          y: cy - ratio * (cy - prev.y),
+        }));
+        return newZoom;
+      });
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
   }, []);
 
-  // Convert screen coords → map (content) coords accounting for zoom centered on container
+  // Convert screen coords → map coords accounting for pan + zoom
   const screenToMap = useCallback(
     (screenX: number, screenY: number) => ({
-      x: (screenX - dims.width / 2) / zoom + dims.width / 2,
-      y: (screenY - dims.height / 2) / zoom + dims.height / 2,
+      x: (screenX - panOffset.x - dims.width / 2) / zoom + dims.width / 2,
+      y: (screenY - panOffset.y - dims.height / 2) / zoom + dims.height / 2,
     }),
-    [zoom, dims]
+    [zoom, dims, panOffset]
   );
 
   const handleMouseMove = useCallback(
@@ -109,7 +126,46 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
     [screenToMap]
   );
 
+  // Pan on background drag
+  const handleContainerMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.button !== 0) return;
+      // Only pan if the direct target is the background (not an entity/button)
+      const target = e.target as HTMLElement;
+      if (target.closest('.entity-card') || target.closest('button') || target.closest('.no-drag')) return;
+
+      wasPanning.current = false;
+      panStartRef.current = {
+        mouseX: e.clientX,
+        mouseY: e.clientY,
+        panX: panOffset.x,
+        panY: panOffset.y,
+      };
+
+      const onMouseMove = (ev: MouseEvent) => {
+        if (!panStartRef.current) return;
+        const dx = ev.clientX - panStartRef.current.mouseX;
+        const dy = ev.clientY - panStartRef.current.mouseY;
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) wasPanning.current = true;
+        if (wasPanning.current) {
+          setPanOffset({ x: panStartRef.current.panX + dx, y: panStartRef.current.panY + dy });
+        }
+      };
+
+      const onMouseUp = () => {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        panStartRef.current = null;
+      };
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    },
+    [panOffset]
+  );
+
   const handleCanvasClick = useCallback(() => {
+    if (wasPanning.current) return; // Was a drag-to-pan, not a click
     setSelectedEntity(null);
     if (connectingFromId) setConnectingFrom(null);
   }, [setSelectedEntity, connectingFromId, setConnectingFrom]);
@@ -117,6 +173,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   const handleCountryClick = useCallback(
     (country: string, screenX: number, screenY: number) => {
       if (isConnecting) return;
+      if (wasPanning.current) return;
       const pos = screenToMap(screenX, screenY);
       setPendingPosition(pos);
       setPendingCountry(country);
@@ -129,7 +186,9 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   const handleEntitySave = useCallback(
     (data: Partial<Entity>) => {
       if (editingEntity?.id) {
-        updateEntity(editingEntity.id, data);
+        // Never overwrite position when editing — entity keeps wherever it currently is
+        const { position: _pos, ...updateData } = data;
+        updateEntity(editingEntity.id, updateData);
       } else {
         addEntity({
           name: data.name || 'New Entity',
@@ -140,7 +199,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
           subItems: data.subItems || [],
           statistics: data.statistics || [],
           country: data.country || '',
-          position: data.position || pendingPosition || { x: dims.width / 2, y: dims.height / 2 },
+          position: pendingPosition || { x: dims.width / 2, y: dims.height / 2 },
           locked: false,
           folderId: undefined,
           createdBy: session?.user?.email || 'local',
@@ -190,7 +249,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
         zoom={zoom}
         onZoomIn={() => setZoom((z) => Math.min(MAX_ZOOM, z + ZOOM_STEP))}
         onZoomOut={() => setZoom((z) => Math.max(MIN_ZOOM, z - ZOOM_STEP))}
-        onZoomReset={() => setZoom(1)}
+        onZoomReset={() => { setZoom(1); setPanOffset({ x: 0, y: 0 }); }}
       />
 
       <Sidebar />
@@ -201,18 +260,19 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
         style={{
           position: 'fixed', top: 56, left: 0, right: 0, bottom: 0,
           overflow: 'hidden',
-          cursor: isConnecting ? 'crosshair' : 'default',
+          cursor: isConnecting ? 'crosshair' : 'grab',
         }}
         onMouseMove={handleMouseMove}
+        onMouseDown={handleContainerMouseDown}
         onClick={handleCanvasClick}
         onContextMenu={(e) => e.preventDefault()}
       >
-        {/* Scaled content layer */}
+        {/* Pan + Scale content layer */}
         <div
           style={{
             width: dims.width,
             height: dims.height,
-            transform: `scale(${zoom})`,
+            transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`,
             transformOrigin: 'center center',
             position: 'absolute',
             top: 0,
@@ -260,22 +320,31 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
               Click any country to place an entity<br />
               or use &quot;Add Entity&quot; above<br />
               <span style={{ fontSize: 11, color: 'rgba(71,85,105,0.8)' }}>
-                Scroll to zoom · Right-click entity to connect
+                Drag to pan · Scroll to zoom · Right-click entity to connect
               </span>
             </div>
           </div>
         )}
 
-        {/* Zoom indicator */}
-        {zoom !== 1 && (
+        {/* Zoom / pan indicator */}
+        {(zoom !== 1 || panOffset.x !== 0 || panOffset.y !== 0) && (
           <div style={{
             position: 'absolute', bottom: 16, right: 16,
             background: 'rgba(15,23,42,0.85)',
             border: '1px solid rgba(59,130,246,0.25)',
             borderRadius: 8, padding: '4px 10px',
             fontSize: 12, color: '#64748b', pointerEvents: 'none',
+            display: 'flex', gap: 8, alignItems: 'center',
           }}>
-            {Math.round(zoom * 100)}%
+            <span>{Math.round(zoom * 100)}%</span>
+            {(panOffset.x !== 0 || panOffset.y !== 0) && (
+              <button
+                style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: 11, padding: 0 }}
+                onClick={(e) => { e.stopPropagation(); setPanOffset({ x: 0, y: 0 }); setZoom(1); }}
+              >
+                Reset view
+              </button>
+            )}
           </div>
         )}
 

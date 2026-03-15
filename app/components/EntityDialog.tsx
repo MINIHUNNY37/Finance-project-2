@@ -5,6 +5,7 @@ import { X, Plus, Trash2, BarChart2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import type { Entity, EntitySubItem, EntityStatistic } from '../types';
 import { ENTITY_ICONS, ENTITY_COLORS } from '../types';
+import { useMapStore } from '../store/mapStore';
 
 interface EntityDialogProps {
   isOpen: boolean;
@@ -20,7 +21,14 @@ type Tab = 'basic' | 'details' | 'stats';
 export default function EntityDialog({
   isOpen, onClose, onSave, initialData, defaultPosition, defaultCountry,
 }: EntityDialogProps) {
+  const {
+    customStatPresets, addCustomStatPreset, removeCustomStatPreset,
+    customDetailPresets, addCustomDetailPreset, removeCustomDetailPreset,
+  } = useMapStore();
+
   const [activeTab, setActiveTab] = useState<Tab>('basic');
+  const [newStatPreset, setNewStatPreset] = useState('');
+  const [newDetailPreset, setNewDetailPreset] = useState('');
   const [name, setName] = useState('');
   const [icon, setIcon] = useState('🏢');
   const [subtitle, setSubtitle] = useState('');
@@ -202,7 +210,7 @@ export default function EntityDialog({
               {/* Quick add preset sub-sections */}
               <div style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: 11, color: '#64748b', marginBottom: 6 }}>Quick add:</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
                   {['Revenue Streams', 'Key Risks', 'Customers', 'Competitors', 'Operations', 'Products', 'Key People', 'Supply Chain'].map((preset) => (
                     <button key={preset}
                       onClick={() => setSubItems([...subItems, { id: uuidv4(), title: preset, description: '' }])}
@@ -217,6 +225,57 @@ export default function EntityDialog({
                       + {preset}
                     </button>
                   ))}
+                  {/* User-saved custom detail presets */}
+                  {customDetailPresets.map((preset) => (
+                    <span key={preset} style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                      <button
+                        onClick={() => setSubItems([...subItems, { id: uuidv4(), title: preset, description: '' }])}
+                        style={{
+                          background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)',
+                          borderRadius: '6px 0 0 6px', padding: '3px 8px', fontSize: 11, color: '#6ee7b7', cursor: 'pointer',
+                        }}
+                      >+ {preset}</button>
+                      <button
+                        onClick={() => removeCustomDetailPreset(preset)}
+                        title="Remove preset"
+                        style={{
+                          background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)',
+                          borderLeft: 'none', borderRadius: '0 6px 6px 0', padding: '3px 5px',
+                          fontSize: 10, color: '#64748b', cursor: 'pointer',
+                        }}
+                      >×</button>
+                    </span>
+                  ))}
+                </div>
+                {/* Add custom preset */}
+                <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                  <input
+                    className="input-field"
+                    value={newDetailPreset}
+                    onChange={(e) => setNewDetailPreset(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newDetailPreset.trim()) {
+                        addCustomDetailPreset(newDetailPreset.trim());
+                        setSubItems([...subItems, { id: uuidv4(), title: newDetailPreset.trim(), description: '' }]);
+                        setNewDetailPreset('');
+                      }
+                    }}
+                    placeholder="Save custom preset…"
+                    style={{ flex: 1, fontSize: 11, padding: '4px 8px' }}
+                  />
+                  <button
+                    className="btn-ghost"
+                    style={{ padding: '4px 10px', fontSize: 11, flexShrink: 0 }}
+                    disabled={!newDetailPreset.trim()}
+                    onClick={() => {
+                      if (!newDetailPreset.trim()) return;
+                      addCustomDetailPreset(newDetailPreset.trim());
+                      setSubItems([...subItems, { id: uuidv4(), title: newDetailPreset.trim(), description: '' }]);
+                      setNewDetailPreset('');
+                    }}
+                  >
+                    <Plus size={11} style={{ display: 'inline', marginRight: 3 }} />Save & Add
+                  </button>
                 </div>
               </div>
 
@@ -272,7 +331,7 @@ export default function EntityDialog({
               {/* Preset suggestions — always visible */}
               <div style={{ marginBottom: 16 }}>
                 <div style={{ fontSize: 11, color: '#64748b', marginBottom: 8 }}>Quick add:</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
                   {['Revenue', 'Net Income', 'Market Cap', 'P/E Ratio', 'EPS', 'Dividend Yield', 'Employees', 'Debt/Equity'].map((statName) => (
                     <button key={statName} onClick={() => setStatistics([...statistics, { id: uuidv4(), name: statName, value: '' }])}
                       style={{
@@ -286,6 +345,57 @@ export default function EntityDialog({
                       + {statName}
                     </button>
                   ))}
+                  {/* User-saved custom presets */}
+                  {customStatPresets.map((preset) => (
+                    <span key={preset} style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                      <button
+                        onClick={() => setStatistics([...statistics, { id: uuidv4(), name: preset, value: '' }])}
+                        style={{
+                          background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)',
+                          borderRadius: '6px 0 0 6px', padding: '3px 8px', fontSize: 11, color: '#6ee7b7', cursor: 'pointer',
+                        }}
+                      >+ {preset}</button>
+                      <button
+                        onClick={() => removeCustomStatPreset(preset)}
+                        title="Remove preset"
+                        style={{
+                          background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)',
+                          borderLeft: 'none', borderRadius: '0 6px 6px 0', padding: '3px 5px',
+                          fontSize: 10, color: '#64748b', cursor: 'pointer',
+                        }}
+                      >×</button>
+                    </span>
+                  ))}
+                </div>
+                {/* Add custom preset */}
+                <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                  <input
+                    className="input-field"
+                    value={newStatPreset}
+                    onChange={(e) => setNewStatPreset(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newStatPreset.trim()) {
+                        addCustomStatPreset(newStatPreset.trim());
+                        setStatistics([...statistics, { id: uuidv4(), name: newStatPreset.trim(), value: '' }]);
+                        setNewStatPreset('');
+                      }
+                    }}
+                    placeholder="Save custom preset…"
+                    style={{ flex: 1, fontSize: 11, padding: '4px 8px' }}
+                  />
+                  <button
+                    className="btn-ghost"
+                    style={{ padding: '4px 10px', fontSize: 11, flexShrink: 0 }}
+                    disabled={!newStatPreset.trim()}
+                    onClick={() => {
+                      if (!newStatPreset.trim()) return;
+                      addCustomStatPreset(newStatPreset.trim());
+                      setStatistics([...statistics, { id: uuidv4(), name: newStatPreset.trim(), value: '' }]);
+                      setNewStatPreset('');
+                    }}
+                  >
+                    <Plus size={11} style={{ display: 'inline', marginRight: 3 }} />Save & Add
+                  </button>
                 </div>
               </div>
 
