@@ -91,11 +91,10 @@ export default function WorldMap({ onCountryClick, children, width, height }: Wo
 
   const handleCountryClick = useCallback(
     (e: React.MouseEvent<SVGPathElement>, name: string) => {
-      const rect = svgRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      onCountryClick?.(name, x, y);
+      // Pass raw client coordinates so MapCanvas can correctly convert them
+      // using its stable containerRef rect — SVG rect shifts with zoom/pan and
+      // would give wrong positions if we subtracted it here.
+      onCountryClick?.(name, e.clientX, e.clientY);
     },
     [onCountryClick]
   );

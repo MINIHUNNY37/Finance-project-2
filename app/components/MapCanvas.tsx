@@ -193,10 +193,15 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   }, [setSelectedEntity, connectingFromId, setConnectingFrom]);
 
   const handleCountryClick = useCallback(
-    (country: string, screenX: number, screenY: number) => {
+    (country: string, clientX: number, clientY: number) => {
       if (isConnecting) return;
       if (wasPanning.current) return;
-      const pos = screenToMap(screenX, screenY);
+      // Convert viewport coords → container-relative → map coords.
+      // Must use containerRef rect (not the SVG rect) because the SVG rect
+      // moves with zoom/pan, which would give wrong positions otherwise.
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const pos = screenToMap(clientX - rect.left, clientY - rect.top);
       setPendingPosition(pos);
       setPendingCountry(country);
       setEditingEntity(undefined);

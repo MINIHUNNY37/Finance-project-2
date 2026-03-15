@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Layers, FolderOpen, Info, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Layers, FolderOpen, Info, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
 import FolderPanel from './FolderPanel';
 
@@ -12,7 +12,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ onFocusEntity }: SidebarProps) {
-  const { currentMap, selectedEntityId, setSelectedEntity } = useMapStore();
+  const { currentMap, selectedEntityId, setSelectedEntity, deleteEntity } = useMapStore();
   const [collapsed, setCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('entities');
 
@@ -176,7 +176,28 @@ export default function Sidebar({ onFocusEntity }: SidebarProps) {
                           <div style={{ fontSize: 10, color: '#475569' }}>{entity.country}</div>
                         )}
                       </div>
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: entity.color, flexShrink: 0 }} />
+                      {selectedEntityId === entity.id ? (
+                        <button
+                          title="Delete entity"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteEntity(entity.id);
+                            setSelectedEntity(null);
+                          }}
+                          style={{
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            color: '#ef4444', padding: '2px 4px', borderRadius: 4,
+                            display: 'flex', alignItems: 'center', flexShrink: 0,
+                            opacity: 0.7, transition: 'opacity 0.1s',
+                          }}
+                          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = '1')}
+                          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = '0.7')}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      ) : (
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: entity.color, flexShrink: 0 }} />
+                      )}
                     </div>
                   ))
                 )}
@@ -199,12 +220,37 @@ export default function Sidebar({ onFocusEntity }: SidebarProps) {
                       }}>
                         {selectedEntity.icon}
                       </div>
-                      <div>
+                      <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 700, color: '#e2e8f0', fontSize: 14 }}>{selectedEntity.name}</div>
                         {selectedEntity.subtitle && (
                           <div style={{ fontSize: 11, color: selectedEntity.color }}>{selectedEntity.subtitle}</div>
                         )}
                       </div>
+                      <button
+                        title="Delete entity"
+                        onClick={() => {
+                          deleteEntity(selectedEntity.id);
+                          setSelectedEntity(null);
+                        }}
+                        style={{
+                          background: 'none', border: '1px solid rgba(239,68,68,0.3)',
+                          borderRadius: 6, cursor: 'pointer', color: '#ef4444',
+                          padding: '4px 6px', display: 'flex', alignItems: 'center',
+                          flexShrink: 0, opacity: 0.75, transition: 'all 0.15s',
+                        }}
+                        onMouseEnter={(e) => {
+                          const el = e.currentTarget as HTMLElement;
+                          el.style.opacity = '1';
+                          el.style.background = 'rgba(239,68,68,0.12)';
+                        }}
+                        onMouseLeave={(e) => {
+                          const el = e.currentTarget as HTMLElement;
+                          el.style.opacity = '0.75';
+                          el.style.background = 'none';
+                        }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
 
                     {selectedEntity.country && (

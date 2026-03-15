@@ -175,7 +175,8 @@ body {
   position: relative;
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  /* overflow:hidden removed — entity pins near map edges were being clipped.
+     The outer MapCanvas container already clips the viewport. */
 }
 
 /* Fade-in animation */
