@@ -21,12 +21,15 @@ interface ToolbarProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onZoomReset: () => void;
+  fixedEntitySize: boolean;
+  onToggleFixedEntitySize: () => void;
 }
 
 export default function Toolbar({
   onAddEntity, isConnecting, onToggleConnect,
   session, onSignIn, onSignOut,
   zoom, onZoomIn, onZoomOut, onZoomReset,
+  fixedEntitySize, onToggleFixedEntitySize,
 }: ToolbarProps) {
   const { currentMap, saveCurrentMap, globalLocked, toggleGlobalLock } = useMapStore();
   const [showShare, setShowShare] = useState(false);
@@ -136,6 +139,23 @@ export default function Toolbar({
             </button>
             <IconBtn icon={<ZoomIn size={13} />} title="Zoom in (Ctrl +)" onClick={onZoomIn} />
           </div>
+
+          {/* Fixed entity size toggle */}
+          <button
+            onClick={onToggleFixedEntitySize}
+            title={fixedEntitySize ? 'Entity size: fixed (click to make relative)' : 'Entity size: relative (click to fix size)'}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px',
+              borderRadius: 8, fontSize: 12, cursor: 'pointer',
+              border: `1px solid ${fixedEntitySize ? '#3b82f6' : 'rgba(59,130,246,0.2)'}`,
+              background: fixedEntitySize ? 'rgba(59,130,246,0.12)' : 'transparent',
+              color: fixedEntitySize ? '#3b82f6' : '#475569',
+              transition: 'all 0.15s',
+            }}
+          >
+            {fixedEntitySize ? <Lock size={13} /> : <Unlock size={13} />}
+            <span>{fixedEntitySize ? 'Fixed size' : 'Relative size'}</span>
+          </button>
 
           {/* Global lock */}
           <button

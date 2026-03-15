@@ -8,6 +8,7 @@ import { useMapStore } from '../store/mapStore';
 interface EntityCardProps {
   entity: Entity;
   onEdit: (entity: Entity) => void;
+  fixedEntitySize?: boolean;
   onDelete: (id: string) => void;
   isConnecting: boolean;
   isConnectingFrom: boolean;
@@ -25,6 +26,7 @@ export default function EntityCard({
   mapWidth,
   mapHeight,
   zoom,
+  fixedEntitySize = false,
 }: EntityCardProps) {
   const {
     moveEntity,
@@ -149,7 +151,7 @@ export default function EntityCard({
         top: entity.position.y,
         pointerEvents: 'all',
         zIndex: isSelected ? 200 : 50,
-        transform: `scale(${1 / zoom})`,
+        transform: `scale(${fixedEntitySize ? 1 / zoom : 1})`,
         transformOrigin: '0 0',
       }}
       onMouseDown={handleMouseDown}
