@@ -37,7 +37,7 @@ export default function EntityDialog({
   const [activeTab, setActiveTab] = useState<Tab>('basic');
   const [newStatPreset, setNewStatPreset] = useState('');
   const [newDetailPreset, setNewDetailPreset] = useState('');
-  const [activeStatCategory, setActiveStatCategory] = useState<string | null>(null);
+  const [activeStatFilter, setActiveStatFilter] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [icon, setIcon] = useState('🏢');
   const [subtitle, setSubtitle] = useState('');
@@ -352,71 +352,83 @@ export default function EntityDialog({
                 </button>
               </div>
 
-              {statistics.length === 0 && (
+              {statistics.length === 0 && !activeStatFilter && (
                 <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', padding: '12px 0' }}>
                   <BarChart2 size={24} style={{ margin: '0 auto 8px', color: '#334155' }} />
                   No statistics yet. Use quick add below.
                 </div>
               )}
 
-              {/* Preset suggestions — right-click to filter by category */}
+              {/* Preset suggestions — right-click a preset to filter stat cards */}
               <div style={{ marginBottom: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                   <div style={{ fontSize: 11, color: '#64748b' }}>
                     Quick add:
-                    {activeStatCategory === null
+                    {activeStatFilter === null
                       ? <span style={{ color: '#334155', marginLeft: 4 }}>(right click to filter)</span>
-                      : <span style={{ color: '#3b82f6', marginLeft: 4, cursor: 'pointer' }} onClick={() => setActiveStatCategory(null)}>
-                          {STAT_CATEGORIES.find(c => c.id === activeStatCategory)?.label} · <span style={{ textDecoration: 'underline' }}>clear</span>
+                      : <span style={{ color: '#f59e0b', marginLeft: 4, cursor: 'pointer' }} onClick={() => setActiveStatFilter(null)}>
+                          {activeStatFilter} · <span style={{ textDecoration: 'underline' }}>clear</span>
                         </span>
                     }
                   </div>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
-                  {(activeStatCategory === null
-                    ? STAT_CATEGORIES.flatMap((c) => c.presets)
-                    : (STAT_CATEGORIES.find((c) => c.id === activeStatCategory)?.presets ?? [])
-                  ).map((statName) => (
-                    <button
-                      key={statName}
-                      onClick={() => setStatistics([...statistics, { id: uuidv4(), name: statName, value: '' }])}
-                      onContextMenu={(e) => {
-                        e.preventDefault();
-                        const cat = STAT_CATEGORIES.find((c) => c.presets.includes(statName));
-                        if (cat) setActiveStatCategory(activeStatCategory === cat.id ? null : cat.id);
-                      }}
-                      style={{
-                        background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)',
-                        borderRadius: 6, padding: '3px 8px', fontSize: 11, color: '#93c5fd', cursor: 'pointer',
-                        transition: 'all 0.1s',
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.2)'}
-                      onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.1)'}
-                    >
-                      + {statName}
-                    </button>
-                  ))}
+                  {STAT_CATEGORIES.flatMap((c) => c.presets).map((statName) => {
+                    const isActive = activeStatFilter === statName;
+                    return (
+                      <button
+                        key={statName}
+                        onClick={() => setStatistics([...statistics, { id: uuidv4(), name: statName, value: '' }])}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          setActiveStatFilter(activeStatFilter === statName ? null : statName);
+                        }}
+                        style={{
+                          background: isActive ? 'rgba(245,158,11,0.2)' : 'rgba(59,130,246,0.1)',
+                          border: `1px solid ${isActive ? 'rgba(245,158,11,0.6)' : 'rgba(59,130,246,0.25)'}`,
+                          borderRadius: 6, padding: '3px 8px', fontSize: 11,
+                          color: isActive ? '#fcd34d' : '#93c5fd',
+                          cursor: 'pointer', transition: 'all 0.1s',
+                          fontWeight: isActive ? 600 : 400,
+                        }}
+                        onMouseEnter={(e) => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.2)'; }}
+                        onMouseLeave={(e) => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.1)'; }}
+                      >
+                        + {statName}
+                      </button>
+                    );
+                  })}
                   {/* User-saved custom presets */}
-                  {customStatPresets.map((preset) => (
-                    <span key={preset} style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                      <button
-                        onClick={() => setStatistics([...statistics, { id: uuidv4(), name: preset, value: '' }])}
-                        style={{
-                          background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)',
-                          borderRadius: '6px 0 0 6px', padding: '3px 8px', fontSize: 11, color: '#6ee7b7', cursor: 'pointer',
-                        }}
-                      >+ {preset}</button>
-                      <button
-                        onClick={() => removeCustomStatPreset(preset)}
-                        title="Remove preset"
-                        style={{
-                          background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)',
-                          borderLeft: 'none', borderRadius: '0 6px 6px 0', padding: '3px 5px',
-                          fontSize: 10, color: '#64748b', cursor: 'pointer',
-                        }}
-                      >×</button>
-                    </span>
-                  ))}
+                  {customStatPresets.map((preset) => {
+                    const isActive = activeStatFilter === preset;
+                    return (
+                      <span key={preset} style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                        <button
+                          onClick={() => setStatistics([...statistics, { id: uuidv4(), name: preset, value: '' }])}
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            setActiveStatFilter(activeStatFilter === preset ? null : preset);
+                          }}
+                          style={{
+                            background: isActive ? 'rgba(245,158,11,0.2)' : 'rgba(16,185,129,0.1)',
+                            border: `1px solid ${isActive ? 'rgba(245,158,11,0.6)' : 'rgba(16,185,129,0.3)'}`,
+                            borderRadius: '6px 0 0 6px', padding: '3px 8px', fontSize: 11,
+                            color: isActive ? '#fcd34d' : '#6ee7b7',
+                            cursor: 'pointer', fontWeight: isActive ? 600 : 400,
+                          }}
+                        >+ {preset}</button>
+                        <button
+                          onClick={() => removeCustomStatPreset(preset)}
+                          title="Remove preset"
+                          style={{
+                            background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)',
+                            borderLeft: 'none', borderRadius: '0 6px 6px 0', padding: '3px 5px',
+                            fontSize: 10, color: '#64748b', cursor: 'pointer',
+                          }}
+                        >×</button>
+                      </span>
+                    );
+                  })}
                 </div>
                 {/* Add custom preset */}
                 <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
@@ -450,7 +462,13 @@ export default function EntityDialog({
                 </div>
               </div>
 
-              {statistics.map((stat, i) => (
+              {activeStatFilter !== null && statistics.filter(s => s.name === activeStatFilter).length === 0 && (
+                <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', padding: '10px 0' }}>
+                  No &quot;{activeStatFilter}&quot; stat added yet.
+                </div>
+              )}
+
+              {(activeStatFilter === null ? statistics : statistics.filter(s => s.name === activeStatFilter)).map((stat, i) => (
                 <div key={stat.id} style={{
                   marginBottom: 8,
                   background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(59,130,246,0.15)',
