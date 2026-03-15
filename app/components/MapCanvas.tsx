@@ -9,7 +9,7 @@ import EntityDialog from './EntityDialog';
 import RelationshipDialog from './RelationshipDialog';
 import Toolbar from './Toolbar';
 import Sidebar from './Sidebar';
-import type { Entity, Relationship } from '../types';
+import type { Entity, Relationship, ArrowStyle } from '../types';
 
 interface MapCanvasProps {
   session: { user?: { name?: string | null; email?: string | null; image?: string | null } } | null;
@@ -18,7 +18,7 @@ interface MapCanvasProps {
 }
 
 const MIN_ZOOM = 0.3;
-const MAX_ZOOM = 5;
+const MAX_ZOOM = 7.5;
 const ZOOM_STEP = 0.15;
 
 export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasProps) {
@@ -52,6 +52,14 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   const [relDialogOpen, setRelDialogOpen] = useState(false);
   const [editingRel, setEditingRel] = useState<Relationship | undefined>();
 
+  // Pending settings for "connect with settings" flow
+  const pendingRelSettingsRef = useRef<{
+    label: string; description: string; color: string; arrowStyle: ArrowStyle;
+  } | null>(null);
+  const [pendingRelSettings, setPendingRelSettings] = useState<{
+    label: string; description: string; color: string; arrowStyle: ArrowStyle;
+  } | null>(null);
+
   // Mouse position in map (content) coordinates
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
@@ -60,6 +68,14 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   // Keep refs in sync with state for sources other than the wheel handler
   useEffect(() => { zoomRef.current = zoom; }, [zoom]);
   useEffect(() => { panRef.current = panOffset; }, [panOffset]);
+
+  // Clear pending rel settings whenever connect mode ends
+  useEffect(() => {
+    if (!connectingFromId) {
+      pendingRelSettingsRef.current = null;
+      setPendingRelSettings(null);
+    }
+  }, [connectingFromId]);
 
   // Track container size
   useEffect(() => {
@@ -82,6 +98,8 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
       if (e.key === 'Escape') {
         setConnectingFrom(null);
         setSelectedEntity(null);
+        pendingRelSettingsRef.current = null;
+        setPendingRelSettings(null);
       }
       if ((e.ctrlKey || e.metaKey) && e.key === '=') { e.preventDefault(); setZoom((z) => Math.min(MAX_ZOOM, z + ZOOM_STEP)); }
       if ((e.ctrlKey || e.metaKey) && e.key === '-') { e.preventDefault(); setZoom((z) => Math.max(MIN_ZOOM, z - ZOOM_STEP)); }
@@ -190,7 +208,11 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   const handleCanvasClick = useCallback(() => {
     if (wasPanning.current) return; // Was a drag-to-pan, not a click
     setSelectedEntity(null);
-    if (connectingFromId) setConnectingFrom(null);
+    if (connectingFromId) {
+      setConnectingFrom(null);
+      pendingRelSettingsRef.current = null;
+      setPendingRelSettings(null);
+    }
   }, [setSelectedEntity, connectingFromId, setConnectingFrom]);
 
   const handleCountryClick = useCallback(
@@ -251,6 +273,16 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
     setRelDialogOpen(true);
   }, []);
 
+  const handleConnectWithSettings = useCallback(
+    (fromId: string, settings: { label: string; description: string; color: string; arrowStyle: ArrowStyle }) => {
+      pendingRelSettingsRef.current = settings;
+      setPendingRelSettings(settings);
+      setConnectingFrom(fromId);
+      setSelectedEntity(fromId);
+    },
+    [setConnectingFrom, setSelectedEntity]
+  );
+
   const handleRelSave = useCallback(
     (data: Partial<Relationship>) => {
       if (editingRel?.id) updateRelationship(editingRel.id, data);
@@ -286,7 +318,11 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
           setEntityDialogOpen(true);
         }}
         isConnecting={isConnecting}
-        onToggleConnect={() => setConnectingFrom(null)}
+        onToggleConnect={() => {
+          setConnectingFrom(null);
+          pendingRelSettingsRef.current = null;
+          setPendingRelSettings(null);
+        }}
         session={session}
         onSignIn={onSignIn}
         onSignOut={onSignOut}
@@ -347,6 +383,8 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
                 mapHeight={dims.height}
                 zoom={zoom}
                 fixedEntitySize={fixedEntitySize}
+                onConnectWithSettings={handleConnectWithSettings}
+                pendingRelSettings={pendingRelSettings}
               />
             ))}
           </WorldMap>

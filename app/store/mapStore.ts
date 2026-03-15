@@ -28,6 +28,7 @@ interface MapState {
   deleteEntity: (id: string) => void;
   moveEntity: (id: string, position: { x: number; y: number }) => void;
   toggleEntityLock: (id: string) => void;
+  toggleEntityFixedSize: (id: string) => void;
   toggleGlobalLock: () => void;
 
   // Relationship actions
@@ -156,6 +157,17 @@ export const useMapStore = create<MapState>()(
             ...state.currentMap,
             entities: state.currentMap.entities.map((e) =>
               e.id === id ? { ...e, locked: !e.locked } : e
+            ),
+          },
+        }));
+      },
+
+      toggleEntityFixedSize: (id) => {
+        set((state) => ({
+          currentMap: {
+            ...state.currentMap,
+            entities: state.currentMap.entities.map((e) =>
+              e.id === id ? { ...e, fixedSize: !e.fixedSize } : e
             ),
           },
         }));

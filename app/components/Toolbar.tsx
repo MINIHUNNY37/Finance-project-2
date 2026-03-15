@@ -140,10 +140,12 @@ export default function Toolbar({
             <IconBtn icon={<ZoomIn size={13} />} title="Zoom in (Ctrl +)" onClick={onZoomIn} />
           </div>
 
-          {/* Fixed entity size toggle */}
+          {/* Global entity size mode toggle */}
           <button
             onClick={onToggleFixedEntitySize}
-            title={fixedEntitySize ? 'Entity size: fixed (click to make relative)' : 'Entity size: relative (click to fix size)'}
+            title={fixedEntitySize
+              ? 'All entities: fixed size (same on screen at any zoom) — click to auto-scale'
+              : 'All entities: auto-scale (shrink at high zoom for country-level view) — click to fix size'}
             style={{
               display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px',
               borderRadius: 8, fontSize: 12, cursor: 'pointer',
@@ -154,7 +156,7 @@ export default function Toolbar({
             }}
           >
             {fixedEntitySize ? <Lock size={13} /> : <Unlock size={13} />}
-            <span>{fixedEntitySize ? 'Fixed size' : 'Relative size'}</span>
+            <span>{fixedEntitySize ? 'Fixed size' : 'Auto size'}</span>
           </button>
 
           {/* Global lock */}
