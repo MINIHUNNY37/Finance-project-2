@@ -384,15 +384,15 @@ export default function EntityDialog({
                           setActiveStatFilter(activeStatFilter === statName ? null : statName);
                         }}
                         style={{
-                          background: isActive ? 'rgba(245,158,11,0.2)' : 'rgba(59,130,246,0.1)',
-                          border: `1px solid ${isActive ? 'rgba(245,158,11,0.6)' : 'rgba(59,130,246,0.25)'}`,
+                          background: isActive ? `${color}33` : `${color}1a`,
+                          border: `1px solid ${isActive ? `${color}99` : `${color}40`}`,
                           borderRadius: 6, padding: '3px 8px', fontSize: 11,
-                          color: isActive ? '#fcd34d' : '#93c5fd',
+                          color: isActive ? color : `${color}cc`,
                           cursor: 'pointer', transition: 'all 0.1s',
                           fontWeight: isActive ? 600 : 400,
                         }}
-                        onMouseEnter={(e) => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.2)'; }}
-                        onMouseLeave={(e) => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.1)'; }}
+                        onMouseEnter={(e) => { if (!isActive) (e.currentTarget as HTMLElement).style.background = `${color}30`; }}
+                        onMouseLeave={(e) => { if (!isActive) (e.currentTarget as HTMLElement).style.background = `${color}1a`; }}
                       >
                         + {statName}
                       </button>
@@ -410,10 +410,10 @@ export default function EntityDialog({
                             setActiveStatFilter(activeStatFilter === preset ? null : preset);
                           }}
                           style={{
-                            background: isActive ? 'rgba(245,158,11,0.2)' : 'rgba(16,185,129,0.1)',
-                            border: `1px solid ${isActive ? 'rgba(245,158,11,0.6)' : 'rgba(16,185,129,0.3)'}`,
+                            background: isActive ? `${color}33` : `${color}1a`,
+                            border: `1px solid ${isActive ? `${color}99` : `${color}40`}`,
                             borderRadius: '6px 0 0 6px', padding: '3px 8px', fontSize: 11,
-                            color: isActive ? '#fcd34d' : '#6ee7b7',
+                            color: isActive ? color : `${color}cc`,
                             cursor: 'pointer', fontWeight: isActive ? 600 : 400,
                           }}
                         >+ {preset}</button>
@@ -421,7 +421,7 @@ export default function EntityDialog({
                           onClick={() => removeCustomStatPreset(preset)}
                           title="Remove preset"
                           style={{
-                            background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)',
+                            background: `${color}1a`, border: `1px solid ${color}40`,
                             borderLeft: 'none', borderRadius: '0 6px 6px 0', padding: '3px 5px',
                             fontSize: 10, color: '#64748b', cursor: 'pointer',
                           }}
