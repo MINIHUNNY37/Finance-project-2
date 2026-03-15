@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import {
   Save, Share2, Map, Plus, Link2, X,
   ChevronDown, TrendingUp, LogIn, LogOut, User,
-  ZoomIn, ZoomOut, RotateCcw, Lock, Unlock, Clock,
+  ZoomIn, ZoomOut, RotateCcw, Lock, Unlock, Clock, Globe, Square,
 } from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
 import ShareDialog from './ShareDialog';
@@ -24,6 +24,8 @@ interface ToolbarProps {
   onZoomReset: () => void;
   fixedEntitySize: boolean;
   onToggleFixedEntitySize: () => void;
+  showWorldMap: boolean;
+  onToggleWorldMap: () => void;
 }
 
 export default function Toolbar({
@@ -31,6 +33,7 @@ export default function Toolbar({
   session, onSignIn, onSignOut,
   zoom, onZoomIn, onZoomOut, onZoomReset,
   fixedEntitySize, onToggleFixedEntitySize,
+  showWorldMap, onToggleWorldMap,
 }: ToolbarProps) {
   const { currentMap, saveCurrentMap, globalLocked, toggleGlobalLock } = useMapStore();
   const [showShare, setShowShare] = useState(false);
@@ -175,6 +178,23 @@ export default function Toolbar({
             }}
           >
             {globalLocked ? <Lock size={13} /> : <Unlock size={13} />}
+          </button>
+
+          {/* Background toggle */}
+          <button
+            onClick={onToggleWorldMap}
+            title={showWorldMap ? 'Switch to plain background' : 'Switch to world map'}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px',
+              borderRadius: 8, fontSize: 12, cursor: 'pointer',
+              border: `1px solid ${showWorldMap ? 'rgba(6,182,212,0.4)' : 'rgba(59,130,246,0.2)'}`,
+              background: showWorldMap ? 'rgba(6,182,212,0.1)' : 'transparent',
+              color: showWorldMap ? '#06b6d4' : '#475569',
+              transition: 'all 0.15s',
+            }}
+          >
+            {showWorldMap ? <Globe size={13} /> : <Square size={13} />}
+            <span>{showWorldMap ? 'Map' : 'Plain'}</span>
           </button>
 
           {/* World Clock */}

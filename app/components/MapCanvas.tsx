@@ -9,6 +9,7 @@ import EntityDialog from './EntityDialog';
 import RelationshipDialog from './RelationshipDialog';
 import Toolbar from './Toolbar';
 import Sidebar from './Sidebar';
+import InvestmentPanel from './InvestmentPanel';
 import type { Entity, Relationship, ArrowStyle } from '../types';
 
 interface MapCanvasProps {
@@ -31,6 +32,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   const [dims, setDims] = useState({ width: 1200, height: 800 });
   const [zoom, setZoom] = useState(1);
   const [fixedEntitySize, setFixedEntitySize] = useState(false);
+  const [showWorldMap, setShowWorldMap] = useState(true);
   const [entitySizeMult, setEntitySizeMult] = useState(1);
   const [arrowSizeMult, setArrowSizeMult] = useState(1);
 
@@ -394,7 +396,11 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
         onZoomReset={() => { setZoom(1); setPanOffset({ x: 0, y: 0 }); }}
         fixedEntitySize={fixedEntitySize}
         onToggleFixedEntitySize={() => setFixedEntitySize((v) => !v)}
+        showWorldMap={showWorldMap}
+        onToggleWorldMap={() => setShowWorldMap((v) => !v)}
       />
+
+      <InvestmentPanel />
 
       <Sidebar
         onFocusEntity={handleFocusEntity}
@@ -435,44 +441,98 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
             left: 0,
           }}
         >
-          <WorldMap onCountryClick={handleCountryClick} width={dims.width} height={dims.height}>
-            <RelationshipLayer
-              entities={currentMap.entities}
-              relationships={currentMap.relationships.filter((r) => {
-                const from = currentMap.entities.find((e) => e.id === r.fromEntityId);
-                const to = currentMap.entities.find((e) => e.id === r.toEntityId);
-                return !from?.hidden && !to?.hidden;
-              })}
-              width={dims.width}
-              height={dims.height}
-              connectingFromId={connectingFromId}
-              mousePos={mousePos}
-              onEditRelationship={handleEditRelationship}
-              zoom={zoom}
-              arrowSizeMult={arrowSizeMult}
-              drawingFromId={drawingFromId}
-            />
-            {currentMap.entities.filter((e) => !e.hidden).map((entity) => (
-              <EntityCard
-                key={entity.id}
-                entity={entity}
-                onEdit={handleEditEntity}
-                onDelete={deleteEntity}
-                isConnecting={isConnecting}
-                isConnectingFrom={connectingFromId === entity.id}
-                mapWidth={dims.width}
-                mapHeight={dims.height}
+          {showWorldMap ? (
+            <WorldMap onCountryClick={handleCountryClick} width={dims.width} height={dims.height}>
+              <RelationshipLayer
+                entities={currentMap.entities}
+                relationships={currentMap.relationships.filter((r) => {
+                  const from = currentMap.entities.find((e) => e.id === r.fromEntityId);
+                  const to = currentMap.entities.find((e) => e.id === r.toEntityId);
+                  return !from?.hidden && !to?.hidden;
+                })}
+                width={dims.width}
+                height={dims.height}
+                connectingFromId={connectingFromId}
+                mousePos={mousePos}
+                onEditRelationship={handleEditRelationship}
                 zoom={zoom}
-                fixedEntitySize={fixedEntitySize}
-                entitySizeMult={entitySizeMult}
-                onConnectWithSettings={handleConnectWithSettings}
-                pendingRelSettings={pendingRelSettings}
-                onStartDrawConnection={handleStartDrawConnection}
-                isDrawTarget={!!drawingFromId && drawingFromId !== entity.id}
-                onDropConnection={handleDropConnection}
+                arrowSizeMult={arrowSizeMult}
+                drawingFromId={drawingFromId}
               />
-            ))}
-          </WorldMap>
+              {currentMap.entities.filter((e) => !e.hidden).map((entity) => (
+                <EntityCard
+                  key={entity.id}
+                  entity={entity}
+                  onEdit={handleEditEntity}
+                  onDelete={deleteEntity}
+                  isConnecting={isConnecting}
+                  isConnectingFrom={connectingFromId === entity.id}
+                  mapWidth={dims.width}
+                  mapHeight={dims.height}
+                  zoom={zoom}
+                  fixedEntitySize={fixedEntitySize}
+                  entitySizeMult={entitySizeMult}
+                  onConnectWithSettings={handleConnectWithSettings}
+                  pendingRelSettings={pendingRelSettings}
+                  onStartDrawConnection={handleStartDrawConnection}
+                  isDrawTarget={!!drawingFromId && drawingFromId !== entity.id}
+                  onDropConnection={handleDropConnection}
+                />
+              ))}
+            </WorldMap>
+          ) : (
+            /* ── Plain background ── */
+            <div style={{
+              position: 'relative', width: dims.width, height: dims.height,
+              background: 'radial-gradient(ellipse at 50% 40%, #0c1f3d 0%, #071224 60%, #050d1a 100%)',
+            }}>
+              {/* Subtle grid */}
+              <svg style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} width={dims.width} height={dims.height}>
+                {Array.from({ length: 24 }, (_, i) => (
+                  <line key={`h${i}`} x1={0} y1={dims.height * (i / 24)} x2={dims.width} y2={dims.height * (i / 24)} stroke="rgba(59,130,246,0.04)" strokeWidth={1} />
+                ))}
+                {Array.from({ length: 40 }, (_, i) => (
+                  <line key={`v${i}`} x1={dims.width * (i / 40)} y1={0} x2={dims.width * (i / 40)} y2={dims.height} stroke="rgba(59,130,246,0.04)" strokeWidth={1} />
+                ))}
+              </svg>
+              <RelationshipLayer
+                entities={currentMap.entities}
+                relationships={currentMap.relationships.filter((r) => {
+                  const from = currentMap.entities.find((e) => e.id === r.fromEntityId);
+                  const to = currentMap.entities.find((e) => e.id === r.toEntityId);
+                  return !from?.hidden && !to?.hidden;
+                })}
+                width={dims.width}
+                height={dims.height}
+                connectingFromId={connectingFromId}
+                mousePos={mousePos}
+                onEditRelationship={handleEditRelationship}
+                zoom={zoom}
+                arrowSizeMult={arrowSizeMult}
+                drawingFromId={drawingFromId}
+              />
+              {currentMap.entities.filter((e) => !e.hidden).map((entity) => (
+                <EntityCard
+                  key={entity.id}
+                  entity={entity}
+                  onEdit={handleEditEntity}
+                  onDelete={deleteEntity}
+                  isConnecting={isConnecting}
+                  isConnectingFrom={connectingFromId === entity.id}
+                  mapWidth={dims.width}
+                  mapHeight={dims.height}
+                  zoom={zoom}
+                  fixedEntitySize={fixedEntitySize}
+                  entitySizeMult={entitySizeMult}
+                  onConnectWithSettings={handleConnectWithSettings}
+                  pendingRelSettings={pendingRelSettings}
+                  onStartDrawConnection={handleStartDrawConnection}
+                  isDrawTarget={!!drawingFromId && drawingFromId !== entity.id}
+                  onDropConnection={handleDropConnection}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Empty state */}
