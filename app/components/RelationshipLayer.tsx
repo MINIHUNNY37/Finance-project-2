@@ -16,6 +16,21 @@ interface RelationshipLayerProps {
   zoom: number;
   arrowSizeMult: number;
   drawingFromId?: string | null;
+  drawPath?: { x: number; y: number }[];
+}
+
+/** Convert an array of points into a smooth SVG path using midpoint quadratic beziers */
+function pointsToPath(pts: { x: number; y: number }[]): string {
+  if (pts.length < 2) return '';
+  if (pts.length === 2) return `M ${pts[0].x} ${pts[0].y} L ${pts[1].x} ${pts[1].y}`;
+  let d = `M ${pts[0].x} ${pts[0].y}`;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const mx = (pts[i].x + pts[i + 1].x) / 2;
+    const my = (pts[i].y + pts[i + 1].y) / 2;
+    d += ` Q ${pts[i].x} ${pts[i].y} ${mx} ${my}`;
+  }
+  d += ` L ${pts[pts.length - 1].x} ${pts[pts.length - 1].y}`;
+  return d;
 }
 
 // Quadratic bezier point at t=0.5
@@ -47,6 +62,7 @@ export default function RelationshipLayer({
   zoom,
   arrowSizeMult,
   drawingFromId,
+  drawPath = [],
 }: RelationshipLayerProps) {
   const { deleteRelationship, setSelectedRelationship, selectedRelationshipId } = useMapStore();
   const [hoveredRelId, setHoveredRelId] = useState<string | null>(null);
@@ -151,9 +167,21 @@ export default function RelationshipLayer({
           const y1 = from.position.y;
           const x2 = to.position.x;
           const y2 = to.position.y;
-          const cp = getControlPoint(x1, y1, x2, y2);
-          const pathD = `M ${x1} ${y1} Q ${cp.x} ${cp.y} ${x2} ${y2}`;
-          const mid = bezierMid(x1, y1, cp.x, cp.y, x2, y2);
+
+          // Use freehand drawn path if available, otherwise bezier
+          const hasDrawn = rel.drawnPath && rel.drawnPath.length > 1;
+          const pathD = hasDrawn
+            ? pointsToPath(rel.drawnPath!)
+            : (() => {
+                const cp = getControlPoint(x1, y1, x2, y2);
+                return `M ${x1} ${y1} Q ${cp.x} ${cp.y} ${x2} ${y2}`;
+              })();
+          const mid = hasDrawn
+            ? rel.drawnPath![Math.floor(rel.drawnPath!.length / 2)]
+            : (() => {
+                const cp = getControlPoint(x1, y1, x2, y2);
+                return bezierMid(x1, y1, cp.x, cp.y, x2, y2);
+              })();
 
           const isSelected = selectedRelationshipId === rel.id;
           const isHovered = hoveredRelId === rel.id;
@@ -242,19 +270,16 @@ export default function RelationshipLayer({
           />
         )}
 
-        {/* Preview line while drawing (drag-mode) */}
-        {(() => {
-          const drawingEntity = drawingFromId ? entityMap.get(drawingFromId) : null;
-          if (!drawingEntity) return null;
+        {/* Freehand path preview while drawing */}
+        {drawingFromId && drawPath.length > 1 && (() => {
+          // Build path: drawn points + line to current cursor
+          const allPts = [...drawPath, mousePos];
           return (
-            <line
-              x1={drawingEntity.position.x}
-              y1={drawingEntity.position.y}
-              x2={mousePos.x}
-              y2={mousePos.y}
+            <path
+              d={pointsToPath(allPts)}
               stroke="#a78bfa"
               strokeWidth={2.5 / zf}
-              strokeDasharray={`${6 / zf} ${4 / zf}`}
+              fill="none"
               markerEnd="url(#arrow-draw)"
               opacity={0.85}
             />

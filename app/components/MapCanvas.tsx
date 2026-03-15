@@ -60,6 +60,10 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   const [drawingFromId, setDrawingFromId] = useState<string | null>(null);
   const drawingHandledRef = useRef(false);
 
+  // Freehand path accumulated while drawing
+  const [drawPath, setDrawPath] = useState<{ x: number; y: number }[]>([]);
+  const drawPathRef = useRef<{ x: number; y: number }[]>([]);
+
   // Draw mode (freehand right-click-drag connections)
   const [isDrawMode, setIsDrawMode] = useState(false);
 
@@ -175,9 +179,20 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
       const rect = containerRef.current.getBoundingClientRect();
       const sx = e.clientX - rect.left;
       const sy = e.clientY - rect.top;
-      setMousePos(screenToMap(sx, sy));
+      const pos = screenToMap(sx, sy);
+      setMousePos(pos);
+      // Accumulate freehand path while drawing (throttle by distance)
+      if (drawingFromId) {
+        setDrawPath((prev) => {
+          const last = prev[prev.length - 1];
+          if (last && Math.abs(pos.x - last.x) < 4 && Math.abs(pos.y - last.y) < 4) return prev;
+          const next = [...prev, pos];
+          drawPathRef.current = next;
+          return next;
+        });
+      }
     },
-    [screenToMap]
+    [screenToMap, drawingFromId]
   );
 
   // Pan on background drag
@@ -321,13 +336,19 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   }, [setConnectingFrom]);
 
   const handleStartDrawConnection = useCallback((fromId: string) => {
+    const entity = currentMap.entities.find((e) => e.id === fromId);
+    const start = entity?.position ?? { x: 0, y: 0 };
+    const initial = [start];
+    drawPathRef.current = initial;
+    setDrawPath(initial);
     setDrawingFromId(fromId);
     drawingHandledRef.current = false;
-  }, []);
+  }, [currentMap.entities]);
 
   const handleDropConnection = useCallback((targetId: string) => {
     if (!drawingFromId || drawingFromId === targetId) return;
     drawingHandledRef.current = true;
+    const path = drawPathRef.current;
     addRelationship({
       fromEntityId: drawingFromId,
       toEntityId: targetId,
@@ -336,8 +357,11 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
       color: '#10B981',
       arrowStyle: 'normal',
       createdBy: 'local',
+      drawnPath: path.length > 1 ? path : undefined,
     });
     setDrawingFromId(null);
+    setDrawPath([]);
+    drawPathRef.current = [];
   }, [drawingFromId, addRelationship]);
 
   // Global mouseup cancels draw mode if no entity handled the drop
@@ -345,6 +369,8 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
     const onMouseUp = () => {
       if (drawingFromId && !drawingHandledRef.current) {
         setDrawingFromId(null);
+        setDrawPath([]);
+        drawPathRef.current = [];
       }
       drawingHandledRef.current = false;
     };
@@ -465,6 +491,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
                 zoom={zoom}
                 arrowSizeMult={arrowSizeMult}
                 drawingFromId={drawingFromId}
+                drawPath={drawPath}
               />
               {currentMap.entities.filter((e) => !e.hidden).map((entity) => (
                 <EntityCard
@@ -518,6 +545,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
                 zoom={zoom}
                 arrowSizeMult={arrowSizeMult}
                 drawingFromId={drawingFromId}
+                drawPath={drawPath}
               />
               {currentMap.entities.filter((e) => !e.hidden).map((entity) => (
                 <EntityCard

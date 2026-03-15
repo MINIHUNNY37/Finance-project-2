@@ -44,6 +44,7 @@ export interface Relationship {
   arrowStyle: ArrowStyle;
   createdBy: string;
   createdAt: string;
+  drawnPath?: { x: number; y: number }[]; // freehand path from draw mode
 }
 
 export interface Folder {
