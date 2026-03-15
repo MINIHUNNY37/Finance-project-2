@@ -23,6 +23,7 @@ export interface Entity {
   position: { x: number; y: number };
   locked?: boolean;
   fixedSize?: boolean;
+  hidden?: boolean;
   folderId?: string;
   createdBy: string;
   createdAt: string;

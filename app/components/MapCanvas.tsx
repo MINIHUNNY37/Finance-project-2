@@ -24,7 +24,7 @@ const ZOOM_STEP = 0.15;
 export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasProps) {
   const {
     currentMap, addEntity, updateEntity, deleteEntity,
-    updateRelationship, setSelectedEntity, setConnectingFrom, connectingFromId,
+    addRelationship, updateRelationship, setSelectedEntity, setConnectingFrom, connectingFromId,
   } = useMapStore();
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -285,6 +285,30 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
     [setConnectingFrom, setSelectedEntity]
   );
 
+  const handleConnectTo = useCallback(
+    (targetId: string) => {
+      if (!connectingFromId) return;
+      const settings = pendingRelSettingsRef.current;
+      addRelationship({
+        fromEntityId: connectingFromId,
+        toEntityId: targetId,
+        label: settings?.label || '',
+        description: settings?.description || '',
+        color: settings?.color || '#10B981',
+        arrowStyle: settings?.arrowStyle || 'normal',
+        createdBy: 'local',
+      });
+      setConnectingFrom(null);
+    },
+    [connectingFromId, addRelationship, setConnectingFrom]
+  );
+
+  const handleCancelConnect = useCallback(() => {
+    setConnectingFrom(null);
+    pendingRelSettingsRef.current = null;
+    setPendingRelSettings(null);
+  }, [setConnectingFrom]);
+
   const handleRelSave = useCallback(
     (data: Partial<Relationship>) => {
       if (editingRel?.id) updateRelationship(editingRel.id, data);
@@ -339,6 +363,11 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
       <Sidebar
         onFocusEntity={handleFocusEntity}
         onConnectWithSettings={handleConnectWithSettings}
+        isConnecting={isConnecting}
+        connectingFromId={connectingFromId}
+        pendingRelSettings={pendingRelSettings}
+        onConnectTo={handleConnectTo}
+        onCancelConnect={handleCancelConnect}
         entitySizeMult={entitySizeMult}
         onEntitySizeChange={setEntitySizeMult}
         arrowSizeMult={arrowSizeMult}
@@ -373,7 +402,11 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
           <WorldMap onCountryClick={handleCountryClick} width={dims.width} height={dims.height}>
             <RelationshipLayer
               entities={currentMap.entities}
-              relationships={currentMap.relationships}
+              relationships={currentMap.relationships.filter((r) => {
+                const from = currentMap.entities.find((e) => e.id === r.fromEntityId);
+                const to = currentMap.entities.find((e) => e.id === r.toEntityId);
+                return !from?.hidden && !to?.hidden;
+              })}
               width={dims.width}
               height={dims.height}
               connectingFromId={connectingFromId}
@@ -382,7 +415,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
               zoom={zoom}
               arrowSizeMult={arrowSizeMult}
             />
-            {currentMap.entities.map((entity) => (
+            {currentMap.entities.filter((e) => !e.hidden).map((entity) => (
               <EntityCard
                 key={entity.id}
                 entity={entity}

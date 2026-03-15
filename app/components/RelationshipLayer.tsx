@@ -91,16 +91,15 @@ export default function RelationshipLayer({
             <marker
               key={`arrow-${rel.id}`}
               id={`arrow-${rel.id}`}
-              markerWidth="9"
-              markerHeight="9"
-              refX="7"
-              refY="3.5"
+              markerWidth={9 * arrowSizeMult}
+              markerHeight={9 * arrowSizeMult}
+              refX={7 * arrowSizeMult}
+              refY={3.5 * arrowSizeMult}
               orient="auto"
               markerUnits="userSpaceOnUse"
             >
-              {/* marker coords are already in map units, counter-scale the marker path */}
               <path
-                d={`M0,0 L0,${7 / zf} L${9 / zf},${3.5 / zf} z`}
+                d={`M0,0 L0,${7 * arrowSizeMult / zf} L${9 * arrowSizeMult / zf},${3.5 * arrowSizeMult / zf} z`}
                 transform={`scale(${zf})`}
                 fill={rel.color}
                 opacity={0.95}
@@ -109,15 +108,15 @@ export default function RelationshipLayer({
           ))}
           <marker
             id="arrow-preview"
-            markerWidth="9"
-            markerHeight="9"
-            refX="7"
-            refY="3.5"
+            markerWidth={9 * arrowSizeMult}
+            markerHeight={9 * arrowSizeMult}
+            refX={7 * arrowSizeMult}
+            refY={3.5 * arrowSizeMult}
             orient="auto"
             markerUnits="userSpaceOnUse"
           >
             <path
-              d={`M0,0 L0,${7 / zf} L${9 / zf},${3.5 / zf} z`}
+              d={`M0,0 L0,${7 * arrowSizeMult / zf} L${9 * arrowSizeMult / zf},${3.5 * arrowSizeMult / zf} z`}
               transform={`scale(${zf})`}
               fill="#06b6d4"
               opacity={0.7}
