@@ -6,7 +6,7 @@ import {
   GitMerge, Link2, Zap, Minus, X, Eye, EyeOff, ArrowRight,
 } from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
-import { isVisibleAtDate } from '../utils/dateFilter';
+import { isVisibleAtDate, getLatestStatsByLabel } from '../utils/dateFilter';
 import FolderPanel from './FolderPanel';
 import type { ArrowStyle } from '../types';
 import { RELATIONSHIP_COLORS } from '../types';
@@ -618,7 +618,7 @@ export default function Sidebar({
                     )}
 
                     {selectedEntity.statistics?.length > 0 && (() => {
-                      const visStats = selectedEntity.statistics.filter((s) => isVisibleAtDate(s.asOf, globalViewDate));
+                      const visStats = getLatestStatsByLabel(selectedEntity.statistics, globalViewDate);
                       return visStats.length > 0 ? (
                         <div style={{ marginBottom: 12 }}>
                           <div style={{ fontSize: 10, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>

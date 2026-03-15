@@ -9,7 +9,7 @@ import {
 import type { Entity, ArrowStyle } from '../types';
 import { RELATIONSHIP_COLORS } from '../types';
 import { useMapStore } from '../store/mapStore';
-import { isVisibleAtDate } from '../utils/dateFilter';
+import { isVisibleAtDate, getLatestStatsByLabel } from '../utils/dateFilter';
 
 interface RelSettings {
   label: string;
@@ -453,16 +453,19 @@ export default function EntityCard({
                 {entity.subtitle}
               </div>
             )}
-            {entity.statistics?.length > 0 && (
-              <div style={{ marginTop: 6, width: '100%' }}>
-                {entity.statistics.slice(0, 2).map((stat) => (
-                  <div key={stat.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, marginTop: 2 }}>
-                    <span style={{ color: 'rgba(148,163,184,0.7)' }}>{stat.name}</span>
-                    <span style={{ color: entity.color, fontWeight: 600 }}>{stat.value || '—'}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+            {entity.statistics?.length > 0 && (() => {
+              const previewStats = getLatestStatsByLabel(entity.statistics, globalViewDate).slice(0, 2);
+              return previewStats.length > 0 ? (
+                <div style={{ marginTop: 6, width: '100%' }}>
+                  {previewStats.map((stat) => (
+                    <div key={stat.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, marginTop: 2 }}>
+                      <span style={{ color: 'rgba(148,163,184,0.7)' }}>{stat.name}</span>
+                      <span style={{ color: entity.color, fontWeight: 600 }}>{stat.value || '—'}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : null;
+            })()}
 
             {hasExpandable && (
               <button
@@ -502,7 +505,7 @@ export default function EntityCard({
                   </div>
                 ))}
                 {entity.statistics?.length > 0 && (() => {
-                  const visibleStats = entity.statistics.filter((s) => isVisibleAtDate(s.asOf, globalViewDate));
+                  const visibleStats = getLatestStatsByLabel(entity.statistics, globalViewDate);
                   return visibleStats.length > 0 ? (
                     <div style={{ marginTop: 4, borderTop: '1px solid rgba(59,130,246,0.15)', paddingTop: 6 }}>
                       <div style={{ fontSize: 9, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
