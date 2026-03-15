@@ -1,20 +1,51 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Layers, FolderOpen, Info, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import {
+  Layers, FolderOpen, Info, ChevronLeft, ChevronRight, Trash2,
+  GitMerge, Link2, Zap, Minus, X,
+} from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
 import FolderPanel from './FolderPanel';
+import type { ArrowStyle } from '../types';
+import { RELATIONSHIP_COLORS } from '../types';
 
 type Tab = 'entities' | 'folders' | 'info';
 
-interface SidebarProps {
-  onFocusEntity: (pos: { x: number; y: number }) => void;
+interface RelSettings {
+  label: string;
+  description: string;
+  color: string;
+  arrowStyle: ArrowStyle;
 }
 
-export default function Sidebar({ onFocusEntity }: SidebarProps) {
-  const { currentMap, selectedEntityId, setSelectedEntity, deleteEntity } = useMapStore();
+interface SidebarProps {
+  onFocusEntity: (pos: { x: number; y: number }) => void;
+  onConnectWithSettings: (fromId: string, settings: RelSettings) => void;
+  entitySizeMult: number;
+  onEntitySizeChange: (v: number) => void;
+  arrowSizeMult: number;
+  onArrowSizeChange: (v: number) => void;
+}
+
+export default function Sidebar({
+  onFocusEntity,
+  onConnectWithSettings,
+  entitySizeMult,
+  onEntitySizeChange,
+  arrowSizeMult,
+  onArrowSizeChange,
+}: SidebarProps) {
+  const { currentMap, selectedEntityId, setSelectedEntity, setConnectingFrom, deleteEntity } = useMapStore();
   const [collapsed, setCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('entities');
+
+  // Inline "connect with settings" panel state
+  const [showRelPanel, setShowRelPanel] = useState(false);
+  const [relLabel, setRelLabel] = useState('');
+  const [relDesc, setRelDesc] = useState('');
+  const [relColor, setRelColor] = useState(RELATIONSHIP_COLORS[0]);
+  const [relArrowStyle, setRelArrowStyle] = useState<ArrowStyle>('normal');
 
   const selectedEntity = selectedEntityId
     ? currentMap.entities.find((e) => e.id === selectedEntityId)
@@ -25,6 +56,25 @@ export default function Sidebar({ onFocusEntity }: SidebarProps) {
     { id: 'folders', icon: <FolderOpen size={14} />, label: 'Folders' },
     { id: 'info', icon: <Info size={14} />, label: 'Selected' },
   ];
+
+  const handleOpenRelPanel = () => {
+    setRelLabel('');
+    setRelDesc('');
+    setRelColor(RELATIONSHIP_COLORS[0]);
+    setRelArrowStyle('normal');
+    setShowRelPanel(true);
+  };
+
+  const handleRelPanelSave = () => {
+    if (!selectedEntity) return;
+    setShowRelPanel(false);
+    onConnectWithSettings(selectedEntity.id, {
+      label: relLabel.trim(),
+      description: relDesc.trim(),
+      color: relColor,
+      arrowStyle: relArrowStyle,
+    });
+  };
 
   return (
     <div
@@ -101,7 +151,7 @@ export default function Sidebar({ onFocusEntity }: SidebarProps) {
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => { setActiveTab(tab.id); setShowRelPanel(false); }}
                 style={{
                   flex: 1,
                   display: 'flex',
@@ -125,7 +175,7 @@ export default function Sidebar({ onFocusEntity }: SidebarProps) {
             ))}
           </div>
 
-          {/* Content */}
+          {/* Content — scrollable middle area */}
           <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
             {activeTab === 'entities' && (
               <div>
@@ -143,6 +193,7 @@ export default function Sidebar({ onFocusEntity }: SidebarProps) {
                       onClick={() => {
                         setSelectedEntity(entity.id);
                         onFocusEntity(entity.position);
+                        setActiveTab('info');
                       }}
                       style={{
                         display: 'flex',
@@ -210,48 +261,168 @@ export default function Sidebar({ onFocusEntity }: SidebarProps) {
               <div>
                 {selectedEntity ? (
                   <div className="fade-in">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                    {/* Entity header */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                       <div style={{
                         width: 40, height: 40, borderRadius: 10,
                         background: selectedEntity.color + '22',
                         border: `2px solid ${selectedEntity.color}`,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 20,
+                        fontSize: 20, flexShrink: 0,
                       }}>
                         {selectedEntity.icon}
                       </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 700, color: '#e2e8f0', fontSize: 14 }}>{selectedEntity.name}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, color: '#e2e8f0', fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {selectedEntity.name}
+                        </div>
                         {selectedEntity.subtitle && (
                           <div style={{ fontSize: 11, color: selectedEntity.color }}>{selectedEntity.subtitle}</div>
                         )}
                       </div>
                       <button
                         title="Delete entity"
-                        onClick={() => {
-                          deleteEntity(selectedEntity.id);
-                          setSelectedEntity(null);
-                        }}
+                        onClick={() => { deleteEntity(selectedEntity.id); setSelectedEntity(null); }}
                         style={{
                           background: 'none', border: '1px solid rgba(239,68,68,0.3)',
                           borderRadius: 6, cursor: 'pointer', color: '#ef4444',
                           padding: '4px 6px', display: 'flex', alignItems: 'center',
                           flexShrink: 0, opacity: 0.75, transition: 'all 0.15s',
                         }}
-                        onMouseEnter={(e) => {
-                          const el = e.currentTarget as HTMLElement;
-                          el.style.opacity = '1';
-                          el.style.background = 'rgba(239,68,68,0.12)';
-                        }}
-                        onMouseLeave={(e) => {
-                          const el = e.currentTarget as HTMLElement;
-                          el.style.opacity = '0.75';
-                          el.style.background = 'none';
-                        }}
+                        onMouseEnter={(e) => { const el = e.currentTarget as HTMLElement; el.style.opacity = '1'; el.style.background = 'rgba(239,68,68,0.12)'; }}
+                        onMouseLeave={(e) => { const el = e.currentTarget as HTMLElement; el.style.opacity = '0.75'; el.style.background = 'none'; }}
                       >
                         <Trash2 size={14} />
                       </button>
                     </div>
+
+                    {/* Quick action buttons */}
+                    {!showRelPanel && (
+                      <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+                        <button
+                          title="Enter connect mode (click a target entity to connect)"
+                          onClick={() => setConnectingFrom(selectedEntity.id)}
+                          style={{
+                            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                            padding: '6px 0', borderRadius: 8, cursor: 'pointer', fontSize: 11,
+                            background: 'transparent', border: '1px solid rgba(6,182,212,0.35)',
+                            color: '#06b6d4', transition: 'all 0.15s',
+                          }}
+                          onMouseEnter={(e) => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(6,182,212,0.1)'; }}
+                          onMouseLeave={(e) => { const el = e.currentTarget as HTMLElement; el.style.background = 'transparent'; }}
+                        >
+                          <Link2 size={12} /> Connect
+                        </button>
+                        <button
+                          title="Connect with custom settings (label, color, style)"
+                          onClick={handleOpenRelPanel}
+                          style={{
+                            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                            padding: '6px 0', borderRadius: 8, cursor: 'pointer', fontSize: 11,
+                            background: 'transparent', border: '1px solid rgba(167,139,250,0.35)',
+                            color: '#a78bfa', transition: 'all 0.15s',
+                          }}
+                          onMouseEnter={(e) => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(167,139,250,0.1)'; }}
+                          onMouseLeave={(e) => { const el = e.currentTarget as HTMLElement; el.style.background = 'transparent'; }}
+                        >
+                          <GitMerge size={12} /> With Settings
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Inline connection settings panel */}
+                    {showRelPanel && (
+                      <div className="fade-in" style={{
+                        marginBottom: 14, padding: 12, borderRadius: 10,
+                        background: 'rgba(167,139,250,0.06)',
+                        border: '1px solid rgba(167,139,250,0.3)',
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                            Connection Settings
+                          </span>
+                          <button onClick={() => setShowRelPanel(false)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: 2 }}>
+                            <X size={13} />
+                          </button>
+                        </div>
+
+                        <input
+                          className="input-field"
+                          value={relLabel}
+                          onChange={(e) => setRelLabel(e.target.value)}
+                          placeholder="Label (e.g. Supplies to)"
+                          style={{ width: '100%', fontSize: 11, padding: '5px 8px', marginBottom: 8, boxSizing: 'border-box' }}
+                        />
+
+                        <textarea
+                          className="input-field"
+                          value={relDesc}
+                          onChange={(e) => setRelDesc(e.target.value)}
+                          placeholder="Note (shown on arrow)"
+                          rows={2}
+                          style={{ width: '100%', fontSize: 11, padding: '5px 8px', marginBottom: 8, resize: 'none', boxSizing: 'border-box' }}
+                        />
+
+                        {/* Arrow style */}
+                        <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                          {(['normal', 'animated'] as ArrowStyle[]).map((style) => (
+                            <button
+                              key={style}
+                              onClick={() => setRelArrowStyle(style)}
+                              style={{
+                                flex: 1, padding: '4px 0', borderRadius: 7, cursor: 'pointer', fontSize: 10,
+                                border: `1px solid ${relArrowStyle === style ? relColor : 'rgba(59,130,246,0.2)'}`,
+                                background: relArrowStyle === style ? `${relColor}20` : 'transparent',
+                                color: relArrowStyle === style ? relColor : '#64748b',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                              }}
+                            >
+                              {style === 'normal' ? <Minus size={10} /> : <Zap size={10} />}
+                              {style === 'normal' ? 'Normal' : 'Animated'}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Color swatches */}
+                        <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+                          {RELATIONSHIP_COLORS.map((c) => (
+                            <button
+                              key={c}
+                              onClick={() => setRelColor(c)}
+                              style={{
+                                width: 20, height: 20, borderRadius: '50%', background: c, cursor: 'pointer',
+                                border: relColor === c ? '2px solid white' : '2px solid transparent',
+                                boxShadow: relColor === c ? `0 0 6px ${c}` : 'none', padding: 0,
+                              }}
+                            />
+                          ))}
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button
+                            onClick={() => setShowRelPanel(false)}
+                            style={{
+                              flex: 1, padding: '5px 0', borderRadius: 7, cursor: 'pointer', fontSize: 11,
+                              background: 'transparent', border: '1px solid rgba(59,130,246,0.2)', color: '#64748b',
+                            }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={handleRelPanelSave}
+                            style={{
+                              flex: 2, padding: '5px 0', borderRadius: 7, cursor: 'pointer', fontSize: 11,
+                              background: 'rgba(167,139,250,0.15)', border: '1px solid rgba(167,139,250,0.5)',
+                              color: '#a78bfa', fontWeight: 600,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                            }}
+                          >
+                            <GitMerge size={11} /> Save &amp; Connect
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
                     {selectedEntity.country && (
                       <InfoRow label="Location" value={selectedEntity.country} />
@@ -302,10 +473,73 @@ export default function Sidebar({ onFocusEntity }: SidebarProps) {
                   </div>
                 ) : (
                   <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', padding: '20px 8px', lineHeight: 1.5 }}>
-                    Select an entity on the map to view details
+                    Select an entity on the map or click one in the Entities tab
                   </div>
                 )}
               </div>
+            )}
+          </div>
+
+          {/* ── Bottom: Size controls panel ── */}
+          <div style={{
+            borderTop: '1px solid rgba(59,130,246,0.12)',
+            padding: '12px 14px',
+            background: 'rgba(10,17,34,0.6)',
+            flexShrink: 0,
+          }}>
+            <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+              Display Size
+            </div>
+
+            {/* Entity size */}
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{ fontSize: 11, color: '#94a3b8' }}>Entities</span>
+                <span style={{ fontSize: 11, color: '#3b82f6', fontWeight: 600 }}>{Math.round(entitySizeMult * 100)}%</span>
+              </div>
+              <input
+                type="range"
+                min={0.4}
+                max={2.5}
+                step={0.05}
+                value={entitySizeMult}
+                onChange={(e) => onEntitySizeChange(parseFloat(e.target.value))}
+                style={{ width: '100%', accentColor: '#3b82f6', cursor: 'pointer' }}
+              />
+            </div>
+
+            {/* Arrow size */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{ fontSize: 11, color: '#94a3b8' }}>Arrows</span>
+                <span style={{ fontSize: 11, color: '#06b6d4', fontWeight: 600 }}>{Math.round(arrowSizeMult * 100)}%</span>
+              </div>
+              <input
+                type="range"
+                min={0.4}
+                max={3}
+                step={0.05}
+                value={arrowSizeMult}
+                onChange={(e) => onArrowSizeChange(parseFloat(e.target.value))}
+                style={{ width: '100%', accentColor: '#06b6d4', cursor: 'pointer' }}
+              />
+            </div>
+
+            {/* Reset button */}
+            {(entitySizeMult !== 1 || arrowSizeMult !== 1) && (
+              <button
+                onClick={() => { onEntitySizeChange(1); onArrowSizeChange(1); }}
+                style={{
+                  marginTop: 8, width: '100%', padding: '4px 0', borderRadius: 6,
+                  background: 'transparent', border: '1px solid rgba(59,130,246,0.2)',
+                  color: '#475569', fontSize: 10, cursor: 'pointer',
+                  transition: 'color 0.15s',
+                }}
+                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = '#3b82f6')}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = '#475569')}
+              >
+                Reset sizes
+              </button>
             )}
           </div>
         </>

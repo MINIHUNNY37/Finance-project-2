@@ -31,6 +31,8 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   const [dims, setDims] = useState({ width: 1200, height: 800 });
   const [zoom, setZoom] = useState(1);
   const [fixedEntitySize, setFixedEntitySize] = useState(false);
+  const [entitySizeMult, setEntitySizeMult] = useState(1);
+  const [arrowSizeMult, setArrowSizeMult] = useState(1);
 
   // Pan state
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
@@ -334,7 +336,14 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
         onToggleFixedEntitySize={() => setFixedEntitySize((v) => !v)}
       />
 
-      <Sidebar onFocusEntity={handleFocusEntity} />
+      <Sidebar
+        onFocusEntity={handleFocusEntity}
+        onConnectWithSettings={handleConnectWithSettings}
+        entitySizeMult={entitySizeMult}
+        onEntitySizeChange={setEntitySizeMult}
+        arrowSizeMult={arrowSizeMult}
+        onArrowSizeChange={setArrowSizeMult}
+      />
 
       {/* Outer clip container */}
       <div
@@ -370,6 +379,8 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
               connectingFromId={connectingFromId}
               mousePos={mousePos}
               onEditRelationship={handleEditRelationship}
+              zoom={zoom}
+              arrowSizeMult={arrowSizeMult}
             />
             {currentMap.entities.map((entity) => (
               <EntityCard
@@ -383,6 +394,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
                 mapHeight={dims.height}
                 zoom={zoom}
                 fixedEntitySize={fixedEntitySize}
+                entitySizeMult={entitySizeMult}
                 onConnectWithSettings={handleConnectWithSettings}
                 pendingRelSettings={pendingRelSettings}
               />

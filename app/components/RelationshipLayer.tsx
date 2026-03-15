@@ -13,6 +13,8 @@ interface RelationshipLayerProps {
   connectingFromId: string | null;
   mousePos: { x: number; y: number };
   onEditRelationship: (rel: Relationship) => void;
+  zoom: number;
+  arrowSizeMult: number;
 }
 
 // Quadratic bezier point at t=0.5
@@ -41,12 +43,29 @@ export default function RelationshipLayer({
   connectingFromId,
   mousePos,
   onEditRelationship,
+  zoom,
+  arrowSizeMult,
 }: RelationshipLayerProps) {
   const { deleteRelationship, setSelectedRelationship, selectedRelationshipId } = useMapStore();
   const [hoveredRelId, setHoveredRelId] = useState<string | null>(null);
 
   const entityMap = new Map(entities.map((e) => [e.id, e]));
   const connectingEntity = connectingFromId ? entityMap.get(connectingFromId) : null;
+
+  // Arrow stroke scaling: same inverse-zoom formula as entities (exponent 1.2)
+  // screen_px = strokeWidth × zoom; with strokeWidth = base / zoom^1.2 → screen = base / zoom^0.2
+  // At zoom=1: arrows at base size. At high zoom: slightly thinner (cleaner country view).
+  const zf = zoom > 1 ? Math.pow(zoom, 1.2) : zoom;
+  const arrowBaseStroke = 3.5 * arrowSizeMult;
+  const strokeNormal = arrowBaseStroke / zf;
+  const strokeSelected = (arrowBaseStroke * 1.4) / zf;
+  const strokeTrack = (arrowBaseStroke * 1.15) / zf;
+  const labelFontSize = (11 * arrowSizeMult) / zf;
+
+  // HTML elements (note boxes, action toolbar) in the scaled layer need
+  // the same counter-scale as entity cards so they shrink at high zoom.
+  const htmlZf = zoom > 1 ? Math.pow(zoom, 1.3) : zoom;
+  const htmlScale = 1 / htmlZf;
 
   return (
     <>
@@ -57,7 +76,7 @@ export default function RelationshipLayer({
         height={height}
       >
         <defs>
-          {/* Animated flow — flows continuously from source to target */}
+          {/* Animated flow */}
           <style>{`
             @keyframes flowDash {
               from { stroke-dashoffset: 0; }
@@ -77,12 +96,32 @@ export default function RelationshipLayer({
               refX="7"
               refY="3.5"
               orient="auto"
+              markerUnits="userSpaceOnUse"
             >
-              <path d="M0,0 L0,7 L9,3.5 z" fill={rel.color} opacity={0.95} />
+              {/* marker coords are already in map units, counter-scale the marker path */}
+              <path
+                d={`M0,0 L0,${7 / zf} L${9 / zf},${3.5 / zf} z`}
+                transform={`scale(${zf})`}
+                fill={rel.color}
+                opacity={0.95}
+              />
             </marker>
           ))}
-          <marker id="arrow-preview" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto">
-            <path d="M0,0 L0,7 L9,3.5 z" fill="#06b6d4" opacity={0.7} />
+          <marker
+            id="arrow-preview"
+            markerWidth="9"
+            markerHeight="9"
+            refX="7"
+            refY="3.5"
+            orient="auto"
+            markerUnits="userSpaceOnUse"
+          >
+            <path
+              d={`M0,0 L0,${7 / zf} L${9 / zf},${3.5 / zf} z`}
+              transform={`scale(${zf})`}
+              fill="#06b6d4"
+              opacity={0.7}
+            />
           </marker>
         </defs>
 
@@ -102,14 +141,15 @@ export default function RelationshipLayer({
           const isSelected = selectedRelationshipId === rel.id;
           const isHovered = hoveredRelId === rel.id;
           const isAnimated = rel.arrowStyle === 'animated';
+          const sw = isSelected || isHovered ? strokeSelected : strokeNormal;
 
           return (
             <g key={rel.id}>
-              {/* Wide invisible hit area */}
+              {/* Wide invisible hit area (counter-scaled so it stays usable at any zoom) */}
               <path
                 d={pathD}
                 stroke="transparent"
-                strokeWidth={22}
+                strokeWidth={22 / zf}
                 fill="none"
                 style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
                 onMouseEnter={() => setHoveredRelId(rel.id)}
@@ -117,25 +157,25 @@ export default function RelationshipLayer({
                 onClick={(e) => { e.stopPropagation(); setSelectedRelationship(rel.id); }}
               />
 
-              {/* Animated background track (for animated style) */}
+              {/* Animated background track */}
               {isAnimated && (
                 <path
                   d={pathD}
                   stroke={rel.color}
-                  strokeWidth={isSelected || isHovered ? 5 : 4}
+                  strokeWidth={strokeTrack}
                   fill="none"
                   strokeOpacity={0.18}
                   style={{ pointerEvents: 'none' }}
                 />
               )}
 
-              {/* Main arrow path — thicker */}
+              {/* Main arrow path */}
               <path
                 d={pathD}
                 stroke={rel.color}
-                strokeWidth={isSelected || isHovered ? 5 : 3.5}
+                strokeWidth={sw}
                 fill="none"
-                strokeDasharray={isAnimated ? '8 8' : isSelected ? '7 4' : 'none'}
+                strokeDasharray={isAnimated ? `${8 / zf} ${8 / zf}` : isSelected ? `${7 / zf} ${4 / zf}` : 'none'}
                 className={isAnimated ? 'arrow-animated' : undefined}
                 markerEnd={`url(#arrow-${rel.id})`}
                 opacity={isSelected ? 1 : 0.85}
@@ -146,20 +186,20 @@ export default function RelationshipLayer({
               {rel.label && (
                 <g transform={`translate(${mid.x}, ${mid.y})`} style={{ pointerEvents: 'none' }}>
                   <rect
-                    x={-rel.label.length * 3.8 - 10}
-                    y={-11}
-                    width={rel.label.length * 7.6 + 20}
-                    height={22}
-                    rx={6}
+                    x={-(rel.label.length * 3.8 + 10) / zf}
+                    y={-11 / zf}
+                    width={(rel.label.length * 7.6 + 20) / zf}
+                    height={22 / zf}
+                    rx={6 / zf}
                     fill="rgba(15,23,42,0.92)"
                     stroke={rel.color}
-                    strokeWidth={0.8}
+                    strokeWidth={0.8 / zf}
                   />
                   <text
                     textAnchor="middle"
                     dominantBaseline="middle"
                     fill={rel.color}
-                    fontSize={11}
+                    fontSize={labelFontSize}
                     fontWeight={600}
                   >
                     {rel.label}
@@ -170,7 +210,7 @@ export default function RelationshipLayer({
           );
         })}
 
-        {/* Preview line while dragging a connection */}
+        {/* Preview line while connecting */}
         {connectingEntity && (
           <line
             x1={connectingEntity.position.x}
@@ -178,15 +218,15 @@ export default function RelationshipLayer({
             x2={mousePos.x}
             y2={mousePos.y}
             stroke="#06b6d4"
-            strokeWidth={2}
-            strokeDasharray="7 5"
+            strokeWidth={2 / zf}
+            strokeDasharray={`${7 / zf} ${5 / zf}`}
             markerEnd="url(#arrow-preview)"
             opacity={0.75}
           />
         )}
       </svg>
 
-      {/* HTML overlay: centered action toolbar for selected relationship */}
+      {/* HTML overlay: action toolbar for selected relationship */}
       {relationships.map((rel) => {
         const isSelected = selectedRelationshipId === rel.id;
         if (!isSelected) return null;
@@ -206,7 +246,8 @@ export default function RelationshipLayer({
               position: 'absolute',
               left: mid.x,
               top: mid.y - (rel.label ? 50 : 42),
-              transform: 'translateX(-50%)',
+              transform: `translateX(-50%) scale(${htmlScale})`,
+              transformOrigin: 'center bottom',
               display: 'flex',
               alignItems: 'center',
               gap: 2,
@@ -264,7 +305,8 @@ export default function RelationshipLayer({
               position: 'absolute',
               left: noteX,
               top: noteY,
-              transform: 'translate(-50%, 0)',
+              transform: `translate(-50%, 0) scale(${htmlScale})`,
+              transformOrigin: 'top center',
               pointerEvents: 'all',
               cursor: 'pointer',
               zIndex: isSelected ? 150 : 80,

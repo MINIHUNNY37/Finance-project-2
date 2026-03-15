@@ -29,6 +29,7 @@ interface EntityCardProps {
   fixedEntitySize?: boolean;
   onConnectWithSettings: (fromId: string, settings: RelSettings) => void;
   pendingRelSettings: RelSettings | null;
+  entitySizeMult?: number;
 }
 
 export default function EntityCard({
@@ -43,6 +44,7 @@ export default function EntityCard({
   fixedEntitySize = false,
   onConnectWithSettings,
   pendingRelSettings,
+  entitySizeMult = 1,
 }: EntityCardProps) {
   const {
     moveEntity,
@@ -72,14 +74,14 @@ export default function EntityCard({
   const isLocked = globalLocked || !!entity.locked;
   const isFixedSize = entity.fixedSize || fixedEntitySize;
 
-  // Scale formula:
-  // - fixedSize mode: scale(1/zoom) → entity stays constant visual size on screen
-  // - auto mode: scale(1 / zoom^1.5) when zoom>1, scale(1/zoom) when zoom≤1
-  //   → entities maintain native size when zoomed out, shrink as you zoom in
+  // Scale formula (exponent 1.3 gives a gentle shrink at high zoom):
+  // - fixedSize: scale(1/zoom) → constant visual size always
+  // - auto: scale(1/zoom^1.3) when zoom>1 → screen_size = native/zoom^0.3 (softly shrinks)
+  //         scale(1/zoom) when zoom≤1 → constant size when zoomed out
+  // entitySizeMult lets the user adjust the overall size.
   const entityScale = (() => {
-    if (isFixedSize) return 1 / zoom;
-    const z = zoom > 1 ? Math.pow(zoom, 1.5) : zoom;
-    return 1 / z;
+    const z = isFixedSize ? zoom : (zoom > 1 ? Math.pow(zoom, 1.3) : zoom);
+    return (1 / z) * entitySizeMult;
   })();
 
   // Drag to move
@@ -434,16 +436,6 @@ export default function EntityCard({
                 {entity.subtitle}
               </div>
             )}
-            {entity.country && (
-              <div style={{
-                marginTop: 6, padding: '2px 8px', borderRadius: 20,
-                background: 'rgba(15,23,42,0.75)', color: 'rgba(147,197,253,0.85)',
-                fontSize: 10, border: '1px solid rgba(59,130,246,0.25)',
-              }}>
-                {entity.country}
-              </div>
-            )}
-
             {entity.statistics?.length > 0 && (
               <div style={{ marginTop: 6, width: '100%' }}>
                 {entity.statistics.slice(0, 2).map((stat) => (
