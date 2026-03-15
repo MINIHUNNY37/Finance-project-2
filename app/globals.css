@@ -1,0 +1,188 @@
+@import "tailwindcss";
+
+:root {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-panel: #1a2744;
+  --accent-blue: #3b82f6;
+  --accent-cyan: #06b6d4;
+  --accent-light: #93c5fd;
+  --text-primary: #f0f9ff;
+  --text-secondary: #94a3b8;
+  --border-color: #1e3a5f;
+  --panel-shadow: 0 4px 24px rgba(6, 182, 212, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--accent-blue);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-cyan);
+}
+
+/* Custom glass panel */
+.glass-panel {
+  background: rgba(26, 39, 68, 0.92);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  box-shadow: var(--panel-shadow);
+}
+
+/* Entity card on map */
+.entity-card {
+  cursor: grab;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  user-select: none;
+}
+.entity-card:active {
+  cursor: grabbing;
+}
+.entity-card:hover {
+  transform: scale(1.05);
+  z-index: 100;
+}
+
+/* Btn primary */
+.btn-primary {
+  background: linear-gradient(135deg, #3b82f6, #06b6d4);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.btn-primary:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--accent-light);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.btn-ghost:hover {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: var(--accent-blue);
+}
+
+/* Input */
+.input-field {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 8px;
+  color: var(--text-primary);
+  padding: 8px 12px;
+  font-size: 14px;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.input-field:focus {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.15);
+}
+.input-field::placeholder {
+  color: var(--text-secondary);
+}
+
+/* Glow effects */
+.glow-blue {
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
+}
+.glow-cyan {
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.4);
+}
+
+/* Animated pulse for connecting mode */
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.7); }
+  70% { box-shadow: 0 0 0 8px rgba(6, 182, 212, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0); }
+}
+.pulse-connect {
+  animation: pulse-ring 1.5s infinite;
+}
+
+/* Map countries hover */
+.country-path {
+  transition: fill 0.2s ease;
+}
+.country-path:hover {
+  fill: rgba(59, 130, 246, 0.15) !important;
+  cursor: crosshair;
+}
+
+/* SVG arrow */
+.relationship-line {
+  cursor: pointer;
+  transition: stroke-width 0.15s ease;
+}
+.relationship-line:hover {
+  stroke-width: 3px !important;
+}
+
+/* Tooltip */
+.tooltip {
+  background: rgba(26, 39, 68, 0.98);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--text-primary);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* World map background */
+.world-map-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Fade-in animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-in {
+  animation: fadeIn 0.2s ease;
+}
