@@ -54,6 +54,10 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   const [relDialogOpen, setRelDialogOpen] = useState(false);
   const [editingRel, setEditingRel] = useState<Relationship | undefined>();
 
+  // Draw-connection drag state
+  const [drawingFromId, setDrawingFromId] = useState<string | null>(null);
+  const drawingHandledRef = useRef(false);
+
   // Pending settings for "connect with settings" flow
   const pendingRelSettingsRef = useRef<{
     label: string; description: string; color: string; arrowStyle: ArrowStyle;
@@ -309,6 +313,38 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
     setPendingRelSettings(null);
   }, [setConnectingFrom]);
 
+  const handleStartDrawConnection = useCallback((fromId: string) => {
+    setDrawingFromId(fromId);
+    drawingHandledRef.current = false;
+  }, []);
+
+  const handleDropConnection = useCallback((targetId: string) => {
+    if (!drawingFromId || drawingFromId === targetId) return;
+    drawingHandledRef.current = true;
+    addRelationship({
+      fromEntityId: drawingFromId,
+      toEntityId: targetId,
+      label: '',
+      description: '',
+      color: '#10B981',
+      arrowStyle: 'normal',
+      createdBy: 'local',
+    });
+    setDrawingFromId(null);
+  }, [drawingFromId, addRelationship]);
+
+  // Global mouseup cancels draw mode if no entity handled the drop
+  useEffect(() => {
+    const onMouseUp = () => {
+      if (drawingFromId && !drawingHandledRef.current) {
+        setDrawingFromId(null);
+      }
+      drawingHandledRef.current = false;
+    };
+    document.addEventListener('mouseup', onMouseUp);
+    return () => document.removeEventListener('mouseup', onMouseUp);
+  }, [drawingFromId]);
+
   const handleRelSave = useCallback(
     (data: Partial<Relationship>) => {
       if (editingRel?.id) updateRelationship(editingRel.id, data);
@@ -414,6 +450,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
               onEditRelationship={handleEditRelationship}
               zoom={zoom}
               arrowSizeMult={arrowSizeMult}
+              drawingFromId={drawingFromId}
             />
             {currentMap.entities.filter((e) => !e.hidden).map((entity) => (
               <EntityCard
@@ -430,6 +467,9 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
                 entitySizeMult={entitySizeMult}
                 onConnectWithSettings={handleConnectWithSettings}
                 pendingRelSettings={pendingRelSettings}
+                onStartDrawConnection={handleStartDrawConnection}
+                isDrawTarget={!!drawingFromId && drawingFromId !== entity.id}
+                onDropConnection={handleDropConnection}
               />
             ))}
           </WorldMap>

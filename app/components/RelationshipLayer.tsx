@@ -15,6 +15,7 @@ interface RelationshipLayerProps {
   onEditRelationship: (rel: Relationship) => void;
   zoom: number;
   arrowSizeMult: number;
+  drawingFromId?: string | null;
 }
 
 // Quadratic bezier point at t=0.5
@@ -45,6 +46,7 @@ export default function RelationshipLayer({
   onEditRelationship,
   zoom,
   arrowSizeMult,
+  drawingFromId,
 }: RelationshipLayerProps) {
   const { deleteRelationship, setSelectedRelationship, selectedRelationshipId } = useMapStore();
   const [hoveredRelId, setHoveredRelId] = useState<string | null>(null);
@@ -120,6 +122,22 @@ export default function RelationshipLayer({
               transform={`scale(${zf})`}
               fill="#06b6d4"
               opacity={0.7}
+            />
+          </marker>
+          <marker
+            id="arrow-draw"
+            markerWidth={9 * arrowSizeMult}
+            markerHeight={9 * arrowSizeMult}
+            refX={7 * arrowSizeMult}
+            refY={3.5 * arrowSizeMult}
+            orient="auto"
+            markerUnits="userSpaceOnUse"
+          >
+            <path
+              d={`M0,0 L0,${7 * arrowSizeMult / zf} L${9 * arrowSizeMult / zf},${3.5 * arrowSizeMult / zf} z`}
+              transform={`scale(${zf})`}
+              fill="#a78bfa"
+              opacity={0.85}
             />
           </marker>
         </defs>
@@ -209,7 +227,7 @@ export default function RelationshipLayer({
           );
         })}
 
-        {/* Preview line while connecting */}
+        {/* Preview line while connecting (click-mode) */}
         {connectingEntity && (
           <line
             x1={connectingEntity.position.x}
@@ -223,6 +241,25 @@ export default function RelationshipLayer({
             opacity={0.75}
           />
         )}
+
+        {/* Preview line while drawing (drag-mode) */}
+        {(() => {
+          const drawingEntity = drawingFromId ? entityMap.get(drawingFromId) : null;
+          if (!drawingEntity) return null;
+          return (
+            <line
+              x1={drawingEntity.position.x}
+              y1={drawingEntity.position.y}
+              x2={mousePos.x}
+              y2={mousePos.y}
+              stroke="#a78bfa"
+              strokeWidth={2.5 / zf}
+              strokeDasharray={`${6 / zf} ${4 / zf}`}
+              markerEnd="url(#arrow-draw)"
+              opacity={0.85}
+            />
+          );
+        })()}
       </svg>
 
       {/* HTML overlay: action toolbar for selected relationship */}

@@ -30,6 +30,9 @@ interface EntityCardProps {
   onConnectWithSettings: (fromId: string, settings: RelSettings) => void;
   pendingRelSettings: RelSettings | null;
   entitySizeMult?: number;
+  onStartDrawConnection?: (id: string) => void;
+  isDrawTarget?: boolean;
+  onDropConnection?: (id: string) => void;
 }
 
 export default function EntityCard({
@@ -45,6 +48,9 @@ export default function EntityCard({
   onConnectWithSettings,
   pendingRelSettings,
   entitySizeMult = 1,
+  onStartDrawConnection,
+  isDrawTarget = false,
+  onDropConnection,
 }: EntityCardProps) {
   const {
     moveEntity,
@@ -58,6 +64,7 @@ export default function EntityCard({
     globalLocked,
   } = useMapStore();
 
+  const [cardHovered, setCardHovered] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [showRelPanel, setShowRelPanel] = useState(false);
   const [relLabel, setRelLabel] = useState('');
@@ -229,6 +236,14 @@ export default function EntityCard({
       onMouseDown={handleMouseDown}
       onClick={handleClick}
       onContextMenu={handleContextMenu}
+      onMouseEnter={() => setCardHovered(true)}
+      onMouseLeave={() => setCardHovered(false)}
+      onMouseUp={(e) => {
+        if (isDrawTarget) {
+          e.stopPropagation();
+          onDropConnection?.(entity.id);
+        }
+      }}
     >
       {isSelected ? (
         /* ── FULL CARD (selected) ── center of card anchored at (0,0) */
@@ -566,6 +581,56 @@ export default function EntityCard({
             }}
           />
         </div>
+      )}
+
+      {/* ── Draw-connection port: visible on hover, draggable ── */}
+      {cardHovered && !isConnecting && onStartDrawConnection && (
+        <div
+          className="no-drag"
+          title="Drag to connect"
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            onStartDrawConnection(entity.id);
+          }}
+          style={{
+            position: 'absolute',
+            left: isSelected ? 72 : 72,
+            top: isSelected ? -52 : -52,
+            width: 16,
+            height: 16,
+            borderRadius: '50%',
+            background: 'rgba(6,182,212,0.9)',
+            border: '2px solid rgba(255,255,255,0.6)',
+            cursor: 'crosshair',
+            zIndex: 400,
+            boxShadow: '0 0 10px rgba(6,182,212,0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <div style={{ width: 4, height: 4, borderRadius: '50%', background: 'white' }} />
+        </div>
+      )}
+
+      {/* ── Draw target ring ── */}
+      {isDrawTarget && (
+        <div
+          style={{
+            position: 'absolute',
+            left: isSelected ? -68 : -22,
+            top: isSelected ? -63 : -85,
+            width: isSelected ? 220 : 160,
+            height: isSelected ? 280 : 88,
+            borderRadius: 14,
+            border: '2px solid #06b6d4',
+            boxShadow: '0 0 16px rgba(6,182,212,0.55)',
+            pointerEvents: 'none',
+            zIndex: 300,
+            animation: 'pulseRing 1s ease-in-out infinite',
+          }}
+        />
       )}
     </div>
   );
