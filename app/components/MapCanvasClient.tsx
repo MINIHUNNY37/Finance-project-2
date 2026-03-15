@@ -1,6 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import { signIn, signOut } from 'next-auth/react';
 
 const MapCanvas = dynamic(() => import('./MapCanvas'), { ssr: false });
 
@@ -17,13 +18,8 @@ interface Props {
 }
 
 export default function MapCanvasClient({ serverSession }: Props) {
-  const handleSignIn = () => {
-    window.location.href = '/api/auth/signin/google';
-  };
-
-  const handleSignOut = () => {
-    window.location.href = '/api/auth/signout';
-  };
+  const handleSignIn = () => signIn('google', { callbackUrl: '/' });
+  const handleSignOut = () => signOut({ callbackUrl: '/' });
 
   return (
     <MapCanvas
@@ -33,3 +29,4 @@ export default function MapCanvasClient({ serverSession }: Props) {
     />
   );
 }
+
