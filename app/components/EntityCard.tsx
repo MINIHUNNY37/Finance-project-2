@@ -38,6 +38,7 @@ export default function EntityCard({
   } = useMapStore();
 
   const [expanded, setExpanded] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const isDragging = useRef(false);
   const dragStart = useRef<{
     mouseX: number; mouseY: number; entityX: number; entityY: number;
@@ -97,7 +98,7 @@ export default function EntityCard({
           toEntityId: entity.id,
           label: '',
           description: '',
-          color: '#3B82F6',
+          color: '#10B981',
           arrowStyle: 'normal',
           createdBy: 'local',
         });
@@ -116,13 +117,19 @@ export default function EntityCard({
       if (isDragging.current) return;
       e.stopPropagation();
 
+      // If collapsed, single click expands
+      if (collapsed) {
+        setCollapsed(false);
+        return;
+      }
+
       if (isConnecting && connectingFromId && connectingFromId !== entity.id) {
         addRelationship({
           fromEntityId: connectingFromId,
           toEntityId: entity.id,
           label: '',
           description: '',
-          color: '#3B82F6',
+          color: '#10B981',
           arrowStyle: 'normal',
           createdBy: 'local',
         });
@@ -131,7 +138,16 @@ export default function EntityCard({
       }
       setSelectedEntity(entity.id);
     },
-    [isConnecting, connectingFromId, entity.id, addRelationship, setConnectingFrom, setSelectedEntity]
+    [isConnecting, connectingFromId, entity.id, addRelationship, setConnectingFrom, setSelectedEntity, collapsed]
+  );
+
+  const handleDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (isDragging.current) return;
+      e.stopPropagation();
+      if (!collapsed) setCollapsed(true);
+    },
+    [collapsed]
   );
 
   const hasExpandable =
@@ -149,168 +165,197 @@ export default function EntityCard({
         top: entity.position.y - 56,
         pointerEvents: 'all',
         zIndex: isSelected ? 200 : 50,
+        // Counter-scale so entities stay same visual size regardless of zoom
+        transform: `scale(${1 / zoom})`,
+        transformOrigin: '60px 56px',
       }}
       onMouseDown={handleMouseDown}
       onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
       onContextMenu={handleContextMenu}
     >
-      {/* Main entity node — thicker */}
-      <div
-        className={`relative flex flex-col items-center transition-all duration-150 ${isSelected ? 'glow-cyan' : ''}`}
-        style={{
-          background: isSelected
-            ? `linear-gradient(135deg, ${entity.color}44, ${entity.color}66)`
-            : `linear-gradient(135deg, ${entity.color}28, ${entity.color}40)`,
-          border: `2px solid ${isSelected ? entity.color : entity.color + 'aa'}`,
-          borderRadius: 14,
-          minWidth: 120,
-          maxWidth: 180,
-          padding: '12px 14px',
-          backdropFilter: 'blur(10px)',
-          cursor: isLocked ? 'default' : isConnecting ? 'crosshair' : 'grab',
-        }}
-      >
-        {/* Lock indicator */}
-        {isLocked && (
-          <div style={{ position: 'absolute', top: 6, right: 6, color: entity.color, opacity: 0.6 }}>
-            <Lock size={9} />
+      {/* Collapsed mode — only icon + name */}
+      {collapsed ? (
+        <div
+          className={`relative flex flex-col items-center transition-all duration-150 ${isSelected ? 'glow-cyan' : ''}`}
+          style={{
+            background: `linear-gradient(135deg, ${entity.color}28, ${entity.color}40)`,
+            border: `2px solid ${entity.color}aa`,
+            borderRadius: 14,
+            padding: '10px 14px',
+            backdropFilter: 'blur(10px)',
+            cursor: isLocked ? 'default' : 'pointer',
+            minWidth: 80,
+            alignItems: 'center',
+          }}
+          title="Click to expand"
+        >
+          <div style={{ fontSize: 28, lineHeight: 1, marginBottom: 4 }}>{entity.icon}</div>
+          <div style={{ color: entity.color, fontWeight: 700, fontSize: 12, textAlign: 'center', maxWidth: 100 }}>
+            {entity.name}
           </div>
-        )}
-
-        {/* Icon */}
-        <div style={{ fontSize: 28, lineHeight: 1, marginBottom: 6 }}>{entity.icon}</div>
-
-        {/* Name */}
-        <div style={{ color: entity.color, fontWeight: 700, fontSize: 13, textAlign: 'center', lineHeight: 1.3, maxWidth: 160 }}>
-          {entity.name}
         </div>
-
-        {/* Subtitle */}
-        {entity.subtitle && (
-          <div style={{ color: 'rgba(148,163,184,0.9)', fontSize: 11, textAlign: 'center', marginTop: 3 }}>
-            {entity.subtitle}
-          </div>
-        )}
-
-        {/* Country badge */}
-        {entity.country && (
-          <div style={{
-            marginTop: 6, padding: '2px 8px', borderRadius: 20,
-            background: 'rgba(15,23,42,0.75)', color: 'rgba(147,197,253,0.85)',
-            fontSize: 10, border: '1px solid rgba(59,130,246,0.25)',
-          }}>
-            {entity.country}
-          </div>
-        )}
-
-        {/* Key statistics preview (top 2) */}
-        {entity.statistics?.length > 0 && (
-          <div style={{ marginTop: 6, width: '100%' }}>
-            {entity.statistics.slice(0, 2).map((stat) => (
-              <div key={stat.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, marginTop: 2 }}>
-                <span style={{ color: 'rgba(148,163,184,0.7)' }}>{stat.name}</span>
-                <span style={{ color: entity.color, fontWeight: 600 }}>{stat.value || '—'}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Expand toggle */}
-        {hasExpandable && (
-          <button
-            className="no-drag"
-            style={{ color: 'rgba(148,163,184,0.5)', background: 'none', border: 'none', cursor: 'pointer', marginTop: 4 }}
-            onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
-          >
-            {expanded ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
-          </button>
-        )}
-
-        {/* Expanded panel */}
-        {expanded && (
+      ) : (
+        <>
+          {/* Main entity node */}
           <div
-            className="no-drag fade-in"
+            className={`relative flex flex-col items-center transition-all duration-150 ${isSelected ? 'glow-cyan' : ''}`}
             style={{
-              marginTop: 8, background: 'rgba(15,23,42,0.93)',
-              border: '1px solid rgba(59,130,246,0.2)', borderRadius: 10,
-              padding: 10, width: '100%', minWidth: 160,
+              background: isSelected
+                ? `linear-gradient(135deg, ${entity.color}44, ${entity.color}66)`
+                : `linear-gradient(135deg, ${entity.color}28, ${entity.color}40)`,
+              border: `2px solid ${isSelected ? entity.color : entity.color + 'aa'}`,
+              borderRadius: 14,
+              minWidth: 120,
+              maxWidth: 180,
+              padding: '12px 14px',
+              backdropFilter: 'blur(10px)',
+              cursor: isLocked ? 'default' : isConnecting ? 'crosshair' : 'grab',
             }}
           >
-            {entity.description && (
-              <p style={{ color: 'rgba(148,163,184,0.9)', fontSize: 11, lineHeight: 1.4, marginBottom: 6 }}>
-                {entity.description}
-              </p>
+            {/* Lock indicator */}
+            {isLocked && (
+              <div style={{ position: 'absolute', top: 6, right: 6, color: entity.color, opacity: 0.6 }}>
+                <Lock size={9} />
+              </div>
             )}
 
-            {/* Sub-items */}
-            {entity.subItems?.map((sub) => (
-              <div key={sub.id} style={{ marginBottom: 6 }}>
-                <div style={{ color: '#93c5fd', fontWeight: 600, fontSize: 11 }}>{sub.title}</div>
-                <div style={{ color: 'rgba(148,163,184,0.8)', fontSize: 10, marginTop: 2, lineHeight: 1.3 }}>
-                  {sub.description}
-                </div>
-              </div>
-            ))}
+            {/* Icon */}
+            <div style={{ fontSize: 28, lineHeight: 1, marginBottom: 6 }}>{entity.icon}</div>
 
-            {/* All statistics */}
+            {/* Name */}
+            <div style={{ color: entity.color, fontWeight: 700, fontSize: 13, textAlign: 'center', lineHeight: 1.3, maxWidth: 160 }}>
+              {entity.name}
+            </div>
+
+            {/* Subtitle */}
+            {entity.subtitle && (
+              <div style={{ color: 'rgba(148,163,184,0.9)', fontSize: 11, textAlign: 'center', marginTop: 3 }}>
+                {entity.subtitle}
+              </div>
+            )}
+
+            {/* Country badge */}
+            {entity.country && (
+              <div style={{
+                marginTop: 6, padding: '2px 8px', borderRadius: 20,
+                background: 'rgba(15,23,42,0.75)', color: 'rgba(147,197,253,0.85)',
+                fontSize: 10, border: '1px solid rgba(59,130,246,0.25)',
+              }}>
+                {entity.country}
+              </div>
+            )}
+
+            {/* Key statistics preview (top 2) */}
             {entity.statistics?.length > 0 && (
-              <div style={{ marginTop: 4, borderTop: '1px solid rgba(59,130,246,0.15)', paddingTop: 6 }}>
-                <div style={{ fontSize: 9, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
-                  Key Statistics
-                </div>
-                {entity.statistics.map((stat) => (
-                  <div key={stat.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 3 }}>
-                    <span style={{ color: 'rgba(148,163,184,0.75)' }}>{stat.name}</span>
+              <div style={{ marginTop: 6, width: '100%' }}>
+                {entity.statistics.slice(0, 2).map((stat) => (
+                  <div key={stat.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, marginTop: 2 }}>
+                    <span style={{ color: 'rgba(148,163,184,0.7)' }}>{stat.name}</span>
                     <span style={{ color: entity.color, fontWeight: 600 }}>{stat.value || '—'}</span>
                   </div>
                 ))}
               </div>
             )}
+
+            {/* Expand toggle */}
+            {hasExpandable && (
+              <button
+                className="no-drag"
+                style={{ color: 'rgba(148,163,184,0.5)', background: 'none', border: 'none', cursor: 'pointer', marginTop: 4 }}
+                onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+              >
+                {expanded ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+              </button>
+            )}
+
+            {/* Expanded panel */}
+            {expanded && (
+              <div
+                className="no-drag fade-in"
+                style={{
+                  marginTop: 8, background: 'rgba(15,23,42,0.93)',
+                  border: '1px solid rgba(59,130,246,0.2)', borderRadius: 10,
+                  padding: 10, width: '100%', minWidth: 160,
+                }}
+              >
+                {entity.description && (
+                  <p style={{ color: 'rgba(148,163,184,0.9)', fontSize: 11, lineHeight: 1.4, marginBottom: 6 }}>
+                    {entity.description}
+                  </p>
+                )}
+
+                {/* Sub-items */}
+                {entity.subItems?.map((sub) => (
+                  <div key={sub.id} style={{ marginBottom: 6 }}>
+                    <div style={{ color: '#93c5fd', fontWeight: 600, fontSize: 11 }}>{sub.title}</div>
+                    <div style={{ color: 'rgba(148,163,184,0.8)', fontSize: 10, marginTop: 2, lineHeight: 1.3 }}>
+                      {sub.description}
+                    </div>
+                  </div>
+                ))}
+
+                {/* All statistics */}
+                {entity.statistics?.length > 0 && (
+                  <div style={{ marginTop: 4, borderTop: '1px solid rgba(59,130,246,0.15)', paddingTop: 6 }}>
+                    <div style={{ fontSize: 9, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
+                      Key Statistics
+                    </div>
+                    {entity.statistics.map((stat) => (
+                      <div key={stat.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 3 }}>
+                        <span style={{ color: 'rgba(148,163,184,0.75)' }}>{stat.name}</span>
+                        <span style={{ color: entity.color, fontWeight: 600 }}>{stat.value || '—'}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* Action toolbar — visible when selected */}
-      {isSelected && (
-        <div
-          className="no-drag fade-in"
-          style={{
-            position: 'absolute',
-            top: -38,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            display: 'flex',
-            gap: 2,
-            background: 'rgba(15,23,42,0.97)',
-            border: '1px solid rgba(59,130,246,0.35)',
-            borderRadius: 10,
-            padding: '5px 8px',
-            whiteSpace: 'nowrap',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-          }}
-        >
-          <ActionBtn icon={<Edit2 size={13} />} title="Edit" onClick={(e) => { e.stopPropagation(); onEdit(entity); }} color="#3b82f6" />
-          <ActionBtn icon={<Link2 size={13} />} title="Right-click to connect" onClick={(e) => { e.stopPropagation(); setConnectingFrom(entity.id); }} color="#06b6d4" />
-          <ActionBtn
-            icon={entity.locked ? <Unlock size={13} /> : <Lock size={13} />}
-            title={entity.locked ? 'Unlock' : 'Lock position'}
-            onClick={(e) => { e.stopPropagation(); toggleEntityLock(entity.id); }}
-            color="#f59e0b"
-          />
-          <ActionBtn icon={<Trash2 size={13} />} title="Delete" onClick={(e) => { e.stopPropagation(); onDelete(entity.id); }} color="#ef4444" />
-        </div>
-      )}
+          {/* Action toolbar — visible when selected */}
+          {isSelected && (
+            <div
+              className="no-drag fade-in"
+              style={{
+                position: 'absolute',
+                top: -38,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                display: 'flex',
+                gap: 2,
+                background: 'rgba(15,23,42,0.97)',
+                border: '1px solid rgba(59,130,246,0.35)',
+                borderRadius: 10,
+                padding: '5px 8px',
+                whiteSpace: 'nowrap',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+              }}
+            >
+              <ActionBtn icon={<Edit2 size={13} />} title="Edit" onClick={(e) => { e.stopPropagation(); onEdit(entity); }} color="#3b82f6" />
+              <ActionBtn icon={<Link2 size={13} />} title="Right-click to connect" onClick={(e) => { e.stopPropagation(); setConnectingFrom(entity.id); }} color="#06b6d4" />
+              <ActionBtn
+                icon={entity.locked ? <Unlock size={13} /> : <Lock size={13} />}
+                title={entity.locked ? 'Unlock' : 'Lock position'}
+                onClick={(e) => { e.stopPropagation(); toggleEntityLock(entity.id); }}
+                color="#f59e0b"
+              />
+              <ActionBtn icon={<Trash2 size={13} />} title="Delete" onClick={(e) => { e.stopPropagation(); onDelete(entity.id); }} color="#ef4444" />
+            </div>
+          )}
 
-      {/* Connecting-from indicator */}
-      {isConnectingFrom && (
-        <div style={{
-          position: 'absolute', top: -26, left: '50%', transform: 'translateX(-50%)',
-          fontSize: 10, color: '#06b6d4', whiteSpace: 'nowrap',
-          background: 'rgba(26,39,68,0.95)', border: '1px solid #06b6d4',
-          borderRadius: 5, padding: '2px 8px',
-        }}>
-          Right-click target to connect
-        </div>
+          {/* Connecting-from indicator */}
+          {isConnectingFrom && (
+            <div style={{
+              position: 'absolute', top: -26, left: '50%', transform: 'translateX(-50%)',
+              fontSize: 10, color: '#06b6d4', whiteSpace: 'nowrap',
+              background: 'rgba(26,39,68,0.95)', border: '1px solid #06b6d4',
+              borderRadius: 5, padding: '2px 8px',
+            }}>
+              Right-click target to connect
+            </div>
+          )}
+        </>
       )}
     </div>
   );

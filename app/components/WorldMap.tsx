@@ -160,9 +160,9 @@ export default function WorldMap({ onCountryClick, children, width, height }: Wo
 
         {/* Countries */}
         <g>
-          {paths.map(({ id, path, name }) => (
+          {paths.map(({ id, path, name }, index) => (
             <path
-              key={id}
+              key={id || `country-${index}`}
               d={path}
               className="country-path"
               fill={

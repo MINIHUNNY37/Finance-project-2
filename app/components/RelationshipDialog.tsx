@@ -15,7 +15,7 @@ interface RelationshipDialogProps {
 export default function RelationshipDialog({ isOpen, onClose, onSave, initialData }: RelationshipDialogProps) {
   const [label, setLabel] = useState('');
   const [description, setDescription] = useState('');
-  const [color, setColor] = useState(RELATIONSHIP_COLORS[0]);
+  const [color, setColor] = useState(RELATIONSHIP_COLORS[0]); // defaults to green
   const [arrowStyle, setArrowStyle] = useState<ArrowStyle>('normal');
 
   useEffect(() => {

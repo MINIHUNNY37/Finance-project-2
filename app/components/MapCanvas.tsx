@@ -155,6 +155,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
 
   const handleEditEntity = useCallback((entity: Entity) => {
     setEditingEntity(entity);
+    setPendingPosition(entity.position);
     setEntityDialogOpen(true);
   }, []);
 

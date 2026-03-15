@@ -57,14 +57,14 @@ export default function RelationshipLayer({
         height={height}
       >
         <defs>
-          {/* Animated flow gradient for supply-chain style */}
+          {/* Animated flow — flows continuously from source to target */}
           <style>{`
             @keyframes flowDash {
-              from { stroke-dashoffset: 24; }
-              to { stroke-dashoffset: 0; }
+              from { stroke-dashoffset: 0; }
+              to { stroke-dashoffset: -16; }
             }
             .arrow-animated {
-              animation: flowDash 0.8s linear infinite;
+              animation: flowDash 0.6s linear infinite;
             }
           `}</style>
 
@@ -109,7 +109,7 @@ export default function RelationshipLayer({
               <path
                 d={pathD}
                 stroke="transparent"
-                strokeWidth={18}
+                strokeWidth={22}
                 fill="none"
                 style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
                 onMouseEnter={() => setHoveredRelId(rel.id)}
@@ -122,23 +122,23 @@ export default function RelationshipLayer({
                 <path
                   d={pathD}
                   stroke={rel.color}
-                  strokeWidth={isSelected || isHovered ? 3.5 : 2.5}
+                  strokeWidth={isSelected || isHovered ? 5 : 4}
                   fill="none"
                   strokeOpacity={0.18}
                   style={{ pointerEvents: 'none' }}
                 />
               )}
 
-              {/* Main arrow path */}
+              {/* Main arrow path — thicker */}
               <path
                 d={pathD}
                 stroke={rel.color}
-                strokeWidth={isSelected || isHovered ? 3 : 2}
+                strokeWidth={isSelected || isHovered ? 5 : 3.5}
                 fill="none"
                 strokeDasharray={isAnimated ? '8 8' : isSelected ? '7 4' : 'none'}
                 className={isAnimated ? 'arrow-animated' : undefined}
                 markerEnd={`url(#arrow-${rel.id})`}
-                opacity={isSelected ? 1 : 0.8}
+                opacity={isSelected ? 1 : 0.85}
                 style={{ pointerEvents: 'none' }}
               />
 
@@ -166,33 +166,6 @@ export default function RelationshipLayer({
                   </text>
                 </g>
               )}
-
-              {/* Action buttons when selected */}
-              {isSelected && (
-                <g transform={`translate(${mid.x}, ${mid.y - (rel.label ? 30 : 22)})`} style={{ pointerEvents: 'all' }}>
-                  <rect x={-38} y={-12} width={76} height={24} rx={6}
-                    fill="rgba(15,23,42,0.97)"
-                    stroke="rgba(59,130,246,0.4)"
-                    strokeWidth={0.8}
-                  />
-                  {/* Edit */}
-                  <g transform="translate(-22, 0)" style={{ cursor: 'pointer' }}
-                    onClick={() => onEditRelationship(rel)}>
-                    <rect x={-9} y={-9} width={18} height={18} rx={3} fill="transparent" />
-                    <Edit2 size={12} color="#3b82f6" />
-                  </g>
-                  {/* Note indicator */}
-                  <g transform="translate(0, 0)" style={{ cursor: 'default' }}>
-                    <MessageSquare size={12} color={rel.description ? '#06b6d4' : '#475569'} />
-                  </g>
-                  {/* Delete */}
-                  <g transform="translate(22, 0)" style={{ cursor: 'pointer' }}
-                    onClick={() => deleteRelationship(rel.id)}>
-                    <rect x={-9} y={-9} width={18} height={18} rx={3} fill="transparent" />
-                    <Trash2 size={12} color="#ef4444" />
-                  </g>
-                </g>
-              )}
             </g>
           );
         })}
@@ -213,6 +186,59 @@ export default function RelationshipLayer({
         )}
       </svg>
 
+      {/* HTML overlay: centered action toolbar for selected relationship */}
+      {relationships.map((rel) => {
+        const isSelected = selectedRelationshipId === rel.id;
+        if (!isSelected) return null;
+        const from = entityMap.get(rel.fromEntityId);
+        const to = entityMap.get(rel.toEntityId);
+        if (!from || !to) return null;
+
+        const x1 = from.position.x, y1 = from.position.y;
+        const x2 = to.position.x, y2 = to.position.y;
+        const cp = getControlPoint(x1, y1, x2, y2);
+        const mid = bezierMid(x1, y1, cp.x, cp.y, x2, y2);
+
+        return (
+          <div
+            key={`toolbar-${rel.id}`}
+            style={{
+              position: 'absolute',
+              left: mid.x,
+              top: mid.y - (rel.label ? 50 : 42),
+              transform: 'translateX(-50%)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2,
+              background: 'rgba(15,23,42,0.97)',
+              border: '1px solid rgba(59,130,246,0.4)',
+              borderRadius: 10,
+              padding: '5px 8px',
+              whiteSpace: 'nowrap',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+              pointerEvents: 'all',
+              zIndex: 200,
+            }}
+          >
+            <RelActionBtn
+              icon={<Edit2 size={13} />}
+              title="Edit connection"
+              onClick={(e) => { e.stopPropagation(); onEditRelationship(rel); }}
+              color="#3b82f6"
+            />
+            <div style={{ color: rel.description ? '#06b6d4' : '#475569', display: 'flex', alignItems: 'center', padding: '3px 5px' }}>
+              <MessageSquare size={13} />
+            </div>
+            <RelActionBtn
+              icon={<Trash2 size={13} />}
+              title="Delete connection"
+              onClick={(e) => { e.stopPropagation(); deleteRelationship(rel.id); }}
+              color="#ef4444"
+            />
+          </div>
+        );
+      })}
+
       {/* HTML note boxes for relationship descriptions */}
       {relationships.map((rel) => {
         if (!rel.description) return null;
@@ -228,8 +254,7 @@ export default function RelationshipLayer({
         const mid = bezierMid(x1, y1, cp.x, cp.y, x2, y2);
         const isSelected = selectedRelationshipId === rel.id;
 
-        // Offset note box slightly below the midpoint
-        const noteX = mid.x + (rel.label ? 0 : 0);
+        const noteX = mid.x;
         const noteY = mid.y + (rel.label ? 20 : 10);
 
         return (
@@ -259,7 +284,6 @@ export default function RelationshipLayer({
               boxShadow: isSelected ? `0 0 10px ${rel.color}44` : '0 2px 8px rgba(0,0,0,0.3)',
               backdropFilter: 'blur(6px)',
               transition: 'all 0.15s ease',
-              // Small "sticky note" triangle pointer at top
               position: 'relative',
             }}>
               <div style={{
@@ -278,5 +302,26 @@ export default function RelationshipLayer({
         );
       })}
     </>
+  );
+}
+
+function RelActionBtn({ icon, title, onClick, color }: {
+  icon: React.ReactNode; title: string;
+  onClick: (e: React.MouseEvent) => void; color: string;
+}) {
+  return (
+    <button
+      title={title}
+      onClick={onClick}
+      style={{
+        background: 'none', border: 'none', color, cursor: 'pointer',
+        padding: '3px 5px', borderRadius: 5, display: 'flex', alignItems: 'center',
+        transition: 'background 0.1s ease',
+      }}
+      onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = `${color}25`)}
+      onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = 'none')}
+    >
+      {icon}
+    </button>
   );
 }

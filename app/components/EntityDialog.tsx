@@ -192,15 +192,37 @@ export default function EntityDialog({
           {/* === DETAILS TAB === */}
           {activeTab === 'details' && (
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                 <label style={labelStyle}>Sub-sections</label>
                 <button className="btn-ghost" style={{ padding: '4px 10px', fontSize: 12 }} onClick={addSubItem}>
                   <Plus size={12} style={{ display: 'inline', marginRight: 4 }} />Add
                 </button>
               </div>
+
+              {/* Quick add preset sub-sections */}
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 6 }}>Quick add:</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {['Revenue Streams', 'Key Risks', 'Customers', 'Competitors', 'Operations', 'Products', 'Key People', 'Supply Chain'].map((preset) => (
+                    <button key={preset}
+                      onClick={() => setSubItems([...subItems, { id: uuidv4(), title: preset, description: '' }])}
+                      style={{
+                        background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)',
+                        borderRadius: 6, padding: '3px 8px', fontSize: 11, color: '#93c5fd', cursor: 'pointer',
+                        transition: 'all 0.1s',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.2)'}
+                      onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.1)'}
+                    >
+                      + {preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {subItems.length === 0 && (
-                <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', padding: '20px 0' }}>
-                  Add sub-sections like &quot;Revenue Streams&quot;, &quot;Key Risks&quot;, &quot;Customers&quot;...
+                <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', padding: '12px 0' }}>
+                  No sub-sections yet. Use quick add above or click Add.
                 </div>
               )}
               {subItems.map((sub) => (
@@ -241,33 +263,31 @@ export default function EntityDialog({
               </div>
 
               {statistics.length === 0 && (
-                <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', padding: '20px 0' }}>
+                <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', padding: '12px 0' }}>
                   <BarChart2 size={24} style={{ margin: '0 auto 8px', color: '#334155' }} />
-                  Add statistics like Revenue, P/E Ratio, Market Cap, EPS...
+                  No statistics yet. Use quick add below.
                 </div>
               )}
 
-              {/* Preset suggestions */}
-              {statistics.length === 0 && (
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 11, color: '#64748b', marginBottom: 8 }}>Quick add:</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {['Revenue', 'Net Income', 'Market Cap', 'P/E Ratio', 'EPS', 'Dividend Yield', 'Employees', 'Debt/Equity'].map((name) => (
-                      <button key={name} onClick={() => setStatistics([...statistics, { id: uuidv4(), name, value: '' }])}
-                        style={{
-                          background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)',
-                          borderRadius: 6, padding: '3px 8px', fontSize: 11, color: '#93c5fd', cursor: 'pointer',
-                          transition: 'all 0.1s',
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.2)'}
-                        onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.1)'}
-                      >
-                        + {name}
-                      </button>
-                    ))}
-                  </div>
+              {/* Preset suggestions — always visible */}
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 8 }}>Quick add:</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {['Revenue', 'Net Income', 'Market Cap', 'P/E Ratio', 'EPS', 'Dividend Yield', 'Employees', 'Debt/Equity'].map((statName) => (
+                    <button key={statName} onClick={() => setStatistics([...statistics, { id: uuidv4(), name: statName, value: '' }])}
+                      style={{
+                        background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)',
+                        borderRadius: 6, padding: '3px 8px', fontSize: 11, color: '#93c5fd', cursor: 'pointer',
+                        transition: 'all 0.1s',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.2)'}
+                      onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.1)'}
+                    >
+                      + {statName}
+                    </button>
+                  ))}
                 </div>
-              )}
+              </div>
 
               {statistics.map((stat, i) => (
                 <div key={stat.id} style={{
