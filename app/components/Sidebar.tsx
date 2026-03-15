@@ -32,6 +32,8 @@ interface SidebarProps {
   onEntitySizeChange: (v: number) => void;
   arrowSizeMult: number;
   onArrowSizeChange: (v: number) => void;
+  isDrawMode: boolean;
+  onToggleDrawMode: () => void;
 }
 
 export default function Sidebar({
@@ -46,6 +48,8 @@ export default function Sidebar({
   onEntitySizeChange,
   arrowSizeMult,
   onArrowSizeChange,
+  isDrawMode,
+  onToggleDrawMode,
 }: SidebarProps) {
   const {
     currentMap, selectedEntityId, setSelectedEntity, setConnectingFrom,
@@ -376,9 +380,38 @@ export default function Sidebar({
             {/* ── CONNECTIONS TAB ── */}
             {activeTab === 'connections' && (
               <div>
-                <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8, paddingLeft: 4 }}>
-                  All Connections ({currentMap.relationships.length})
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingLeft: 4 }}>
+                  <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    All Connections ({currentMap.relationships.length})
+                  </div>
+                  <button
+                    onClick={onToggleDrawMode}
+                    title={isDrawMode ? 'Exit draw mode' : 'Draw connections by right-click dragging between entities'}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 4,
+                      padding: '3px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
+                      background: isDrawMode ? 'rgba(168,85,247,0.2)' : 'rgba(15,23,42,0.5)',
+                      border: `1px solid ${isDrawMode ? 'rgba(168,85,247,0.6)' : 'rgba(59,130,246,0.2)'}`,
+                      color: isDrawMode ? '#c084fc' : '#475569',
+                      fontWeight: isDrawMode ? 600 : 400,
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                    </svg>
+                    Draw
+                  </button>
                 </div>
+                {isDrawMode && (
+                  <div style={{
+                    marginBottom: 8, padding: '6px 10px', borderRadius: 7,
+                    background: 'rgba(168,85,247,0.08)', border: '1px solid rgba(168,85,247,0.25)',
+                    fontSize: 11, color: '#a78bfa', lineHeight: 1.5,
+                  }}>
+                    Right-click and drag from one entity to another to draw a connection
+                  </div>
+                )}
                 {currentMap.relationships.length === 0 ? (
                   <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', padding: '20px 8px', lineHeight: 1.5 }}>
                     Select two entities and use Connect to create a connection

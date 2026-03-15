@@ -34,6 +34,7 @@ interface EntityCardProps {
   onStartDrawConnection?: (id: string) => void;
   isDrawTarget?: boolean;
   onDropConnection?: (id: string) => void;
+  isDrawMode?: boolean;
 }
 
 export default function EntityCard({
@@ -52,6 +53,7 @@ export default function EntityCard({
   onStartDrawConnection,
   isDrawTarget = false,
   onDropConnection,
+  isDrawMode = false,
 }: EntityCardProps) {
   const {
     moveEntity,
@@ -144,10 +146,14 @@ export default function EntityCard({
     [pendingRelSettings]
   );
 
-  // Right-click to connect
+  // Right-click: start drawing in draw mode, otherwise normal connect
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
+      if (isDrawMode) {
+        // drawing is started on mousedown; contextmenu just suppresses the menu
+        return;
+      }
       if (isConnecting && connectingFromId && connectingFromId !== entity.id) {
         const rel = makeRelPayload();
         addRelationship({
@@ -165,7 +171,29 @@ export default function EntityCard({
         setSelectedEntity(entity.id);
       }
     },
-    [isConnecting, connectingFromId, entity.id, addRelationship, setConnectingFrom, setSelectedEntity, makeRelPayload]
+    [isDrawMode, isConnecting, connectingFromId, entity.id, addRelationship, setConnectingFrom, setSelectedEntity, makeRelPayload]
+  );
+
+  // Right-mousedown in draw mode → start the draw line
+  const handleMouseDownDraw = useCallback(
+    (e: React.MouseEvent) => {
+      if (!isDrawMode || e.button !== 2) return;
+      e.preventDefault();
+      e.stopPropagation();
+      onStartDrawConnection?.(entity.id);
+    },
+    [isDrawMode, entity.id, onStartDrawConnection]
+  );
+
+  // Right-mouseup in draw mode over this entity → complete the connection
+  const handleMouseUpDraw = useCallback(
+    (e: React.MouseEvent) => {
+      if (!isDrawMode || e.button !== 2) return;
+      e.preventDefault();
+      e.stopPropagation();
+      onDropConnection?.(entity.id);
+    },
+    [isDrawMode, entity.id, onDropConnection]
   );
 
   const handleClick = useCallback(
@@ -235,17 +263,18 @@ export default function EntityCard({
         transform: `scale(${entityScale})`,
         transformOrigin: '0 0',
       }}
-      onMouseDown={handleMouseDown}
-      onClick={handleClick}
-      onContextMenu={handleContextMenu}
-      onMouseEnter={() => setCardHovered(true)}
-      onMouseLeave={() => setCardHovered(false)}
+      onMouseDown={(e) => { handleMouseDownDraw(e); handleMouseDown(e); }}
       onMouseUp={(e) => {
-        if (isDrawTarget) {
+        handleMouseUpDraw(e);
+        if (!isDrawMode && isDrawTarget) {
           e.stopPropagation();
           onDropConnection?.(entity.id);
         }
       }}
+      onClick={handleClick}
+      onContextMenu={handleContextMenu}
+      onMouseEnter={() => setCardHovered(true)}
+      onMouseLeave={() => setCardHovered(false)}
     >
       {isSelected ? (
         /* ── FULL CARD (selected) ── center of card anchored at (0,0) */

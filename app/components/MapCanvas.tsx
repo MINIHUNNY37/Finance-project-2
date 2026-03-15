@@ -60,6 +60,9 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   const [drawingFromId, setDrawingFromId] = useState<string | null>(null);
   const drawingHandledRef = useRef(false);
 
+  // Draw mode (freehand right-click-drag connections)
+  const [isDrawMode, setIsDrawMode] = useState(false);
+
   // Pending settings for "connect with settings" flow
   const pendingRelSettingsRef = useRef<{
     label: string; description: string; color: string; arrowStyle: ArrowStyle;
@@ -106,6 +109,8 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
       if (e.key === 'Escape') {
         setConnectingFrom(null);
         setSelectedEntity(null);
+        setIsDrawMode(false);
+        setDrawingFromId(null);
         pendingRelSettingsRef.current = null;
         setPendingRelSettings(null);
       }
@@ -414,6 +419,8 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
         onEntitySizeChange={setEntitySizeMult}
         arrowSizeMult={arrowSizeMult}
         onArrowSizeChange={setArrowSizeMult}
+        isDrawMode={isDrawMode}
+        onToggleDrawMode={() => setIsDrawMode((v) => !v)}
       />
 
       {/* Outer clip container */}
@@ -422,7 +429,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
         style={{
           position: 'fixed', top: 56, left: 0, right: 0, bottom: 0,
           overflow: 'hidden',
-          cursor: isConnecting ? 'crosshair' : 'grab',
+          cursor: isConnecting ? 'crosshair' : isDrawMode ? 'crosshair' : 'grab',
         }}
         onMouseMove={handleMouseMove}
         onMouseDown={handleContainerMouseDown}
@@ -477,6 +484,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
                   onStartDrawConnection={handleStartDrawConnection}
                   isDrawTarget={!!drawingFromId && drawingFromId !== entity.id}
                   onDropConnection={handleDropConnection}
+                  isDrawMode={isDrawMode}
                 />
               ))}
             </WorldMap>
@@ -529,6 +537,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
                   onStartDrawConnection={handleStartDrawConnection}
                   isDrawTarget={!!drawingFromId && drawingFromId !== entity.id}
                   onDropConnection={handleDropConnection}
+                  isDrawMode={isDrawMode}
                 />
               ))}
             </div>
@@ -575,6 +584,19 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
                 Reset view
               </button>
             )}
+          </div>
+        )}
+
+        {/* Draw mode hint */}
+        {isDrawMode && !drawingFromId && (
+          <div style={{
+            position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)',
+            background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(168,85,247,0.5)',
+            borderRadius: 10, padding: '8px 16px', color: '#c084fc',
+            fontSize: 13, fontWeight: 500, pointerEvents: 'none',
+            backdropFilter: 'blur(8px)', zIndex: 10,
+          }}>
+            ✏️ Right-click drag from an entity to draw a connection · Esc to exit
           </div>
         )}
 
