@@ -2,17 +2,9 @@
 
 import React, { useState } from 'react';
 import {
-  Save,
-  Share2,
-  Map,
-  Plus,
-  Link2,
-  X,
-  ChevronDown,
-  TrendingUp,
-  LogIn,
-  LogOut,
-  User,
+  Save, Share2, Map, Plus, Link2, X,
+  ChevronDown, TrendingUp, LogIn, LogOut, User,
+  ZoomIn, ZoomOut, RotateCcw, Lock, Unlock,
 } from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
 import ShareDialog from './ShareDialog';
@@ -25,17 +17,18 @@ interface ToolbarProps {
   session: { user?: { name?: string | null; email?: string | null; image?: string | null } } | null;
   onSignIn: () => void;
   onSignOut: () => void;
+  zoom: number;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onZoomReset: () => void;
 }
 
 export default function Toolbar({
-  onAddEntity,
-  isConnecting,
-  onToggleConnect,
-  session,
-  onSignIn,
-  onSignOut,
+  onAddEntity, isConnecting, onToggleConnect,
+  session, onSignIn, onSignOut,
+  zoom, onZoomIn, onZoomOut, onZoomReset,
 }: ToolbarProps) {
-  const { currentMap, saveCurrentMap } = useMapStore();
+  const { currentMap, saveCurrentMap, globalLocked, toggleGlobalLock } = useMapStore();
   const [showShare, setShowShare] = useState(false);
   const [showMaps, setShowMaps] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -48,52 +41,36 @@ export default function Toolbar({
 
   return (
     <>
-      <div
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 56,
-          background: 'rgba(15,23,42,0.96)',
-          borderBottom: '1px solid rgba(59,130,246,0.2)',
-          backdropFilter: 'blur(12px)',
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0 16px',
-          gap: 8,
-          zIndex: 500,
-        }}
-      >
+      <div style={{
+        position: 'fixed', top: 0, left: 0, right: 0, height: 56,
+        background: 'rgba(10,17,34,0.97)',
+        borderBottom: '1px solid rgba(59,130,246,0.18)',
+        backdropFilter: 'blur(12px)',
+        display: 'flex', alignItems: 'center',
+        padding: '0 12px', gap: 6, zIndex: 500,
+      }}>
         {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginRight: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginRight: 10, flexShrink: 0 }}>
           <div style={{
             width: 32, height: 32, borderRadius: 8,
             background: 'linear-gradient(135deg, #3b82f6, #06b6d4)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <TrendingUp size={16} style={{ color: 'white' }} />
+            <TrendingUp size={16} color="white" />
           </div>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#e2e8f0', lineHeight: 1.2 }}>StockMapper</div>
-            <div style={{ fontSize: 10, color: '#64748b', lineHeight: 1 }}>Scenario Planner</div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#e2e8f0', lineHeight: 1.2 }}>StockMapper</span>
+            <span style={{ fontSize: 9, color: '#64748b', lineHeight: 1 }}>Scenario Planner</span>
           </div>
         </div>
 
         {/* Map name */}
         <div
           style={{
-            flex: 1,
-            fontSize: 14,
-            fontWeight: 600,
-            color: '#93c5fd',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            cursor: 'pointer',
-            padding: '4px 8px',
-            borderRadius: 6,
-            transition: 'background 0.15s',
+            fontSize: 13, fontWeight: 600, color: '#93c5fd',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            cursor: 'pointer', padding: '4px 8px', borderRadius: 6,
+            transition: 'background 0.15s', flexShrink: 1, minWidth: 0,
           }}
           onClick={() => setShowMaps(true)}
           onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.1)')}
@@ -101,119 +78,127 @@ export default function Toolbar({
           title="Click to manage maps"
         >
           {currentMap.name}
-          <ChevronDown size={12} style={{ marginLeft: 4, color: '#64748b', display: 'inline' }} />
+          <ChevronDown size={11} style={{ marginLeft: 4, color: '#64748b', display: 'inline' }} />
         </div>
 
         {/* Stats */}
-        <div style={{ display: 'flex', gap: 12, marginRight: 8 }}>
-          <span style={{ fontSize: 11, color: '#64748b' }}>
+        <div style={{ display: 'flex', gap: 10, marginRight: 4, flexShrink: 0 }}>
+          <span style={{ fontSize: 11, color: '#475569' }}>
             <span style={{ color: '#3b82f6', fontWeight: 600 }}>{currentMap.entities.length}</span> entities
           </span>
-          <span style={{ fontSize: 11, color: '#64748b' }}>
+          <span style={{ fontSize: 11, color: '#475569' }}>
             <span style={{ color: '#06b6d4', fontWeight: 600 }}>{currentMap.relationships.length}</span> connections
           </span>
         </div>
 
-        {/* Actions */}
-        <div style={{ display: 'flex', gap: 6 }}>
-          <button
-            className="btn-primary"
-            onClick={onAddEntity}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px' }}
-          >
-            <Plus size={14} />
-            <span style={{ fontSize: 13 }}>Add Entity</span>
+        {/* Spacer */}
+        <div style={{ flex: 1 }} />
+
+        {/* === Action group === */}
+        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+
+          {/* Add Entity */}
+          <button className="btn-primary" onClick={onAddEntity}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', fontSize: 12 }}>
+            <Plus size={13} />Add Entity
           </button>
 
-          <button
-            onClick={onToggleConnect}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '7px 14px',
-              borderRadius: 8,
-              border: `1px solid ${isConnecting ? '#06b6d4' : 'rgba(59,130,246,0.3)'}`,
-              background: isConnecting ? 'rgba(6,182,212,0.15)' : 'transparent',
-              color: isConnecting ? '#06b6d4' : '#93c5fd',
-              cursor: 'pointer',
-              fontSize: 13,
-              transition: 'all 0.15s ease',
-            }}
-          >
-            {isConnecting ? <X size={14} /> : <Link2 size={14} />}
+          {/* Connect toggle */}
+          <button onClick={onToggleConnect} style={{
+            display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px',
+            borderRadius: 8, fontSize: 12, cursor: 'pointer',
+            border: `1px solid ${isConnecting ? '#06b6d4' : 'rgba(59,130,246,0.3)'}`,
+            background: isConnecting ? 'rgba(6,182,212,0.15)' : 'transparent',
+            color: isConnecting ? '#06b6d4' : '#93c5fd',
+            transition: 'all 0.15s ease',
+          }}>
+            {isConnecting ? <X size={13} /> : <Link2 size={13} />}
             <span>{isConnecting ? 'Cancel' : 'Connect'}</span>
           </button>
 
+          {/* Divider */}
+          <div style={{ width: 1, height: 24, background: 'rgba(59,130,246,0.15)', margin: '0 2px' }} />
+
+          {/* Zoom controls */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 1,
+            background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(59,130,246,0.2)',
+            borderRadius: 8, padding: '2px 4px',
+          }}>
+            <IconBtn icon={<ZoomOut size={13} />} title="Zoom out (Ctrl –)" onClick={onZoomOut} />
+            <button onClick={onZoomReset} title="Reset zoom (Ctrl 0)" style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: zoom !== 1 ? '#3b82f6' : '#475569', fontSize: 11, fontWeight: 600,
+              padding: '3px 6px', borderRadius: 5, minWidth: 38, textAlign: 'center',
+              transition: 'color 0.15s',
+            }}>
+              {Math.round(zoom * 100)}%
+            </button>
+            <IconBtn icon={<ZoomIn size={13} />} title="Zoom in (Ctrl +)" onClick={onZoomIn} />
+          </div>
+
+          {/* Global lock */}
           <button
-            className="btn-ghost"
-            onClick={handleSave}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px' }}
-            title="Save"
+            onClick={toggleGlobalLock}
+            title={globalLocked ? 'Unlock all entities' : 'Lock all entities'}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px',
+              borderRadius: 8, fontSize: 12, cursor: 'pointer',
+              border: `1px solid ${globalLocked ? '#f59e0b' : 'rgba(59,130,246,0.2)'}`,
+              background: globalLocked ? 'rgba(245,158,11,0.12)' : 'transparent',
+              color: globalLocked ? '#f59e0b' : '#475569',
+              transition: 'all 0.15s ease',
+            }}
           >
-            <Save size={14} />
-            <span style={{ fontSize: 13 }}>{saved ? 'Saved!' : 'Save'}</span>
+            {globalLocked ? <Lock size={13} /> : <Unlock size={13} />}
           </button>
 
-          <button
-            className="btn-ghost"
-            onClick={() => setShowMaps(true)}
-            style={{ padding: '7px 12px', display: 'flex', alignItems: 'center', gap: 6 }}
-            title="Maps"
-          >
-            <Map size={14} />
-            <span style={{ fontSize: 13 }}>Maps</span>
+          {/* Save */}
+          <button className="btn-ghost" onClick={handleSave}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', fontSize: 12 }}>
+            <Save size={13} />{saved ? '✓ Saved' : 'Save'}
           </button>
 
-          <button
-            className="btn-ghost"
-            onClick={() => setShowShare(true)}
-            style={{ padding: '7px 12px', display: 'flex', alignItems: 'center', gap: 6 }}
-            title="Share"
-          >
-            <Share2 size={14} />
-            <span style={{ fontSize: 13 }}>Share</span>
+          {/* Maps */}
+          <button className="btn-ghost" onClick={() => setShowMaps(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', fontSize: 12 }}>
+            <Map size={13} />Maps
           </button>
+
+          {/* Share */}
+          <button className="btn-ghost" onClick={() => setShowShare(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', fontSize: 12 }}>
+            <Share2 size={13} />Share
+          </button>
+
+          {/* Divider */}
+          <div style={{ width: 1, height: 24, background: 'rgba(59,130,246,0.15)', margin: '0 2px' }} />
 
           {/* Auth */}
-          <div style={{ width: 1, background: 'rgba(59,130,246,0.2)', margin: '0 4px' }} />
-
           {session?.user ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               {session.user.image ? (
-                <img
-                  src={session.user.image}
-                  alt={session.user.name || 'User'}
-                  style={{ width: 28, height: 28, borderRadius: '50%', border: '2px solid rgba(59,130,246,0.4)' }}
-                />
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={session.user.image} alt={session.user.name || 'User'}
+                  style={{ width: 26, height: 26, borderRadius: '50%', border: '2px solid rgba(59,130,246,0.4)' }} />
               ) : (
                 <div style={{
-                  width: 28, height: 28, borderRadius: '50%',
+                  width: 26, height: 26, borderRadius: '50%',
                   background: 'rgba(59,130,246,0.2)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <User size={14} style={{ color: '#3b82f6' }} />
+                  <User size={13} style={{ color: '#3b82f6' }} />
                 </div>
               )}
-              <span style={{ fontSize: 12, color: '#94a3b8', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {session.user.name}
-              </span>
-              <button
-                onClick={onSignOut}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center' }}
-                title="Sign out"
-              >
+              <button onClick={onSignOut} title="Sign out"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex' }}>
                 <LogOut size={14} />
               </button>
             </div>
           ) : (
-            <button
-              className="btn-ghost"
-              onClick={onSignIn}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px' }}
-            >
-              <LogIn size={14} />
-              <span style={{ fontSize: 13 }}>Sign In</span>
+            <button className="btn-ghost" onClick={onSignIn}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', fontSize: 12 }}>
+              <LogIn size={13} />Sign In
             </button>
           )}
         </div>
@@ -222,5 +207,20 @@ export default function Toolbar({
       <ShareDialog isOpen={showShare} onClose={() => setShowShare(false)} />
       <MapsDialog isOpen={showMaps} onClose={() => setShowMaps(false)} />
     </>
+  );
+}
+
+function IconBtn({ icon, title, onClick }: { icon: React.ReactNode; title: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick} title={title} style={{
+      background: 'none', border: 'none', cursor: 'pointer', color: '#64748b',
+      padding: '3px 5px', borderRadius: 5, display: 'flex', alignItems: 'center',
+      transition: 'color 0.12s',
+    }}
+      onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = '#3b82f6')}
+      onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = '#64748b')}
+    >
+      {icon}
+    </button>
   );
 }

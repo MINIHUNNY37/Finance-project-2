@@ -10,14 +10,17 @@ interface MapState {
   savedMaps: ScenarioMap[];
   selectedEntityId: string | null;
   selectedRelationshipId: string | null;
-  connectingFromId: string | null; // entity id we're drawing connection from
+  connectingFromId: string | null;
   hoveredEntityId: string | null;
+  globalLocked: boolean;
 
   // Entity actions
   addEntity: (entity: Omit<Entity, 'id' | 'createdAt' | 'updatedAt'>) => string;
   updateEntity: (id: string, updates: Partial<Entity>) => void;
   deleteEntity: (id: string) => void;
   moveEntity: (id: string, position: { x: number; y: number }) => void;
+  toggleEntityLock: (id: string) => void;
+  toggleGlobalLock: () => void;
 
   // Relationship actions
   addRelationship: (rel: Omit<Relationship, 'id' | 'createdAt'>) => void;
@@ -67,16 +70,12 @@ export const useMapStore = create<MapState>()(
       selectedRelationshipId: null,
       connectingFromId: null,
       hoveredEntityId: null,
+      globalLocked: false,
 
       addEntity: (entityData) => {
         const id = uuidv4();
         const now = new Date().toISOString();
-        const entity: Entity = {
-          ...entityData,
-          id,
-          createdAt: now,
-          updatedAt: now,
-        };
+        const entity: Entity = { ...entityData, id, createdAt: now, updatedAt: now };
         set((state) => ({
           currentMap: {
             ...state.currentMap,
@@ -128,13 +127,24 @@ export const useMapStore = create<MapState>()(
         }));
       },
 
+      toggleEntityLock: (id) => {
+        set((state) => ({
+          currentMap: {
+            ...state.currentMap,
+            entities: state.currentMap.entities.map((e) =>
+              e.id === id ? { ...e, locked: !e.locked } : e
+            ),
+          },
+        }));
+      },
+
+      toggleGlobalLock: () => {
+        set((state) => ({ globalLocked: !state.globalLocked }));
+      },
+
       addRelationship: (relData) => {
         const now = new Date().toISOString();
-        const relationship: Relationship = {
-          ...relData,
-          id: uuidv4(),
-          createdAt: now,
-        };
+        const relationship: Relationship = { ...relData, id: uuidv4(), createdAt: now };
         set((state) => ({
           currentMap: {
             ...state.currentMap,
@@ -168,16 +178,9 @@ export const useMapStore = create<MapState>()(
 
       addFolder: (folderData) => {
         const id = uuidv4();
-        const folder: Folder = {
-          ...folderData,
-          id,
-          createdAt: new Date().toISOString(),
-        };
+        const folder: Folder = { ...folderData, id, createdAt: new Date().toISOString() };
         set((state) => ({
-          currentMap: {
-            ...state.currentMap,
-            folders: [...state.currentMap.folders, folder],
-          },
+          currentMap: { ...state.currentMap, folders: [...state.currentMap.folders, folder] },
         }));
         return id;
       },
@@ -186,9 +189,7 @@ export const useMapStore = create<MapState>()(
         set((state) => ({
           currentMap: {
             ...state.currentMap,
-            folders: state.currentMap.folders.map((f) =>
-              f.id === id ? { ...f, ...updates } : f
-            ),
+            folders: state.currentMap.folders.map((f) => (f.id === id ? { ...f, ...updates } : f)),
           },
         }));
       },
@@ -267,28 +268,20 @@ export const useMapStore = create<MapState>()(
       },
 
       deleteMap: (id) => {
-        set((state) => ({
-          savedMaps: state.savedMaps.filter((m) => m.id !== id),
-        }));
+        set((state) => ({ savedMaps: state.savedMaps.filter((m) => m.id !== id) }));
       },
 
       generateShareToken: () => {
         const token = uuidv4();
-        set((state) => ({
-          currentMap: { ...state.currentMap, shareToken: token },
-        }));
+        set((state) => ({ currentMap: { ...state.currentMap, shareToken: token } }));
         return token;
       },
 
-      setSelectedEntity: (id) =>
-        set({ selectedEntityId: id, selectedRelationshipId: null }),
-      setSelectedRelationship: (id) =>
-        set({ selectedRelationshipId: id, selectedEntityId: null }),
+      setSelectedEntity: (id) => set({ selectedEntityId: id, selectedRelationshipId: null }),
+      setSelectedRelationship: (id) => set({ selectedRelationshipId: id, selectedEntityId: null }),
       setConnectingFrom: (id) => set({ connectingFromId: id }),
       setHoveredEntity: (id) => set({ hoveredEntityId: id }),
     }),
-    {
-      name: 'stock-scenario-mapper',
-    }
+    { name: 'stock-scenario-mapper' }
   )
 );

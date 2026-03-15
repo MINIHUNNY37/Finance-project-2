@@ -4,6 +4,12 @@ export interface EntitySubItem {
   description: string;
 }
 
+export interface EntityStatistic {
+  id: string;
+  name: string;   // template label e.g. "Revenue", "P/E Ratio" — this is what gets saved
+  value: string;  // current figure e.g. "$394B"
+}
+
 export interface Entity {
   id: string;
   name: string;
@@ -11,22 +17,27 @@ export interface Entity {
   subtitle: string;
   description: string;
   subItems: EntitySubItem[];
+  statistics: EntityStatistic[];
   color: string;
-  country: string; // country name where placed
-  position: { x: number; y: number }; // pixel position on map
+  country: string;
+  position: { x: number; y: number };
+  locked?: boolean;
   folderId?: string;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
 }
 
+export type ArrowStyle = 'normal' | 'animated';
+
 export interface Relationship {
   id: string;
   fromEntityId: string;
   toEntityId: string;
   label: string;
-  description: string;
+  description: string; // shown as a note box on the connection
   color: string;
+  arrowStyle: ArrowStyle;
   createdBy: string;
   createdAt: string;
 }
@@ -48,8 +59,8 @@ export interface ScenarioMap {
   relationships: Relationship[];
   folders: Folder[];
   ownerId: string;
-  sharedWith: string[]; // user IDs or emails
-  shareToken?: string; // public share token
+  sharedWith: string[];
+  shareToken?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -89,23 +100,10 @@ export const ENTITY_ICONS = [
 ];
 
 export const ENTITY_COLORS = [
-  '#3B82F6', // blue
-  '#06B6D4', // cyan
-  '#10B981', // emerald
-  '#F59E0B', // amber
-  '#EF4444', // red
-  '#8B5CF6', // violet
-  '#EC4899', // pink
-  '#F97316', // orange
-  '#14B8A6', // teal
-  '#6366F1', // indigo
+  '#3B82F6', '#06B6D4', '#10B981', '#F59E0B', '#EF4444',
+  '#8B5CF6', '#EC4899', '#F97316', '#14B8A6', '#6366F1',
 ];
 
 export const RELATIONSHIP_COLORS = [
-  '#3B82F6',
-  '#10B981',
-  '#F59E0B',
-  '#EF4444',
-  '#8B5CF6',
-  '#EC4899',
+  '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899',
 ];
