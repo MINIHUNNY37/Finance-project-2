@@ -102,13 +102,13 @@ export default function WorldMap({ onCountryClick, children, width, height }: Wo
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<SVGPathElement>, name: string) => {
       const rect = svgRef.current?.getBoundingClientRect();
-      if (!rect || !svgRef.current) return;
+      if (!rect) return;
       // rect is in scaled viewport space; tooltip is positioned in map/SVG space.
       // Dividing by the visual scale factor (rect.width / layout width) converts
       // the viewport offset back to map coordinates so the tooltip tracks correctly
       // at any zoom level.
-      const scaleX = rect.width / svgRef.current.offsetWidth;
-      const scaleY = rect.height / svgRef.current.offsetHeight;
+      const scaleX = rect.width / width;
+      const scaleY = rect.height / height;
       const mapX = (e.clientX - rect.left) / scaleX;
       const mapY = (e.clientY - rect.top) / scaleY;
       setTooltip({ x: mapX + 12, y: mapY - 32, name });
