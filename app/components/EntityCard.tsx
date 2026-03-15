@@ -488,7 +488,14 @@ export default function EntityCard({
                 )}
                 {entity.subItems?.map((sub) => (
                   <div key={sub.id} style={{ marginBottom: 6 }}>
-                    <div style={{ color: '#93c5fd', fontWeight: 600, fontSize: 11 }}>{sub.title}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ color: '#93c5fd', fontWeight: 600, fontSize: 11 }}>{sub.title}</div>
+                      {sub.date && (
+                        <div style={{ fontSize: 9, color: '#475569', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: 4, padding: '1px 5px' }}>
+                          {sub.date}
+                        </div>
+                      )}
+                    </div>
                     <div style={{ color: 'rgba(148,163,184,0.8)', fontSize: 10, marginTop: 2, lineHeight: 1.3 }}>{sub.description}</div>
                   </div>
                 ))}
@@ -498,9 +505,16 @@ export default function EntityCard({
                       Key Statistics
                     </div>
                     {entity.statistics.map((stat) => (
-                      <div key={stat.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 3 }}>
-                        <span style={{ color: 'rgba(148,163,184,0.75)' }}>{stat.name}</span>
-                        <span style={{ color: entity.color, fontWeight: 600 }}>{stat.value || '—'}</span>
+                      <div key={stat.id} style={{ marginBottom: 4 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                          <span style={{ color: 'rgba(148,163,184,0.75)' }}>{stat.name}</span>
+                          <span style={{ color: entity.color, fontWeight: 600 }}>{stat.value || '—'}</span>
+                        </div>
+                        {stat.asOf && (
+                          <div style={{ fontSize: 9, color: '#475569', textAlign: 'right', marginTop: 1 }}>
+                            as of {stat.asOf}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

@@ -15,12 +15,14 @@ interface MapState {
   globalLocked: boolean;
   customStatPresets: string[];
   customDetailPresets: string[];
+  worldClockTimezones: string[];
 
   // Custom preset actions
   addCustomStatPreset: (name: string) => void;
   removeCustomStatPreset: (name: string) => void;
   addCustomDetailPreset: (name: string) => void;
   removeCustomDetailPreset: (name: string) => void;
+  setWorldClockTimezones: (zones: string[]) => void;
 
   // Entity actions
   addEntity: (entity: Omit<Entity, 'id' | 'createdAt' | 'updatedAt'>) => string;
@@ -83,6 +85,7 @@ export const useMapStore = create<MapState>()(
       globalLocked: false,
       customStatPresets: [],
       customDetailPresets: [],
+      worldClockTimezones: ['America/New_York', 'Europe/London', 'Asia/Tokyo', 'Asia/Hong_Kong'],
 
       addCustomStatPreset: (name) => set((s) => ({
         customStatPresets: [...new Set([...s.customStatPresets, name.trim()])].filter(Boolean),
@@ -96,6 +99,7 @@ export const useMapStore = create<MapState>()(
       removeCustomDetailPreset: (name) => set((s) => ({
         customDetailPresets: s.customDetailPresets.filter((p) => p !== name),
       })),
+      setWorldClockTimezones: (zones) => set({ worldClockTimezones: zones }),
 
       addEntity: (entityData) => {
         const id = uuidv4();

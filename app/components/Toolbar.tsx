@@ -4,11 +4,12 @@ import React, { useState } from 'react';
 import {
   Save, Share2, Map, Plus, Link2, X,
   ChevronDown, TrendingUp, LogIn, LogOut, User,
-  ZoomIn, ZoomOut, RotateCcw, Lock, Unlock,
+  ZoomIn, ZoomOut, RotateCcw, Lock, Unlock, Clock,
 } from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
 import ShareDialog from './ShareDialog';
 import MapsDialog from './MapsDialog';
+import WorldClockPanel from './WorldClockPanel';
 
 interface ToolbarProps {
   onAddEntity: () => void;
@@ -34,6 +35,7 @@ export default function Toolbar({
   const { currentMap, saveCurrentMap, globalLocked, toggleGlobalLock } = useMapStore();
   const [showShare, setShowShare] = useState(false);
   const [showMaps, setShowMaps] = useState(false);
+  const [showClock, setShowClock] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const handleSave = () => {
@@ -175,6 +177,22 @@ export default function Toolbar({
             {globalLocked ? <Lock size={13} /> : <Unlock size={13} />}
           </button>
 
+          {/* World Clock */}
+          <button
+            onClick={() => setShowClock((v) => !v)}
+            title="World Time"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px',
+              borderRadius: 8, fontSize: 12, cursor: 'pointer',
+              border: `1px solid ${showClock ? '#3b82f6' : 'rgba(59,130,246,0.2)'}`,
+              background: showClock ? 'rgba(59,130,246,0.12)' : 'transparent',
+              color: showClock ? '#3b82f6' : '#475569',
+              transition: 'all 0.15s',
+            }}
+          >
+            <Clock size={13} />
+          </button>
+
           {/* Save */}
           <button className="btn-ghost" onClick={handleSave}
             style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', fontSize: 12 }}>
@@ -228,6 +246,7 @@ export default function Toolbar({
 
       <ShareDialog isOpen={showShare} onClose={() => setShowShare(false)} />
       <MapsDialog isOpen={showMaps} onClose={() => setShowMaps(false)} />
+      {showClock && <WorldClockPanel onClose={() => setShowClock(false)} />}
     </>
   );
 }

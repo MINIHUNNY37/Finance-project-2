@@ -66,7 +66,7 @@ export default function EntityDialog({
   const removeSubItem = (id: string) => setSubItems(subItems.filter((s) => s.id !== id));
 
   // Statistics
-  const addStat = () => setStatistics([...statistics, { id: uuidv4(), name: '', value: '' }]);
+  const addStat = () => setStatistics([...statistics, { id: uuidv4(), name: '', value: '', asOf: '' }]);
   const updateStat = (id: string, field: keyof EntityStatistic, value: string) =>
     setStatistics(statistics.map((s) => (s.id === id ? { ...s, [field]: value } : s)));
   const removeStat = (id: string) => setStatistics(statistics.filter((s) => s.id !== id));
@@ -308,7 +308,17 @@ export default function EntityDialog({
                   </div>
                   <textarea className="input-field" value={sub.description}
                     onChange={(e) => updateSubItem(sub.id, 'description', e.target.value)}
-                    placeholder="Description..." rows={2} style={{ resize: 'vertical' }} />
+                    placeholder="Description..." rows={2} style={{ resize: 'vertical', marginBottom: 6 }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 10, color: '#475569', flexShrink: 0 }}>Date</span>
+                    <input
+                      className="input-field"
+                      value={sub.date || ''}
+                      onChange={(e) => updateSubItem(sub.id, 'date', e.target.value)}
+                      placeholder="e.g. Q4 2024, Jan 2025, 2024-12-31"
+                      style={{ flex: 1, fontSize: 10, padding: '3px 7px' }}
+                    />
+                  </div>
                 </div>
               ))}
             </div>
@@ -409,29 +419,41 @@ export default function EntityDialog({
 
               {statistics.map((stat, i) => (
                 <div key={stat.id} style={{
-                  display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8,
+                  marginBottom: 8,
                   background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(59,130,246,0.15)',
                   borderRadius: 10, padding: '10px 12px',
                 }}>
-                  <div style={{ fontSize: 12, color: '#475569', width: 20, textAlign: 'center', flexShrink: 0 }}>{i + 1}</div>
-                  <input
-                    className="input-field"
-                    value={stat.name}
-                    onChange={(e) => updateStat(stat.id, 'name', e.target.value)}
-                    placeholder="Stat name (e.g. Revenue)"
-                    style={{ flex: 1 }}
-                  />
-                  <input
-                    className="input-field"
-                    value={stat.value}
-                    onChange={(e) => updateStat(stat.id, 'value', e.target.value)}
-                    placeholder="Value (e.g. $394B)"
-                    style={{ flex: 1 }}
-                  />
-                  <button onClick={() => removeStat(stat.id)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', flexShrink: 0 }}>
-                    <Trash2 size={14} />
-                  </button>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                    <div style={{ fontSize: 12, color: '#475569', width: 20, textAlign: 'center', flexShrink: 0 }}>{i + 1}</div>
+                    <input
+                      className="input-field"
+                      value={stat.name}
+                      onChange={(e) => updateStat(stat.id, 'name', e.target.value)}
+                      placeholder="Stat name (e.g. Revenue)"
+                      style={{ flex: 1 }}
+                    />
+                    <input
+                      className="input-field"
+                      value={stat.value}
+                      onChange={(e) => updateStat(stat.id, 'value', e.target.value)}
+                      placeholder="Value (e.g. $394B)"
+                      style={{ flex: 1 }}
+                    />
+                    <button onClick={() => removeStat(stat.id)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', flexShrink: 0 }}>
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 28 }}>
+                    <span style={{ fontSize: 10, color: '#475569', flexShrink: 0 }}>As of</span>
+                    <input
+                      className="input-field"
+                      value={stat.asOf || ''}
+                      onChange={(e) => updateStat(stat.id, 'asOf', e.target.value)}
+                      placeholder="e.g. FY2024, Q3 2025, 2024-12-31"
+                      style={{ flex: 1, fontSize: 10, padding: '3px 7px' }}
+                    />
+                  </div>
                 </div>
               ))}
             </div>

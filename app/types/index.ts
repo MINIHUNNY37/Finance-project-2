@@ -2,12 +2,14 @@ export interface EntitySubItem {
   id: string;
   title: string;
   description: string;
+  date?: string;   // optional date/time label e.g. "Q4 2024" or "Jan 2025"
 }
 
 export interface EntityStatistic {
   id: string;
   name: string;   // template label e.g. "Revenue", "P/E Ratio" — this is what gets saved
   value: string;  // current figure e.g. "$394B"
+  asOf?: string;  // optional timestamp e.g. "FY2024" or "2024-12-31"
 }
 
 export interface Entity {
