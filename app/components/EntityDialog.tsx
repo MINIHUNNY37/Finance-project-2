@@ -18,6 +18,14 @@ interface EntityDialogProps {
 
 type Tab = 'basic' | 'details' | 'stats';
 
+const STAT_CATEGORIES: { id: string; label: string; presets: string[] }[] = [
+  { id: 'income',    label: 'Income',     presets: ['Revenue', 'Net Income', 'Gross Profit', 'Operating Income', 'EBITDA'] },
+  { id: 'balance',   label: 'Balance',    presets: ['Total Assets', 'Total Liabilities', 'Book Value', 'Cash & Equiv.', 'Debt/Equity'] },
+  { id: 'valuation', label: 'Valuation',  presets: ['Market Cap', 'P/E Ratio', 'EPS', 'P/B Ratio', 'EV/EBITDA'] },
+  { id: 'dividend',  label: 'Dividends',  presets: ['Dividend Yield', 'Dividend/Share', 'Payout Ratio'] },
+  { id: 'ops',       label: 'Operations', presets: ['Employees', 'ROE', 'ROA', 'Profit Margin', 'FCF'] },
+];
+
 export default function EntityDialog({
   isOpen, onClose, onSave, initialData, defaultPosition, defaultCountry,
 }: EntityDialogProps) {
@@ -29,6 +37,7 @@ export default function EntityDialog({
   const [activeTab, setActiveTab] = useState<Tab>('basic');
   const [newStatPreset, setNewStatPreset] = useState('');
   const [newDetailPreset, setNewDetailPreset] = useState('');
+  const [activeStatCategory, setActiveStatCategory] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [icon, setIcon] = useState('🏢');
   const [subtitle, setSubtitle] = useState('');
@@ -350,11 +359,44 @@ export default function EntityDialog({
                 </div>
               )}
 
-              {/* Preset suggestions — always visible */}
+              {/* Preset suggestions — with category filter */}
               <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 8 }}>Quick add:</div>
+                {/* Category pills */}
+                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 6 }}>Category:</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10 }}>
+                  <button
+                    onClick={() => setActiveStatCategory(null)}
+                    style={{
+                      padding: '3px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
+                      fontWeight: activeStatCategory === null ? 600 : 400,
+                      background: activeStatCategory === null ? 'rgba(59,130,246,0.25)' : 'rgba(15,23,42,0.5)',
+                      border: `1px solid ${activeStatCategory === null ? 'rgba(59,130,246,0.5)' : 'rgba(59,130,246,0.15)'}`,
+                      color: activeStatCategory === null ? '#93c5fd' : '#475569',
+                      transition: 'all 0.1s',
+                    }}
+                  >All</button>
+                  {STAT_CATEGORIES.map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setActiveStatCategory(activeStatCategory === cat.id ? null : cat.id)}
+                      style={{
+                        padding: '3px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
+                        fontWeight: activeStatCategory === cat.id ? 600 : 400,
+                        background: activeStatCategory === cat.id ? 'rgba(59,130,246,0.25)' : 'rgba(15,23,42,0.5)',
+                        border: `1px solid ${activeStatCategory === cat.id ? 'rgba(59,130,246,0.5)' : 'rgba(59,130,246,0.15)'}`,
+                        color: activeStatCategory === cat.id ? '#93c5fd' : '#475569',
+                        transition: 'all 0.1s',
+                      }}
+                    >{cat.label}</button>
+                  ))}
+                </div>
+                {/* Filtered quick-add presets */}
+                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 6 }}>Quick add:</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
-                  {['Revenue', 'Net Income', 'Market Cap', 'P/E Ratio', 'EPS', 'Dividend Yield', 'Employees', 'Debt/Equity'].map((statName) => (
+                  {(activeStatCategory === null
+                    ? STAT_CATEGORIES.flatMap((c) => c.presets)
+                    : (STAT_CATEGORIES.find((c) => c.id === activeStatCategory)?.presets ?? [])
+                  ).map((statName) => (
                     <button key={statName} onClick={() => setStatistics([...statistics, { id: uuidv4(), name: statName, value: '' }])}
                       style={{
                         background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)',
