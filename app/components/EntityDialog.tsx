@@ -312,11 +312,15 @@ export default function EntityDialog({
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ fontSize: 10, color: '#475569', flexShrink: 0 }}>Date</span>
                     <input
-                      className="input-field"
+                      type="date"
                       value={sub.date || ''}
                       onChange={(e) => updateSubItem(sub.id, 'date', e.target.value)}
-                      placeholder="e.g. Q4 2024, Jan 2025, 2024-12-31"
-                      style={{ flex: 1, fontSize: 10, padding: '3px 7px' }}
+                      style={{
+                        flex: 1, fontSize: 11, padding: '3px 7px',
+                        background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(59,130,246,0.2)',
+                        borderRadius: 6, color: '#94a3b8', outline: 'none',
+                        colorScheme: 'dark',
+                      }}
                     />
                   </div>
                 </div>
@@ -447,11 +451,15 @@ export default function EntityDialog({
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 28 }}>
                     <span style={{ fontSize: 10, color: '#475569', flexShrink: 0 }}>As of</span>
                     <input
-                      className="input-field"
+                      type="date"
                       value={stat.asOf || ''}
                       onChange={(e) => updateStat(stat.id, 'asOf', e.target.value)}
-                      placeholder="e.g. FY2024, Q3 2025, 2024-12-31"
-                      style={{ flex: 1, fontSize: 10, padding: '3px 7px' }}
+                      style={{
+                        flex: 1, fontSize: 11, padding: '3px 7px',
+                        background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(59,130,246,0.2)',
+                        borderRadius: 6, color: '#94a3b8', outline: 'none',
+                        colorScheme: 'dark',
+                      }}
                     />
                   </div>
                 </div>

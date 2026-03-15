@@ -9,6 +9,7 @@ import {
 import type { Entity, ArrowStyle } from '../types';
 import { RELATIONSHIP_COLORS } from '../types';
 import { useMapStore } from '../store/mapStore';
+import { isVisibleAtDate } from '../utils/dateFilter';
 
 interface RelSettings {
   label: string;
@@ -62,6 +63,7 @@ export default function EntityCard({
     connectingFromId,
     selectedEntityId,
     globalLocked,
+    globalViewDate,
   } = useMapStore();
 
   const [cardHovered, setCardHovered] = useState(false);
@@ -486,39 +488,42 @@ export default function EntityCard({
                     {entity.description}
                   </p>
                 )}
-                {entity.subItems?.map((sub) => (
+                {entity.subItems?.filter((s) => isVisibleAtDate(s.date, globalViewDate)).map((sub) => (
                   <div key={sub.id} style={{ marginBottom: 6 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <div style={{ color: '#93c5fd', fontWeight: 600, fontSize: 11 }}>{sub.title}</div>
                       {sub.date && (
                         <div style={{ fontSize: 9, color: '#475569', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: 4, padding: '1px 5px' }}>
-                          {sub.date}
+                          {new Date(sub.date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                         </div>
                       )}
                     </div>
                     <div style={{ color: 'rgba(148,163,184,0.8)', fontSize: 10, marginTop: 2, lineHeight: 1.3 }}>{sub.description}</div>
                   </div>
                 ))}
-                {entity.statistics?.length > 0 && (
-                  <div style={{ marginTop: 4, borderTop: '1px solid rgba(59,130,246,0.15)', paddingTop: 6 }}>
-                    <div style={{ fontSize: 9, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
-                      Key Statistics
-                    </div>
-                    {entity.statistics.map((stat) => (
-                      <div key={stat.id} style={{ marginBottom: 4 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                          <span style={{ color: 'rgba(148,163,184,0.75)' }}>{stat.name}</span>
-                          <span style={{ color: entity.color, fontWeight: 600 }}>{stat.value || '—'}</span>
-                        </div>
-                        {stat.asOf && (
-                          <div style={{ fontSize: 9, color: '#475569', textAlign: 'right', marginTop: 1 }}>
-                            as of {stat.asOf}
-                          </div>
-                        )}
+                {entity.statistics?.length > 0 && (() => {
+                  const visibleStats = entity.statistics.filter((s) => isVisibleAtDate(s.asOf, globalViewDate));
+                  return visibleStats.length > 0 ? (
+                    <div style={{ marginTop: 4, borderTop: '1px solid rgba(59,130,246,0.15)', paddingTop: 6 }}>
+                      <div style={{ fontSize: 9, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
+                        Key Statistics{globalViewDate ? ' (filtered)' : ''}
                       </div>
-                    ))}
-                  </div>
-                )}
+                      {visibleStats.map((stat) => (
+                        <div key={stat.id} style={{ marginBottom: 4 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                            <span style={{ color: 'rgba(148,163,184,0.75)' }}>{stat.name}</span>
+                            <span style={{ color: entity.color, fontWeight: 600 }}>{stat.value || '—'}</span>
+                          </div>
+                          {stat.asOf && (
+                            <div style={{ fontSize: 9, color: '#475569', textAlign: 'right', marginTop: 1 }}>
+                              as of {new Date(stat.asOf + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : null;
+                })()}
               </div>
             )}
           </div>

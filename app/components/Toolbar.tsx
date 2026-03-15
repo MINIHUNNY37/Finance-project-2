@@ -10,6 +10,7 @@ import { useMapStore } from '../store/mapStore';
 import ShareDialog from './ShareDialog';
 import MapsDialog from './MapsDialog';
 import WorldClockPanel from './WorldClockPanel';
+import CalendarPicker from './CalendarPicker';
 
 interface ToolbarProps {
   onAddEntity: () => void;
@@ -179,6 +180,9 @@ export default function Toolbar({
           >
             {globalLocked ? <Lock size={13} /> : <Unlock size={13} />}
           </button>
+
+          {/* Calendar date filter */}
+          <CalendarPicker />
 
           {/* Background toggle */}
           <button

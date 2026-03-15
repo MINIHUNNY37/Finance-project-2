@@ -6,6 +6,7 @@ import {
   GitMerge, Link2, Zap, Minus, X, Eye, EyeOff, ArrowRight,
 } from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
+import { isVisibleAtDate } from '../utils/dateFilter';
 import FolderPanel from './FolderPanel';
 import type { ArrowStyle } from '../types';
 import { RELATIONSHIP_COLORS } from '../types';
@@ -49,7 +50,7 @@ export default function Sidebar({
   const {
     currentMap, selectedEntityId, setSelectedEntity, setConnectingFrom,
     deleteEntity, deleteRelationship, setSelectedRelationship, selectedRelationshipId,
-    toggleEntityHidden,
+    toggleEntityHidden, globalViewDate,
   } = useMapStore();
 
   const [collapsed, setCollapsed] = useState(false);
@@ -616,30 +617,37 @@ export default function Sidebar({
                       </div>
                     )}
 
-                    {selectedEntity.statistics?.length > 0 && (
-                      <div style={{ marginBottom: 12 }}>
-                        <div style={{ fontSize: 10, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Statistics</div>
-                        {selectedEntity.statistics.map((stat) => (
-                          <div key={stat.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 5, fontSize: 12 }}>
-                            <span style={{ color: '#94a3b8' }}>{stat.name}</span>
-                            <div style={{ textAlign: 'right' }}>
-                              <span style={{ color: selectedEntity.color, fontWeight: 600 }}>{stat.value || '—'}</span>
-                              {stat.asOf && (
-                                <div style={{ fontSize: 9, color: '#475569', marginTop: 1 }}>as of {stat.asOf}</div>
-                              )}
-                            </div>
+                    {selectedEntity.statistics?.length > 0 && (() => {
+                      const visStats = selectedEntity.statistics.filter((s) => isVisibleAtDate(s.asOf, globalViewDate));
+                      return visStats.length > 0 ? (
+                        <div style={{ marginBottom: 12 }}>
+                          <div style={{ fontSize: 10, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+                            Statistics{globalViewDate ? ' (filtered)' : ''}
                           </div>
-                        ))}
-                      </div>
-                    )}
+                          {visStats.map((stat) => (
+                            <div key={stat.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 5, fontSize: 12 }}>
+                              <span style={{ color: '#94a3b8' }}>{stat.name}</span>
+                              <div style={{ textAlign: 'right' }}>
+                                <span style={{ color: selectedEntity.color, fontWeight: 600 }}>{stat.value || '—'}</span>
+                                {stat.asOf && (
+                                  <div style={{ fontSize: 9, color: '#475569', marginTop: 1 }}>
+                                    as of {new Date(stat.asOf + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null;
+                    })()}
 
-                    {selectedEntity.subItems?.map((sub) => (
+                    {selectedEntity.subItems?.filter((s) => isVisibleAtDate(s.date, globalViewDate)).map((sub) => (
                       <div key={sub.id} style={{ marginBottom: 10, paddingLeft: 10, borderLeft: `2px solid ${selectedEntity.color}44` }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                           <div style={{ fontSize: 12, fontWeight: 600, color: '#93c5fd' }}>{sub.title}</div>
                           {sub.date && (
                             <div style={{ fontSize: 9, color: '#475569', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: 4, padding: '1px 5px' }}>
-                              {sub.date}
+                              {new Date(sub.date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                             </div>
                           )}
                         </div>

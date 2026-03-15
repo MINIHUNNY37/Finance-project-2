@@ -16,6 +16,7 @@ interface MapState {
   customStatPresets: string[];
   customDetailPresets: string[];
   worldClockTimezones: string[];
+  globalViewDate: string | null; // ISO date string or null = "today"
   investmentPlan: {
     balance: number;
     allocations: { entityId: string; amount: number }[];
@@ -28,6 +29,7 @@ interface MapState {
   addCustomDetailPreset: (name: string) => void;
   removeCustomDetailPreset: (name: string) => void;
   setWorldClockTimezones: (zones: string[]) => void;
+  setGlobalViewDate: (date: string | null) => void;
   updateInvestmentPlan: (updates: Partial<{ balance: number; allocations: { entityId: string; amount: number }[]; notes: string }>) => void;
 
   // Entity actions
@@ -92,6 +94,7 @@ export const useMapStore = create<MapState>()(
       customStatPresets: [],
       customDetailPresets: [],
       worldClockTimezones: ['America/New_York', 'Europe/London', 'Asia/Tokyo', 'Asia/Hong_Kong'],
+      globalViewDate: null,
       investmentPlan: { balance: 0, allocations: [], notes: '' },
 
       addCustomStatPreset: (name) => set((s) => ({
@@ -107,6 +110,7 @@ export const useMapStore = create<MapState>()(
         customDetailPresets: s.customDetailPresets.filter((p) => p !== name),
       })),
       setWorldClockTimezones: (zones) => set({ worldClockTimezones: zones }),
+      setGlobalViewDate: (date) => set({ globalViewDate: date }),
       updateInvestmentPlan: (updates) => set((s) => ({ investmentPlan: { ...s.investmentPlan, ...updates } })),
 
       addEntity: (entityData) => {

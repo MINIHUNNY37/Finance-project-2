@@ -74,7 +74,7 @@ export default function WorldMap({ onCountryClick, children, width, height }: Wo
           return {
             id,
             path: pathGenerator(f) || '',
-            name: COUNTRY_NAMES[id] || `Country ${id}`,
+            name: (id ? COUNTRY_NAMES[id] : null) || `Country ${id}`,
           };
         });
 
