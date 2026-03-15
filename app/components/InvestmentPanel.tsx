@@ -4,14 +4,11 @@ import React, { useState, useCallback } from 'react';
 import { ChevronRight, ChevronLeft, Plus, Trash2, TrendingUp } from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
 
-type InputMode = 'amount' | 'percent';
-
 export default function InvestmentPanel() {
   const { currentMap, investmentPlan, updateInvestmentPlan } = useMapStore();
   const [collapsed, setCollapsed] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
-  const [inputMode, setInputMode] = useState<InputMode>('amount');
-  // Per-row percent drafts (while user is typing %)
+  // Per-row percent drafts (while user is actively typing %)
   const [pctDraft, setPctDraft] = useState<Record<string, string>>({});
 
   const { balance, allocations, notes } = investmentPlan;
@@ -213,35 +210,18 @@ export default function InvestmentPanel() {
             <div style={{ fontSize: 10, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               Companies ({allocations.length})
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              {/* $/% toggle */}
-              <div style={{
-                display: 'flex', background: 'rgba(15,23,42,0.7)',
-                border: '1px solid rgba(59,130,246,0.2)', borderRadius: 6, overflow: 'hidden',
-              }}>
-                {(['amount', 'percent'] as InputMode[]).map((m) => (
-                  <button key={m} onClick={() => setInputMode(m)} style={{
-                    padding: '3px 8px', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 600,
-                    background: inputMode === m ? 'rgba(59,130,246,0.2)' : 'transparent',
-                    color: inputMode === m ? '#3b82f6' : '#475569', transition: 'all 0.1s',
-                  }}>
-                    {m === 'amount' ? '$' : '%'}
-                  </button>
-                ))}
-              </div>
-              <button
-                onClick={() => setShowPicker((v) => !v)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 4,
-                  padding: '4px 8px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
-                  background: showPicker ? 'rgba(59,130,246,0.15)' : 'transparent',
-                  border: '1px solid rgba(59,130,246,0.3)',
-                  color: '#3b82f6', transition: 'all 0.1s',
-                }}
-              >
-                <Plus size={11} /> Add
-              </button>
-            </div>
+            <button
+              onClick={() => setShowPicker((v) => !v)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 4,
+                padding: '4px 8px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
+                background: showPicker ? 'rgba(59,130,246,0.15)' : 'transparent',
+                border: '1px solid rgba(59,130,246,0.3)',
+                color: '#3b82f6', transition: 'all 0.1s',
+              }}
+            >
+              <Plus size={11} /> Add
+            </button>
           </div>
 
           {/* Entity picker dropdown */}
@@ -319,45 +299,43 @@ export default function InvestmentPanel() {
                   </button>
                 </div>
 
-                {/* Inputs */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                  {inputMode === 'amount' ? (
-                    <>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1, background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 7, padding: '5px 8px' }}>
-                        <span style={{ fontSize: 11, color: '#475569' }}>$</span>
-                        <input
-                          type="number"
-                          value={alloc.amount || ''}
-                          onChange={(e) => handleAmountChange(alloc.entityId, e.target.value)}
-                          placeholder="0"
-                          min={0}
-                          style={{ flex: 1, background: 'none', border: 'none', outline: 'none', color: '#e2e8f0', fontSize: 12, fontVariantNumeric: 'tabular-nums' }}
-                        />
-                      </div>
-                      <div style={{ fontSize: 11, color: entity.color, fontWeight: 600, minWidth: 42, textAlign: 'right' }}>
-                        {allocPct.toFixed(1)}%
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1, background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 7, padding: '5px 8px' }}>
-                        <input
-                          type="number"
-                          value={displayPct}
-                          onChange={(e) => handlePctChange(alloc.entityId, e.target.value)}
-                          onBlur={() => handlePctBlur(alloc.entityId)}
-                          placeholder="0"
-                          min={0}
-                          max={100}
-                          style={{ flex: 1, background: 'none', border: 'none', outline: 'none', color: '#e2e8f0', fontSize: 12, fontVariantNumeric: 'tabular-nums' }}
-                        />
-                        <span style={{ fontSize: 11, color: '#475569' }}>%</span>
-                      </div>
-                      <div style={{ fontSize: 11, color: entity.color, fontWeight: 600, minWidth: 56, textAlign: 'right' }}>
-                        {fmt(alloc.amount)}
-                      </div>
-                    </>
-                  )}
+                {/* Inputs — $ amount and % always shown side by side */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
+                  {/* Dollar input */}
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 3, flex: 1,
+                    background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(59,130,246,0.2)',
+                    borderRadius: 7, padding: '5px 7px',
+                  }}>
+                    <span style={{ fontSize: 10, color: '#475569', flexShrink: 0 }}>$</span>
+                    <input
+                      type="number"
+                      value={alloc.amount || ''}
+                      onChange={(e) => handleAmountChange(alloc.entityId, e.target.value)}
+                      placeholder="0"
+                      min={0}
+                      style={{ flex: 1, minWidth: 0, background: 'none', border: 'none', outline: 'none', color: '#e2e8f0', fontSize: 11, fontVariantNumeric: 'tabular-nums' }}
+                    />
+                  </div>
+                  {/* Percent input */}
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 3, width: 72,
+                    background: `${entity.color}12`,
+                    border: `1px solid ${entity.color}40`,
+                    borderRadius: 7, padding: '5px 7px', flexShrink: 0,
+                  }}>
+                    <input
+                      type="number"
+                      value={displayPct}
+                      onChange={(e) => handlePctChange(alloc.entityId, e.target.value)}
+                      onBlur={() => handlePctBlur(alloc.entityId)}
+                      placeholder="0"
+                      min={0}
+                      max={100}
+                      style={{ flex: 1, minWidth: 0, background: 'none', border: 'none', outline: 'none', color: entity.color, fontSize: 11, fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}
+                    />
+                    <span style={{ fontSize: 10, color: entity.color, opacity: 0.7, flexShrink: 0 }}>%</span>
+                  </div>
                 </div>
 
                 {/* Allocation bar */}
