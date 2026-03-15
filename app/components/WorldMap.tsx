@@ -47,7 +47,6 @@ export default function WorldMap({ onCountryClick, children, width, height }: Wo
   const svgRef = useRef<SVGSVGElement>(null);
   const [paths, setPaths] = useState<Array<{ id: string; path: string; name: string }>>([]);
   const [hoveredCountry, setHoveredCountry] = useState<string | null>(null);
-  const [tooltip, setTooltip] = useState<{ x: number; y: number; name: string } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -97,23 +96,6 @@ export default function WorldMap({ onCountryClick, children, width, height }: Wo
       onCountryClick?.(name, e.clientX, e.clientY);
     },
     [onCountryClick]
-  );
-
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent<SVGPathElement>, name: string) => {
-      const rect = svgRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      // rect is in scaled viewport space; tooltip is positioned in map/SVG space.
-      // Dividing by the visual scale factor (rect.width / layout width) converts
-      // the viewport offset back to map coordinates so the tooltip tracks correctly
-      // at any zoom level.
-      const scaleX = rect.width / width;
-      const scaleY = rect.height / height;
-      const mapX = (e.clientX - rect.left) / scaleX;
-      const mapY = (e.clientY - rect.top) / scaleY;
-      setTooltip({ x: mapX + 12, y: mapY - 32, name });
-    },
-    []
   );
 
   return (
@@ -181,27 +163,12 @@ export default function WorldMap({ onCountryClick, children, width, height }: Wo
               strokeWidth={0.5}
               onClick={(e) => handleCountryClick(e, name)}
               onMouseEnter={() => setHoveredCountry(name)}
-              onMouseLeave={() => { setHoveredCountry(null); setTooltip(null); }}
-              onMouseMove={(e) => handleMouseMove(e, name)}
+              onMouseLeave={() => setHoveredCountry(null)}
             />
           ))}
         </g>
       </svg>
 
-      {/* Country name tooltip */}
-      {tooltip && (
-        <div
-          className="tooltip"
-          style={{
-            position: 'absolute',
-            left: tooltip.x,
-            top: tooltip.y,
-            pointerEvents: 'none',
-          }}
-        >
-          {tooltip.name}
-        </div>
-      )}
 
       {/* Entities & relationships layer */}
       <div style={{ position: 'absolute', top: 0, left: 0, width, height, pointerEvents: 'none' }}>
