@@ -26,7 +26,20 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   const {
     currentMap, addEntity, updateEntity, deleteEntity,
     addRelationship, updateRelationship, setSelectedEntity, setConnectingFrom, connectingFromId,
+    mergeCloudMaps,
   } = useMapStore();
+
+  useEffect(() => {
+    if (!session?.user?.email) return;
+    fetch('/api/maps')
+      .then((r) => r.json())
+      .then(({ maps }) => {
+        if (!Array.isArray(maps)) return;
+        const parsed = maps.map((m: { data: string }) => JSON.parse(m.data));
+        mergeCloudMaps(parsed);
+      })
+      .catch(() => {});
+  }, [session?.user?.email]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [dims, setDims] = useState({ width: 1200, height: 800 });

@@ -60,6 +60,7 @@ interface MapState {
   createNewMap: (name: string, description: string) => void;
   deleteMap: (id: string) => void;
   generateShareToken: () => string;
+  mergeCloudMaps: (cloudMaps: ScenarioMap[]) => void;
 
   // UI state
   setSelectedEntity: (id: string | null) => void;
@@ -338,6 +339,21 @@ export const useMapStore = create<MapState>()(
         const token = uuidv4();
         set((state) => ({ currentMap: { ...state.currentMap, shareToken: token } }));
         return token;
+      },
+
+      mergeCloudMaps: (cloudMaps) => {
+        set((state) => {
+          const merged = [...state.savedMaps];
+          for (const cloud of cloudMaps) {
+            const idx = merged.findIndex((m) => m.id === cloud.id);
+            if (idx >= 0) {
+              merged[idx] = cloud;
+            } else {
+              merged.push(cloud);
+            }
+          }
+          return { savedMaps: merged };
+        });
       },
 
       setSelectedEntity: (id) => set({ selectedEntityId: id, selectedRelationshipId: null }),
