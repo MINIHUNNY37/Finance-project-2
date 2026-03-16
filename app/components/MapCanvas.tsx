@@ -10,6 +10,7 @@ import RelationshipDialog from './RelationshipDialog';
 import Toolbar from './Toolbar';
 import Sidebar from './Sidebar';
 import InvestmentPanel from './InvestmentPanel';
+import MapsDialog from './MapsDialog';
 import type { Entity, Relationship, ArrowStyle } from '../types';
 
 interface MapCanvasProps {
@@ -29,8 +30,15 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
     mergeCloudMaps,
   } = useMapStore();
 
+  const [showMapPicker, setShowMapPicker] = useState(true);
+  const [cloudMapsLoading, setCloudMapsLoading] = useState(!!session?.user?.email);
+
   useEffect(() => {
-    if (!session?.user?.email) return;
+    if (!session?.user?.email) {
+      setCloudMapsLoading(false);
+      return;
+    }
+    setCloudMapsLoading(true);
     fetch('/api/maps')
       .then((r) => r.json())
       .then(({ maps }) => {
@@ -38,7 +46,8 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
         const parsed = maps.map((m: { data: string }) => JSON.parse(m.data));
         mergeCloudMaps(parsed);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setCloudMapsLoading(false));
   }, [session?.user?.email]);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -668,6 +677,12 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
         onClose={() => { setRelDialogOpen(false); setEditingRel(undefined); }}
         onSave={handleRelSave}
         initialData={editingRel}
+      />
+      <MapsDialog
+        isOpen={showMapPicker}
+        onClose={() => setShowMapPicker(false)}
+        required
+        loading={cloudMapsLoading}
       />
     </div>
   );
