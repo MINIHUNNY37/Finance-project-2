@@ -53,7 +53,7 @@ export default function LoginPage() {
             <TrendingUp size={24} color="white" />
           </div>
           <div style={{ textAlign: 'left' }}>
-            <div style={{ fontSize: 22, fontWeight: 800, color: '#e2e8f0' }}>StockMapper</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: '#e2e8f0' }}>Plotifolio</div>
             <div style={{ fontSize: 12, color: '#64748b' }}>Scenario Planner</div>
           </div>
         </div>

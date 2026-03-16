@@ -62,7 +62,7 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Map size={18} style={{ color: '#06b6d4' }} />
             <h2 style={{ color: '#93c5fd', fontSize: 18, fontWeight: 700 }}>
-              {required ? 'Welcome to StockMapper' : 'My Maps'}
+              {required ? 'Welcome to Plotifolio' : 'My Maps'}
             </h2>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

@@ -89,7 +89,7 @@ export default function Toolbar({
             <TrendingUp size={16} color="white" />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#e2e8f0', lineHeight: 1.2 }}>StockMapper</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#e2e8f0', lineHeight: 1.2 }}>Plotifolio</span>
             <span style={{ fontSize: 9, color: '#64748b', lineHeight: 1 }}>Scenario Planner</span>
           </div>
         </div>

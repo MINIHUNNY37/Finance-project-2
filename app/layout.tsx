@@ -3,7 +3,7 @@ import "./globals.css";
 import Providers from "./providers";
 
 export const metadata: Metadata = {
-  title: "StockMapper – Scenario Planner",
+  title: "Plotifolio – Scenario Planner",
   description: "Visually map how companies operate and test investment scenarios on an interactive world map.",
 };
 
