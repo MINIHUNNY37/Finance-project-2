@@ -41,11 +41,32 @@ export default function Toolbar({
   const [showMaps, setShowMaps] = useState(false);
   const [showClock, setShowClock] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    // Always save locally first
     saveCurrentMap();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+
+    if (!session?.user) {
+      // Not logged in — show prompt
+      setShowLoginPrompt(true);
+      return;
+    }
+
+    // Logged in — also save to cloud
+    setSaving(true);
+    try {
+      await fetch('/api/maps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ map: currentMap }),
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -218,9 +239,10 @@ export default function Toolbar({
           </button>
 
           {/* Save */}
-          <button className="btn-ghost" onClick={handleSave}
-            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', fontSize: 12 }}>
-            <Save size={13} />{saved ? '✓ Saved' : 'Save'}
+          <button className="btn-ghost" onClick={handleSave} disabled={saving}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', fontSize: 12, opacity: saving ? 0.7 : 1 }}>
+            <Save size={13} />
+            {saving ? 'Saving…' : saved ? '✓ Cloud Saved' : 'Save'}
           </button>
 
           {/* Maps */}
@@ -271,6 +293,60 @@ export default function Toolbar({
       <ShareDialog isOpen={showShare} onClose={() => setShowShare(false)} />
       <MapsDialog isOpen={showMaps} onClose={() => setShowMaps(false)} />
       {showClock && <WorldClockPanel onClose={() => setShowClock(false)} />}
+
+      {/* Login prompt modal */}
+      {showLoginPrompt && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+        }} onClick={() => setShowLoginPrompt(false)}>
+          <div style={{
+            background: 'rgba(15,23,42,0.98)',
+            border: '1px solid rgba(59,130,246,0.3)',
+            borderRadius: 16, padding: 32, maxWidth: 380, width: '90%',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16,
+            boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{
+              width: 48, height: 48, borderRadius: 12,
+              background: 'linear-gradient(135deg, #3b82f6, #06b6d4)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Save size={22} color="white" />
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: '#e2e8f0', marginBottom: 8 }}>
+                Sign in to save to the cloud
+              </div>
+              <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.5 }}>
+                Your map was saved locally. Sign in with Google to sync it to your account and access it from any device.
+              </div>
+            </div>
+            <button
+              onClick={() => { setShowLoginPrompt(false); onSignIn(); }}
+              style={{
+                width: '100%', padding: '10px 0', borderRadius: 10,
+                background: 'linear-gradient(135deg, #3b82f6, #06b6d4)',
+                border: 'none', cursor: 'pointer',
+                color: 'white', fontSize: 14, fontWeight: 600,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              }}
+            >
+              <LogIn size={15} /> Sign in with Google
+            </button>
+            <button
+              onClick={() => setShowLoginPrompt(false)}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: '#475569', fontSize: 13,
+              }}
+            >
+              Continue without signing in
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

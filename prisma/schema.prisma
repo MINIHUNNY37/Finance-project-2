@@ -1,0 +1,20 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model SavedMap {
+  id        String   @id @default(cuid())
+  userId    String
+  mapId     String
+  name      String
+  data      String   // JSON blob of the full ScenarioMap
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, mapId])
+}
