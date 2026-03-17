@@ -178,9 +178,9 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
     return nx;
   }, [dims.width]);
 
-  // Clamp vertical pan to ±50% of screen height so the map never drifts too far up/down
-  const clampPanY = useCallback((y: number): number => {
-    const limit = dims.height / 2;
+  // Clamp vertical pan: ±50% of screen at zoom=1, scales linearly with zoom
+  const clampPanY = useCallback((y: number, z?: number): number => {
+    const limit = (dims.height / 2) * (z ?? zoomRef.current);
     return Math.min(limit, Math.max(-limit, y));
   }, [dims.height]);
 
@@ -205,7 +205,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
       const rawPanY = (cy - hh) * (1 - ratio) + ratio * prevPan.y;
       const newPan = {
         x: (cx - hw) * (1 - ratio) + ratio * prevPan.x,
-        y: Math.min(dimsRef.current.height / 2, Math.max(-dimsRef.current.height / 2, rawPanY)),
+        y: Math.min((dimsRef.current.height / 2) * newZoom, Math.max(-(dimsRef.current.height / 2) * newZoom, rawPanY)),
       };
 
       // Normalize X for world map wrapping after zoom
@@ -275,7 +275,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
         if (Math.abs(dx) > 3 || Math.abs(dy) > 3) wasPanning.current = true;
         if (wasPanning.current) {
           const rawY = panStartRef.current.panY + dy;
-          setPanOffset({ x: panStartRef.current.panX + dx, y: clampPanY(rawY) });
+          setPanOffset({ x: panStartRef.current.panX + dx, y: clampPanY(rawY, zoomRef.current) });
         }
       };
 
