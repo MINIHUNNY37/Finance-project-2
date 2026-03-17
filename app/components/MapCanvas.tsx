@@ -65,6 +65,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [dims, setDims] = useState({ width: 1200, height: 800 });
+  const dimsRef = useRef({ width: 1200, height: 800 });
   const [zoom, setZoom] = useState(1);
   const [fixedEntitySize, setFixedEntitySize] = useState(false);
   const [entitySizeMult, setEntitySizeMult] = useState(1);
@@ -137,10 +138,10 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   useEffect(() => {
     const update = () => {
       if (containerRef.current) {
-        setDims({
-          width: containerRef.current.offsetWidth,
-          height: containerRef.current.offsetHeight,
-        });
+        const w = containerRef.current.offsetWidth;
+        const h = containerRef.current.offsetHeight;
+        dimsRef.current = { width: w, height: h };
+        setDims({ width: w, height: h });
       }
     };
     update();
@@ -177,6 +178,12 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
     return nx;
   }, [dims.width]);
 
+  // Clamp vertical pan to ±50% of screen height so the map never drifts too far up/down
+  const clampPanY = useCallback((y: number): number => {
+    const limit = dims.height / 2;
+    return Math.min(limit, Math.max(-limit, y));
+  }, [dims.height]);
+
   // Mouse wheel zoom toward cursor
   useEffect(() => {
     const el = containerRef.current;
@@ -195,9 +202,10 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
 
       const newZoom = Math.max(minZoomRef.current, Math.min(MAX_ZOOM, prevZoom * delta));
       const ratio = newZoom / prevZoom;
+      const rawPanY = (cy - hh) * (1 - ratio) + ratio * prevPan.y;
       const newPan = {
         x: (cx - hw) * (1 - ratio) + ratio * prevPan.x,
-        y: (cy - hh) * (1 - ratio) + ratio * prevPan.y,
+        y: Math.min(dimsRef.current.height / 2, Math.max(-dimsRef.current.height / 2, rawPanY)),
       };
 
       // Normalize X for world map wrapping after zoom
@@ -266,7 +274,8 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
         const dy = ev.clientY - panStartRef.current.mouseY;
         if (Math.abs(dx) > 3 || Math.abs(dy) > 3) wasPanning.current = true;
         if (wasPanning.current) {
-          setPanOffset({ x: panStartRef.current.panX + dx, y: panStartRef.current.panY + dy });
+          const rawY = panStartRef.current.panY + dy;
+          setPanOffset({ x: panStartRef.current.panX + dx, y: clampPanY(rawY) });
         }
       };
 
