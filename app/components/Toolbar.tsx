@@ -205,16 +205,22 @@ export default function Toolbar({
           {/* Calendar date filter */}
           <CalendarPicker />
 
-          {/* Background toggle */}
+          {/* Background toggle — switching world→plain is irreversible; disabled when already plain */}
           <button
-            onClick={onToggleWorldMap}
-            title={showWorldMap ? 'Switch to plain background' : 'Switch to world map'}
+            onClick={showWorldMap ? onToggleWorldMap : undefined}
+            title={
+              showWorldMap
+                ? 'Switch to plain background (irreversible)'
+                : 'Plain mode — cannot switch back to world map'
+            }
             style={{
               display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px',
-              borderRadius: 8, fontSize: 12, cursor: 'pointer',
-              border: `1px solid ${showWorldMap ? 'rgba(6,182,212,0.4)' : 'rgba(59,130,246,0.2)'}`,
+              borderRadius: 8, fontSize: 12,
+              cursor: showWorldMap ? 'pointer' : 'not-allowed',
+              border: `1px solid ${showWorldMap ? 'rgba(6,182,212,0.4)' : 'rgba(59,130,246,0.1)'}`,
               background: showWorldMap ? 'rgba(6,182,212,0.1)' : 'transparent',
-              color: showWorldMap ? '#06b6d4' : '#475569',
+              color: showWorldMap ? '#06b6d4' : '#334155',
+              opacity: showWorldMap ? 1 : 0.45,
               transition: 'all 0.15s',
             }}
           >
@@ -291,7 +297,7 @@ export default function Toolbar({
       </div>
 
       <ShareDialog isOpen={showShare} onClose={() => setShowShare(false)} />
-      <MapsDialog isOpen={showMaps} onClose={() => setShowMaps(false)} />
+      <MapsDialog isOpen={showMaps} onClose={() => setShowMaps(false)} session={session} onSignIn={onSignIn} />
       {showClock && <WorldClockPanel onClose={() => setShowClock(false)} />}
 
       {/* Login prompt modal */}

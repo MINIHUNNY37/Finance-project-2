@@ -3,8 +3,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as d3 from 'd3-geo';
 
-// Simplified world map paths for major countries as SVG path data
-// Using a simplified Robinson-like projection baked as static paths
 const WORLD_SVG_URL = 'https://unpkg.com/world-atlas@2/countries-110m.json';
 
 interface WorldMapProps {
@@ -43,9 +41,110 @@ const COUNTRY_NAMES: Record<string, string> = {
   '887': 'Yemen', '894': 'Zambia', '716': 'Zimbabwe',
 };
 
+interface CountryPath {
+  id: string;
+  path: string;
+  name: string;
+}
+
+// Renders a single copy of the world map background SVG at a horizontal offset.
+// interactive=true means the copy has hover/click handlers (center copy only).
+function WorldMapBackground({
+  paths,
+  hoveredCountry,
+  width,
+  height,
+  offsetX,
+  interactive,
+  onCountryClick,
+  onHoverEnter,
+  onHoverLeave,
+  svgIdSuffix,
+}: {
+  paths: CountryPath[];
+  hoveredCountry: string | null;
+  width: number;
+  height: number;
+  offsetX: number;
+  interactive: boolean;
+  onCountryClick?: (name: string, clientX: number, clientY: number) => void;
+  onHoverEnter?: (name: string) => void;
+  onHoverLeave?: () => void;
+  svgIdSuffix: string;
+}) {
+  const gradId = `oceanGrad${svgIdSuffix}`;
+  const filterId = `countryGlow${svgIdSuffix}`;
+  return (
+    <svg
+      width={width}
+      height={height}
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: offsetX,
+        pointerEvents: interactive ? 'all' : 'none',
+      }}
+    >
+      <defs>
+        <radialGradient id={gradId} cx="50%" cy="50%" r="70%">
+          <stop offset="0%" stopColor="#0c1f3d" />
+          <stop offset="100%" stopColor="#071224" />
+        </radialGradient>
+        <filter id={filterId}>
+          <feGaussianBlur stdDeviation="1" result="coloredBlur" />
+          <feMerge>
+            <feMergeNode in="coloredBlur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+      <rect width={width} height={height} fill={`url(#${gradId})`} />
+
+      {/* Subtle grid lines */}
+      {Array.from({ length: 18 }, (_, i) => (
+        <line
+          key={`lat-${i}`}
+          x1={0} y1={height * (i / 18)}
+          x2={width} y2={height * (i / 18)}
+          stroke="rgba(59, 130, 246, 0.04)" strokeWidth={1}
+        />
+      ))}
+      {Array.from({ length: 36 }, (_, i) => (
+        <line
+          key={`lon-${i}`}
+          x1={width * (i / 36)} y1={0}
+          x2={width * (i / 36)} y2={height}
+          stroke="rgba(59, 130, 246, 0.04)" strokeWidth={1}
+        />
+      ))}
+
+      {/* Countries */}
+      <g>
+        {paths.map(({ path, name }, index) => (
+          <path
+            key={`country-${index}`}
+            d={path}
+            className="country-path"
+            fill={
+              interactive && hoveredCountry === name
+                ? 'rgba(59, 130, 246, 0.22)'
+                : 'rgba(30, 58, 95, 0.7)'
+            }
+            stroke="rgba(59, 130, 246, 0.35)"
+            strokeWidth={0.5}
+            onClick={interactive ? (e) => onCountryClick?.(name, e.clientX, e.clientY) : undefined}
+            onMouseEnter={interactive ? () => onHoverEnter?.(name) : undefined}
+            onMouseLeave={interactive ? () => onHoverLeave?.() : undefined}
+          />
+        ))}
+      </g>
+    </svg>
+  );
+}
+
 export default function WorldMap({ onCountryClick, children, width, height }: WorldMapProps) {
   const svgRef = useRef<SVGSVGElement>(null);
-  const [paths, setPaths] = useState<Array<{ id: string; path: string; name: string }>>([]);
+  const [paths, setPaths] = useState<CountryPath[]>([]);
   const [hoveredCountry, setHoveredCountry] = useState<string | null>(null);
 
   useEffect(() => {
@@ -89,88 +188,64 @@ export default function WorldMap({ onCountryClick, children, width, height }: Wo
   }, [width, height]);
 
   const handleCountryClick = useCallback(
-    (e: React.MouseEvent<SVGPathElement>, name: string) => {
-      // Pass raw client coordinates so MapCanvas can correctly convert them
-      // using its stable containerRef rect — SVG rect shifts with zoom/pan and
-      // would give wrong positions if we subtracted it here.
-      onCountryClick?.(name, e.clientX, e.clientY);
+    (name: string, clientX: number, clientY: number) => {
+      onCountryClick?.(name, clientX, clientY);
     },
     [onCountryClick]
   );
 
+  // We render 3 copies of the background side by side:
+  //   left copy  at offsetX = -width  (no interaction)
+  //   center copy at offsetX = 0      (interactive — hover + click)
+  //   right copy  at offsetX = +width (no interaction)
+  //
+  // The outer overflow:hidden in MapCanvas clips anything outside the viewport.
+  // When the user pans, these copies fill what would otherwise be empty space,
+  // creating the illusion of a round world that wraps horizontally.
+
   return (
-    <div className="world-map-container" style={{ width, height }}>
-      {/* Ocean background */}
-      <svg
-        ref={svgRef}
+    <div
+      className="world-map-container"
+      ref={svgRef as unknown as React.RefObject<HTMLDivElement>}
+      style={{ width, height, position: 'relative', overflow: 'visible' }}
+    >
+      {/* Left copy — background only, no interaction */}
+      <WorldMapBackground
+        paths={paths}
+        hoveredCountry={null}
         width={width}
         height={height}
-        style={{ position: 'absolute', top: 0, left: 0 }}
-      >
-        {/* Ocean gradient */}
-        <defs>
-          <radialGradient id="oceanGrad" cx="50%" cy="50%" r="70%">
-            <stop offset="0%" stopColor="#0c1f3d" />
-            <stop offset="100%" stopColor="#071224" />
-          </radialGradient>
-          <filter id="countryGlow">
-            <feGaussianBlur stdDeviation="1" result="coloredBlur" />
-            <feMerge>
-              <feMergeNode in="coloredBlur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-        <rect width={width} height={height} fill="url(#oceanGrad)" />
+        offsetX={-width}
+        interactive={false}
+        svgIdSuffix="L"
+      />
 
-        {/* Subtle grid lines */}
-        {Array.from({ length: 18 }, (_, i) => (
-          <line
-            key={`lat-${i}`}
-            x1={0}
-            y1={height * (i / 18)}
-            x2={width}
-            y2={height * (i / 18)}
-            stroke="rgba(59, 130, 246, 0.04)"
-            strokeWidth={1}
-          />
-        ))}
-        {Array.from({ length: 36 }, (_, i) => (
-          <line
-            key={`lon-${i}`}
-            x1={width * (i / 36)}
-            y1={0}
-            x2={width * (i / 36)}
-            y2={height}
-            stroke="rgba(59, 130, 246, 0.04)"
-            strokeWidth={1}
-          />
-        ))}
+      {/* Center copy — interactive */}
+      <WorldMapBackground
+        paths={paths}
+        hoveredCountry={hoveredCountry}
+        width={width}
+        height={height}
+        offsetX={0}
+        interactive={true}
+        onCountryClick={handleCountryClick}
+        onHoverEnter={setHoveredCountry}
+        onHoverLeave={() => setHoveredCountry(null)}
+        svgIdSuffix="C"
+      />
 
-        {/* Countries */}
-        <g>
-          {paths.map(({ id, path, name }, index) => (
-            <path
-              key={`country-${index}`}
-              d={path}
-              className="country-path"
-              fill={
-                hoveredCountry === name
-                  ? 'rgba(59, 130, 246, 0.22)'
-                  : 'rgba(30, 58, 95, 0.7)'
-              }
-              stroke="rgba(59, 130, 246, 0.35)"
-              strokeWidth={0.5}
-              onClick={(e) => handleCountryClick(e, name)}
-              onMouseEnter={() => setHoveredCountry(name)}
-              onMouseLeave={() => setHoveredCountry(null)}
-            />
-          ))}
-        </g>
-      </svg>
+      {/* Right copy — background only, no interaction */}
+      <WorldMapBackground
+        paths={paths}
+        hoveredCountry={null}
+        width={width}
+        height={height}
+        offsetX={width}
+        interactive={false}
+        svgIdSuffix="R"
+      />
 
-
-      {/* Entities & relationships layer */}
+      {/* Entities & relationships layer — center only */}
       <div style={{ position: 'absolute', top: 0, left: 0, width, height, pointerEvents: 'none' }}>
         {children}
       </div>

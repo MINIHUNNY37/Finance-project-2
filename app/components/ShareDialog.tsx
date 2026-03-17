@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Copy, Share2, Check, Link } from 'lucide-react';
+import { X, Copy, Share2, Check, Link, Code, Download } from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
 
 interface ShareDialogProps {
@@ -12,6 +12,7 @@ interface ShareDialogProps {
 export default function ShareDialog({ isOpen, onClose }: ShareDialogProps) {
   const { currentMap, generateShareToken, saveCurrentMap } = useMapStore();
   const [copied, setCopied] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
   const [email, setEmail] = useState('');
   const [shareEmails, setShareEmails] = useState<string[]>([]);
 
@@ -38,6 +39,18 @@ export default function ShareDialog({ isOpen, onClose }: ShareDialogProps) {
     if (email.trim() && !shareEmails.includes(email.trim())) {
       setShareEmails([...shareEmails, email.trim()]);
       setEmail('');
+    }
+  };
+
+  // Generate a compact code that encodes all map data
+  const handleCopyMapCode = () => {
+    try {
+      const code = btoa(encodeURIComponent(JSON.stringify(currentMap)));
+      navigator.clipboard.writeText(code);
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 2000);
+    } catch {
+      // ignore
     }
   };
 
@@ -87,6 +100,24 @@ export default function ShareDialog({ isOpen, onClose }: ShareDialogProps) {
           <div style={{ fontSize: 12, color: '#64748b' }}>
             {currentMap.entities.length} entities · {currentMap.relationships.length} connections · {currentMap.folders.length} folders
           </div>
+        </div>
+
+        {/* Map Code — portable snapshot */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
+            Map Code
+          </div>
+          <div style={{ fontSize: 11, color: '#475569', marginBottom: 8, lineHeight: 1.5 }}>
+            Copy this code and paste it in any Plotifolio session to import a full copy of this map.
+          </div>
+          <button
+            className="btn-primary"
+            onClick={handleCopyMapCode}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+          >
+            {codeCopied ? <Check size={14} /> : <Code size={14} />}
+            {codeCopied ? 'Code Copied!' : 'Copy Map Code'}
+          </button>
         </div>
 
         {/* Shareable link */}
@@ -166,7 +197,8 @@ export default function ShareDialog({ isOpen, onClose }: ShareDialogProps) {
           <div style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
             Export
           </div>
-          <button className="btn-ghost" onClick={handleExportJSON} style={{ width: '100%', fontSize: 13 }}>
+          <button className="btn-ghost" onClick={handleExportJSON} style={{ width: '100%', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <Download size={13} />
             Download as JSON
           </button>
         </div>

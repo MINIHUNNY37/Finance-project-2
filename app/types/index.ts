@@ -66,6 +66,7 @@ export interface ScenarioMap {
   ownerId: string;
   sharedWith: string[];
   shareToken?: string;
+  mapType?: 'world' | 'plain';
   createdAt: string;
   updatedAt: string;
 }

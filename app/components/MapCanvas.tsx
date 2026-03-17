@@ -19,19 +19,32 @@ interface MapCanvasProps {
   onSignOut: () => void;
 }
 
-const MIN_ZOOM = 0.3;
 const MAX_ZOOM = 7.5;
 const ZOOM_STEP = 0.15;
+// Min zoom is dynamic: 1.0 for world map (can't zoom out past 100%), 0.3 for plain
+const MIN_ZOOM_WORLD = 1.0;
+const MIN_ZOOM_PLAIN = 0.3;
 
 export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasProps) {
   const {
     currentMap, addEntity, updateEntity, deleteEntity,
     addRelationship, updateRelationship, setSelectedEntity, setConnectingFrom, connectingFromId,
-    mergeCloudMaps,
+    mergeCloudMaps, setCurrentMapType,
   } = useMapStore();
+
+  // Derive showWorldMap from the current map's type (default to world for legacy maps)
+  const showWorldMap = currentMap.mapType !== 'plain';
+  const MIN_ZOOM = showWorldMap ? MIN_ZOOM_WORLD : MIN_ZOOM_PLAIN;
+
+  // Keep minZoom in a ref so wheel/keyboard handlers always have the latest value
+  const minZoomRef = useRef(MIN_ZOOM);
+  useEffect(() => { minZoomRef.current = MIN_ZOOM; }, [MIN_ZOOM]);
 
   const [showMapPicker, setShowMapPicker] = useState(true);
   const [cloudMapsLoading, setCloudMapsLoading] = useState(!!session?.user?.email);
+
+  // Warning dialog for switching world → plain (irreversible)
+  const [showPlainWarning, setShowPlainWarning] = useState(false);
 
   useEffect(() => {
     if (!session?.user?.email) {
@@ -54,7 +67,6 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   const [dims, setDims] = useState({ width: 1200, height: 800 });
   const [zoom, setZoom] = useState(1);
   const [fixedEntitySize, setFixedEntitySize] = useState(false);
-  const [showWorldMap, setShowWorldMap] = useState(true);
   const [entitySizeMult, setEntitySizeMult] = useState(1);
   const [arrowSizeMult, setArrowSizeMult] = useState(1);
 
@@ -64,7 +76,6 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   const panStartRef = useRef<{ mouseX: number; mouseY: number; panX: number; panY: number } | null>(null);
 
   // Refs that always hold the latest zoom/pan — used inside wheel handler
-  // to avoid calling setState inside another setState's updater (React anti-pattern)
   const zoomRef = useRef(1);
   const panRef = useRef({ x: 0, y: 0 });
 
@@ -102,9 +113,17 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
 
   const isConnecting = !!connectingFromId;
 
-  // Keep refs in sync with state for sources other than the wheel handler
+  // Keep refs in sync with state
   useEffect(() => { zoomRef.current = zoom; }, [zoom]);
   useEffect(() => { panRef.current = panOffset; }, [panOffset]);
+
+  // When switching to world map mode, enforce min zoom
+  useEffect(() => {
+    if (showWorldMap && zoom < MIN_ZOOM_WORLD) {
+      setZoom(MIN_ZOOM_WORLD);
+      zoomRef.current = MIN_ZOOM_WORLD;
+    }
+  }, [showWorldMap, zoom]);
 
   // Clear pending rel settings whenever connect mode ends
   useEffect(() => {
@@ -141,16 +160,24 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
         setPendingRelSettings(null);
       }
       if ((e.ctrlKey || e.metaKey) && e.key === '=') { e.preventDefault(); setZoom((z) => Math.min(MAX_ZOOM, z + ZOOM_STEP)); }
-      if ((e.ctrlKey || e.metaKey) && e.key === '-') { e.preventDefault(); setZoom((z) => Math.max(MIN_ZOOM, z - ZOOM_STEP)); }
-      if ((e.ctrlKey || e.metaKey) && e.key === '0') { e.preventDefault(); setZoom(1); setPanOffset({ x: 0, y: 0 }); }
+      if ((e.ctrlKey || e.metaKey) && e.key === '-') { e.preventDefault(); setZoom((z) => Math.max(minZoomRef.current, z - ZOOM_STEP)); }
+      if ((e.ctrlKey || e.metaKey) && e.key === '0') { e.preventDefault(); setZoom(minZoomRef.current); setPanOffset({ x: 0, y: 0 }); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [setConnectingFrom, setSelectedEntity]);
 
+  // Helper: normalize panOffset.x for world map wrapping
+  // The "world wrap amount" in pan units = dims.width * zoom (one full world width in screen space)
+  const normalizePanForWrap = useCallback((panX: number, z: number): number => {
+    const worldWrap = dims.width * z;
+    if (worldWrap === 0) return panX;
+    let nx = panX % worldWrap;
+    if (nx === 0 && panX !== 0) nx = 0; // avoid -0
+    return nx;
+  }, [dims.width]);
+
   // Mouse wheel zoom toward cursor
-  // Uses refs so rapid scroll events always read the latest accumulated values
-  // without the React anti-pattern of calling setState inside another setState updater.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -166,16 +193,18 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
       const prevZoom = zoomRef.current;
       const prevPan = panRef.current;
 
-      const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, prevZoom * delta));
+      const newZoom = Math.max(minZoomRef.current, Math.min(MAX_ZOOM, prevZoom * delta));
       const ratio = newZoom / prevZoom;
-      // With transformOrigin:center, keep map point under cursor fixed:
-      // panX_new = (cx - hw)*(1 - ratio) + ratio*panX_old
       const newPan = {
         x: (cx - hw) * (1 - ratio) + ratio * prevPan.x,
         y: (cy - hh) * (1 - ratio) + ratio * prevPan.y,
       };
 
-      // Update refs first so the next wheel event sees the new values
+      // Normalize X for world map wrapping after zoom
+      if (minZoomRef.current === MIN_ZOOM_WORLD) {
+        newPan.x = newPan.x % (dims.width * newZoom) || 0;
+      }
+
       zoomRef.current = newZoom;
       panRef.current = newPan;
 
@@ -184,7 +213,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
-  }, []);
+  }, [dims.width, normalizePanForWrap]);
 
   // Convert screen coords → map coords accounting for pan + zoom
   const screenToMap = useCallback(
@@ -203,7 +232,6 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
       const sy = e.clientY - rect.top;
       const pos = screenToMap(sx, sy);
       setMousePos(pos);
-      // Accumulate freehand path while drawing (throttle by distance)
       if (drawingFromId) {
         setDrawPath((prev) => {
           const last = prev[prev.length - 1];
@@ -221,7 +249,6 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   const handleContainerMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (e.button !== 0) return;
-      // Only pan if the direct target is the background (not an entity/button)
       const target = e.target as HTMLElement;
       if (target.closest('.entity-card') || target.closest('button') || target.closest('.no-drag')) return;
 
@@ -246,17 +273,27 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
       const onMouseUp = () => {
         document.removeEventListener('mousemove', onMouseMove);
         document.removeEventListener('mouseup', onMouseUp);
+
+        // Normalize pan X for world map wrapping after drag ends (seamless, no visual jump)
+        if (minZoomRef.current === MIN_ZOOM_WORLD) {
+          const normalized = normalizePanForWrap(panRef.current.x, zoomRef.current);
+          if (normalized !== panRef.current.x) {
+            panRef.current = { ...panRef.current, x: normalized };
+            setPanOffset(panRef.current);
+          }
+        }
+
         panStartRef.current = null;
       };
 
       document.addEventListener('mousemove', onMouseMove);
       document.addEventListener('mouseup', onMouseUp);
     },
-    [panOffset]
+    [panOffset, normalizePanForWrap]
   );
 
   const handleCanvasClick = useCallback(() => {
-    if (wasPanning.current) return; // Was a drag-to-pan, not a click
+    if (wasPanning.current) return;
     setSelectedEntity(null);
     if (connectingFromId) {
       setConnectingFrom(null);
@@ -269,9 +306,6 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
     (country: string, clientX: number, clientY: number) => {
       if (isConnecting) return;
       if (wasPanning.current) return;
-      // Convert viewport coords → container-relative → map coords.
-      // Must use containerRef rect (not the SVG rect) because the SVG rect
-      // moves with zoom/pan, which would give wrong positions otherwise.
       const rect = containerRef.current?.getBoundingClientRect();
       if (!rect) return;
       const pos = screenToMap(clientX - rect.left, clientY - rect.top);
@@ -286,13 +320,12 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   const handleEntitySave = useCallback(
     (data: Partial<Entity>) => {
       if (editingEntity?.id) {
-        // Never overwrite position when editing — entity keeps wherever it currently is
         const { position: _pos, ...updateData } = data;
         updateEntity(editingEntity.id, updateData);
       } else {
         addEntity({
           name: data.name || 'New Entity',
-          icon: data.icon || '🏢', // dialog guarantees icon is set; fallback just in case
+          icon: data.icon || '🏢',
           subtitle: data.subtitle || '',
           description: data.description || '',
           color: data.color || '#3B82F6',
@@ -386,7 +419,6 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
     drawPathRef.current = [];
   }, [drawingFromId, addRelationship]);
 
-  // Global mouseup cancels draw mode if no entity handled the drop
   useEffect(() => {
     const onMouseUp = () => {
       if (drawingFromId && !drawingHandledRef.current) {
@@ -408,10 +440,6 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
     [editingRel, updateRelationship]
   );
 
-  // Pan the view so the given map-coordinate position is centered on screen.
-  // Formula with transformOrigin:center — to center point (px, py):
-  //   screenX = zoom*(px - cw/2) + panX + cw/2 = cw/2
-  //   => panX = zoom*(cw/2 - px)
   const handleFocusEntity = useCallback(
     (pos: { x: number; y: number }) => {
       const newPan = {
@@ -423,6 +451,54 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
     },
     [zoom, dims]
   );
+
+  // Handle world map toggle — switching world→plain is irreversible (show warning)
+  const handleToggleWorldMap = useCallback(() => {
+    if (showWorldMap) {
+      // Show confirmation before switching to plain
+      setShowPlainWarning(true);
+    }
+    // plain→world is blocked (irreversible); toggle button is disabled in that state
+  }, [showWorldMap]);
+
+  const handleConfirmSwitchToPlain = useCallback(() => {
+    setCurrentMapType('plain');
+    setShowPlainWarning(false);
+    // Allow zooming out below 1.0 now that we're in plain mode
+    // (current zoom stays, MIN_ZOOM will update via the ref)
+  }, [setCurrentMapType]);
+
+  const entityList = (
+    <>
+      {currentMap.entities.filter((e) => !e.hidden).map((entity) => (
+        <EntityCard
+          key={entity.id}
+          entity={entity}
+          onEdit={handleEditEntity}
+          onDelete={deleteEntity}
+          isConnecting={isConnecting}
+          isConnectingFrom={connectingFromId === entity.id}
+          mapWidth={dims.width}
+          mapHeight={dims.height}
+          zoom={zoom}
+          fixedEntitySize={fixedEntitySize}
+          entitySizeMult={entitySizeMult}
+          onConnectWithSettings={handleConnectWithSettings}
+          pendingRelSettings={pendingRelSettings}
+          onStartDrawConnection={handleStartDrawConnection}
+          isDrawTarget={!!drawingFromId && drawingFromId !== entity.id}
+          onDropConnection={handleDropConnection}
+          isDrawMode={isDrawMode}
+        />
+      ))}
+    </>
+  );
+
+  const visibleRelationships = currentMap.relationships.filter((r) => {
+    const from = currentMap.entities.find((e) => e.id === r.fromEntityId);
+    const to = currentMap.entities.find((e) => e.id === r.toEntityId);
+    return !from?.hidden && !to?.hidden;
+  });
 
   return (
     <div style={{ width: '100vw', height: '100vh' }}>
@@ -446,11 +522,11 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
         zoom={zoom}
         onZoomIn={() => setZoom((z) => Math.min(MAX_ZOOM, z + ZOOM_STEP))}
         onZoomOut={() => setZoom((z) => Math.max(MIN_ZOOM, z - ZOOM_STEP))}
-        onZoomReset={() => { setZoom(1); setPanOffset({ x: 0, y: 0 }); }}
+        onZoomReset={() => { setZoom(MIN_ZOOM); setPanOffset({ x: 0, y: 0 }); }}
         fixedEntitySize={fixedEntitySize}
         onToggleFixedEntitySize={() => setFixedEntitySize((v) => !v)}
         showWorldMap={showWorldMap}
-        onToggleWorldMap={() => setShowWorldMap((v) => !v)}
+        onToggleWorldMap={handleToggleWorldMap}
       />
 
       <InvestmentPanel />
@@ -500,11 +576,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
             <WorldMap onCountryClick={handleCountryClick} width={dims.width} height={dims.height}>
               <RelationshipLayer
                 entities={currentMap.entities}
-                relationships={currentMap.relationships.filter((r) => {
-                  const from = currentMap.entities.find((e) => e.id === r.fromEntityId);
-                  const to = currentMap.entities.find((e) => e.id === r.toEntityId);
-                  return !from?.hidden && !to?.hidden;
-                })}
+                relationships={visibleRelationships}
                 width={dims.width}
                 height={dims.height}
                 connectingFromId={connectingFromId}
@@ -515,27 +587,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
                 drawingFromId={drawingFromId}
                 drawPath={drawPath}
               />
-              {currentMap.entities.filter((e) => !e.hidden).map((entity) => (
-                <EntityCard
-                  key={entity.id}
-                  entity={entity}
-                  onEdit={handleEditEntity}
-                  onDelete={deleteEntity}
-                  isConnecting={isConnecting}
-                  isConnectingFrom={connectingFromId === entity.id}
-                  mapWidth={dims.width}
-                  mapHeight={dims.height}
-                  zoom={zoom}
-                  fixedEntitySize={fixedEntitySize}
-                  entitySizeMult={entitySizeMult}
-                  onConnectWithSettings={handleConnectWithSettings}
-                  pendingRelSettings={pendingRelSettings}
-                  onStartDrawConnection={handleStartDrawConnection}
-                  isDrawTarget={!!drawingFromId && drawingFromId !== entity.id}
-                  onDropConnection={handleDropConnection}
-                  isDrawMode={isDrawMode}
-                />
-              ))}
+              {entityList}
             </WorldMap>
           ) : (
             /* ── Plain background ── */
@@ -554,11 +606,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
               </svg>
               <RelationshipLayer
                 entities={currentMap.entities}
-                relationships={currentMap.relationships.filter((r) => {
-                  const from = currentMap.entities.find((e) => e.id === r.fromEntityId);
-                  const to = currentMap.entities.find((e) => e.id === r.toEntityId);
-                  return !from?.hidden && !to?.hidden;
-                })}
+                relationships={visibleRelationships}
                 width={dims.width}
                 height={dims.height}
                 connectingFromId={connectingFromId}
@@ -569,27 +617,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
                 drawingFromId={drawingFromId}
                 drawPath={drawPath}
               />
-              {currentMap.entities.filter((e) => !e.hidden).map((entity) => (
-                <EntityCard
-                  key={entity.id}
-                  entity={entity}
-                  onEdit={handleEditEntity}
-                  onDelete={deleteEntity}
-                  isConnecting={isConnecting}
-                  isConnectingFrom={connectingFromId === entity.id}
-                  mapWidth={dims.width}
-                  mapHeight={dims.height}
-                  zoom={zoom}
-                  fixedEntitySize={fixedEntitySize}
-                  entitySizeMult={entitySizeMult}
-                  onConnectWithSettings={handleConnectWithSettings}
-                  pendingRelSettings={pendingRelSettings}
-                  onStartDrawConnection={handleStartDrawConnection}
-                  isDrawTarget={!!drawingFromId && drawingFromId !== entity.id}
-                  onDropConnection={handleDropConnection}
-                  isDrawMode={isDrawMode}
-                />
-              ))}
+              {entityList}
             </div>
           )}
         </div>
@@ -606,8 +634,12 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
               Start Building Your Scenario Map
             </div>
             <div style={{ fontSize: 13, color: 'rgba(100,116,139,0.8)', lineHeight: 1.7 }}>
-              Click any country to place an entity<br />
-              or use &quot;Add Entity&quot; above<br />
+              {showWorldMap ? (
+                <>Click any country to place an entity<br />or use &quot;Add Entity&quot; above</>
+              ) : (
+                <>Use &quot;Add Entity&quot; above to place entities</>
+              )}
+              <br />
               <span style={{ fontSize: 11, color: 'rgba(71,85,105,0.8)' }}>
                 Drag to pan · Scroll to zoom · Right-click entity to connect
               </span>
@@ -628,8 +660,8 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
             <span>{Math.round(zoom * 100)}%</span>
             {(panOffset.x !== 0 || panOffset.y !== 0) && (
               <button
-                style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: 11, padding: 0 }}
-                onClick={(e) => { e.stopPropagation(); setPanOffset({ x: 0, y: 0 }); setZoom(1); }}
+                style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: 11, padding: 0, pointerEvents: 'all' }}
+                onClick={(e) => { e.stopPropagation(); setPanOffset({ x: 0, y: 0 }); setZoom(MIN_ZOOM); }}
               >
                 Reset view
               </button>
@@ -683,7 +715,75 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
         onClose={() => setShowMapPicker(false)}
         required
         loading={cloudMapsLoading}
+        session={session}
+        onSignIn={onSignIn}
       />
+
+      {/* World → Plain switch warning modal */}
+      {showPlainWarning && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1100,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
+          }}
+          onClick={() => setShowPlainWarning(false)}
+        >
+          <div
+            style={{
+              background: 'rgba(15,23,42,0.98)',
+              border: '1px solid rgba(239,68,68,0.4)',
+              borderRadius: 16, padding: 28, maxWidth: 400, width: '90%',
+              display: 'flex', flexDirection: 'column', gap: 16,
+              boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: 8,
+                background: 'rgba(239,68,68,0.15)',
+                border: '1px solid rgba(239,68,68,0.4)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 18,
+              }}>
+                ⚠️
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: '#fca5a5' }}>
+                Switch to Plain Background?
+              </div>
+            </div>
+            <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}>
+              This will switch your map to a plain canvas. <strong style={{ color: '#fca5a5' }}>This action is irreversible</strong> — you won&apos;t be able to switch back to the world map for this scenario.
+              <br /><br />
+              Your entities and connections will remain intact, just without the world map background.
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={handleConfirmSwitchToPlain}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 8,
+                  background: 'rgba(239,68,68,0.15)',
+                  border: '1px solid rgba(239,68,68,0.5)',
+                  color: '#fca5a5', cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                  transition: 'all 0.15s',
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.25)'; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.15)'; }}
+              >
+                Yes, switch to Plain
+              </button>
+              <button
+                onClick={() => setShowPlainWarning(false)}
+                className="btn-ghost"
+                style={{ flex: 1, fontSize: 13 }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -57,10 +57,12 @@ interface MapState {
   // Map actions
   saveCurrentMap: () => void;
   loadMap: (id: string) => void;
-  createNewMap: (name: string, description: string) => void;
+  createNewMap: (name: string, description: string, mapType?: 'world' | 'plain') => void;
   deleteMap: (id: string) => void;
   generateShareToken: () => string;
   mergeCloudMaps: (cloudMaps: ScenarioMap[]) => void;
+  importMapFromCode: (code: string) => boolean;
+  setCurrentMapType: (type: 'world' | 'plain') => void;
 
   // UI state
   setSelectedEntity: (id: string | null) => void;
@@ -78,6 +80,7 @@ const createDefaultMap = (): ScenarioMap => ({
   folders: [],
   ownerId: 'local',
   sharedWith: [],
+  mapType: 'world',
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 });
@@ -321,11 +324,11 @@ export const useMapStore = create<MapState>()(
         if (map) set({ currentMap: map, selectedEntityId: null, selectedRelationshipId: null });
       },
 
-      createNewMap: (name, description) => {
+      createNewMap: (name, description, mapType = 'world') => {
         const { saveCurrentMap } = get();
         saveCurrentMap();
         set({
-          currentMap: { ...createDefaultMap(), name, description },
+          currentMap: { ...createDefaultMap(), name, description, mapType },
           selectedEntityId: null,
           selectedRelationshipId: null,
         });
@@ -354,6 +357,36 @@ export const useMapStore = create<MapState>()(
           }
           return { savedMaps: merged };
         });
+      },
+
+      setCurrentMapType: (type) => {
+        const now = new Date().toISOString();
+        set((state) => ({
+          currentMap: { ...state.currentMap, mapType: type, updatedAt: now },
+        }));
+      },
+
+      importMapFromCode: (code) => {
+        try {
+          const json = decodeURIComponent(atob(code.trim()));
+          const map = JSON.parse(json) as ScenarioMap;
+          if (!map.id || !Array.isArray(map.entities) || !Array.isArray(map.relationships)) return false;
+          const { saveCurrentMap } = get();
+          saveCurrentMap();
+          const newMap: ScenarioMap = {
+            ...map,
+            id: uuidv4(),
+            name: `${map.name} (imported)`,
+            shareToken: undefined,
+            ownerId: 'local',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          set({ currentMap: newMap, selectedEntityId: null, selectedRelationshipId: null });
+          return true;
+        } catch {
+          return false;
+        }
       },
 
       setSelectedEntity: (id) => set({ selectedEntityId: id, selectedRelationshipId: null }),
