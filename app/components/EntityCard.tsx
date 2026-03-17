@@ -35,6 +35,8 @@ interface EntityCardProps {
   isDrawTarget?: boolean;
   onDropConnection?: (id: string) => void;
   isDrawMode?: boolean;
+  /** Horizontal offset (in map-space pixels) for world-wrap ghost copies. Default 0. */
+  offsetX?: number;
 }
 
 export default function EntityCard({
@@ -54,6 +56,7 @@ export default function EntityCard({
   isDrawTarget = false,
   onDropConnection,
   isDrawMode = false,
+  offsetX = 0,
 }: EntityCardProps) {
   const {
     moveEntity,
@@ -256,7 +259,7 @@ export default function EntityCard({
       className={`entity-card ${isConnectingFrom ? 'pulse-connect' : ''}`}
       style={{
         position: 'absolute',
-        left: entity.position.x,
+        left: entity.position.x + offsetX,
         top: entity.position.y,
         pointerEvents: 'all',
         zIndex: isSelected ? 200 : 50,

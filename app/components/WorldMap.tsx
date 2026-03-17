@@ -209,14 +209,17 @@ export default function WorldMap({ onCountryClick, children, width, height }: Wo
       ref={svgRef as unknown as React.RefObject<HTMLDivElement>}
       style={{ width, height, position: 'relative', overflow: 'visible' }}
     >
-      {/* Left copy — background only, no interaction */}
+      {/* Left copy — background + country clicks (entities rendered by MapCanvas at offsetX) */}
       <WorldMapBackground
         paths={paths}
-        hoveredCountry={null}
+        hoveredCountry={hoveredCountry}
         width={width}
         height={height}
         offsetX={-width}
-        interactive={false}
+        interactive={true}
+        onCountryClick={handleCountryClick}
+        onHoverEnter={setHoveredCountry}
+        onHoverLeave={() => setHoveredCountry(null)}
         svgIdSuffix="L"
       />
 
@@ -234,14 +237,17 @@ export default function WorldMap({ onCountryClick, children, width, height }: Wo
         svgIdSuffix="C"
       />
 
-      {/* Right copy — background only, no interaction */}
+      {/* Right copy — background + country clicks */}
       <WorldMapBackground
         paths={paths}
-        hoveredCountry={null}
+        hoveredCountry={hoveredCountry}
         width={width}
         height={height}
         offsetX={width}
-        interactive={false}
+        interactive={true}
+        onCountryClick={handleCountryClick}
+        onHoverEnter={setHoveredCountry}
+        onHoverLeave={() => setHoveredCountry(null)}
         svgIdSuffix="R"
       />
 

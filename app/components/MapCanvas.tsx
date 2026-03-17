@@ -308,13 +308,15 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
       if (wasPanning.current) return;
       const rect = containerRef.current?.getBoundingClientRect();
       if (!rect) return;
-      const pos = screenToMap(clientX - rect.left, clientY - rect.top);
-      setPendingPosition(pos);
+      const raw = screenToMap(clientX - rect.left, clientY - rect.top);
+      // Normalize x so clicks on left/right wrap-copies map back into [0, dims.width)
+      const normalizedX = ((raw.x % dims.width) + dims.width) % dims.width;
+      setPendingPosition({ x: normalizedX, y: raw.y });
       setPendingCountry(country);
       setEditingEntity(undefined);
       setEntityDialogOpen(true);
     },
-    [isConnecting, screenToMap]
+    [isConnecting, screenToMap, dims.width]
   );
 
   const handleEntitySave = useCallback(
@@ -468,11 +470,11 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
     // (current zoom stays, MIN_ZOOM will update via the ref)
   }, [setCurrentMapType]);
 
-  const entityList = (
+  const renderEntities = (keyPrefix: string, offsetX: number) => (
     <>
       {currentMap.entities.filter((e) => !e.hidden).map((entity) => (
         <EntityCard
-          key={entity.id}
+          key={`${keyPrefix}-${entity.id}`}
           entity={entity}
           onEdit={handleEditEntity}
           onDelete={deleteEntity}
@@ -489,9 +491,27 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
           isDrawTarget={!!drawingFromId && drawingFromId !== entity.id}
           onDropConnection={handleDropConnection}
           isDrawMode={isDrawMode}
+          offsetX={offsetX}
         />
       ))}
     </>
+  );
+
+  const renderRelationships = (offsetX: number) => (
+    <RelationshipLayer
+      entities={currentMap.entities}
+      relationships={visibleRelationships}
+      width={dims.width}
+      height={dims.height}
+      connectingFromId={connectingFromId}
+      mousePos={mousePos}
+      onEditRelationship={handleEditRelationship}
+      zoom={zoom}
+      arrowSizeMult={arrowSizeMult}
+      drawingFromId={drawingFromId}
+      drawPath={drawPath}
+      offsetX={offsetX}
+    />
   );
 
   const visibleRelationships = currentMap.relationships.filter((r) => {
@@ -574,20 +594,15 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
         >
           {showWorldMap ? (
             <WorldMap onCountryClick={handleCountryClick} width={dims.width} height={dims.height}>
-              <RelationshipLayer
-                entities={currentMap.entities}
-                relationships={visibleRelationships}
-                width={dims.width}
-                height={dims.height}
-                connectingFromId={connectingFromId}
-                mousePos={mousePos}
-                onEditRelationship={handleEditRelationship}
-                zoom={zoom}
-                arrowSizeMult={arrowSizeMult}
-                drawingFromId={drawingFromId}
-                drawPath={drawPath}
-              />
-              {entityList}
+              {/* Left ghost copy */}
+              {renderRelationships(-dims.width)}
+              {renderEntities('L', -dims.width)}
+              {/* Center (original) */}
+              {renderRelationships(0)}
+              {renderEntities('C', 0)}
+              {/* Right ghost copy */}
+              {renderRelationships(dims.width)}
+              {renderEntities('R', dims.width)}
             </WorldMap>
           ) : (
             /* ── Plain background ── */
@@ -604,20 +619,8 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
                   <line key={`v${i}`} x1={dims.width * (i / 40)} y1={0} x2={dims.width * (i / 40)} y2={dims.height} stroke="rgba(59,130,246,0.04)" strokeWidth={1} />
                 ))}
               </svg>
-              <RelationshipLayer
-                entities={currentMap.entities}
-                relationships={visibleRelationships}
-                width={dims.width}
-                height={dims.height}
-                connectingFromId={connectingFromId}
-                mousePos={mousePos}
-                onEditRelationship={handleEditRelationship}
-                zoom={zoom}
-                arrowSizeMult={arrowSizeMult}
-                drawingFromId={drawingFromId}
-                drawPath={drawPath}
-              />
-              {entityList}
+              {renderRelationships(0)}
+              {renderEntities('P', 0)}
             </div>
           )}
         </div>

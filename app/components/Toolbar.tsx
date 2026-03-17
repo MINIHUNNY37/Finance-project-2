@@ -5,6 +5,7 @@ import {
   Save, Share2, Map, Plus, Link2, X,
   ChevronDown, TrendingUp, LogIn, LogOut, User,
   ZoomIn, ZoomOut, RotateCcw, Lock, Unlock, Clock, Globe, Square,
+  Maximize2, Minimize2,
 } from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
 import ShareDialog from './ShareDialog';
@@ -171,18 +172,18 @@ export default function Toolbar({
           <button
             onClick={onToggleFixedEntitySize}
             title={fixedEntitySize
-              ? 'All entities: fixed size (same on screen at any zoom) — click to auto-scale'
-              : 'All entities: auto-scale (shrink at high zoom for country-level view) — click to fix size'}
+              ? 'Entity size locked — same on-screen size at any zoom (click to auto-scale)'
+              : 'Entity size auto-scales — shrinks slightly at high zoom (click to lock size)'}
             style={{
               display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px',
               borderRadius: 8, fontSize: 12, cursor: 'pointer',
-              border: `1px solid ${fixedEntitySize ? '#3b82f6' : 'rgba(59,130,246,0.2)'}`,
-              background: fixedEntitySize ? 'rgba(59,130,246,0.12)' : 'transparent',
-              color: fixedEntitySize ? '#3b82f6' : '#475569',
+              border: `1px solid ${fixedEntitySize ? '#f59e0b' : 'rgba(59,130,246,0.2)'}`,
+              background: fixedEntitySize ? 'rgba(245,158,11,0.12)' : 'transparent',
+              color: fixedEntitySize ? '#f59e0b' : '#475569',
               transition: 'all 0.15s',
             }}
           >
-            {fixedEntitySize ? <Lock size={13} /> : <Unlock size={13} />}
+            {fixedEntitySize ? <Maximize2 size={13} /> : <Minimize2 size={13} />}
             <span>{fixedEntitySize ? 'Fixed size' : 'Auto size'}</span>
           </button>
 
@@ -205,28 +206,43 @@ export default function Toolbar({
           {/* Calendar date filter */}
           <CalendarPicker />
 
-          {/* Background toggle — switching world→plain is irreversible; disabled when already plain */}
-          <button
-            onClick={showWorldMap ? onToggleWorldMap : undefined}
-            title={
-              showWorldMap
-                ? 'Switch to plain background (irreversible)'
-                : 'Plain mode — cannot switch back to world map'
-            }
-            style={{
-              display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px',
-              borderRadius: 8, fontSize: 12,
-              cursor: showWorldMap ? 'pointer' : 'not-allowed',
-              border: `1px solid ${showWorldMap ? 'rgba(6,182,212,0.4)' : 'rgba(59,130,246,0.1)'}`,
-              background: showWorldMap ? 'rgba(6,182,212,0.1)' : 'transparent',
-              color: showWorldMap ? '#06b6d4' : '#334155',
-              opacity: showWorldMap ? 1 : 0.45,
-              transition: 'all 0.15s',
-            }}
-          >
-            {showWorldMap ? <Globe size={13} /> : <Square size={13} />}
-            <span>{showWorldMap ? 'Map' : 'Plain'}</span>
-          </button>
+          {/* Background type — two separate buttons */}
+          <div style={{
+            display: 'flex', borderRadius: 8, overflow: 'hidden',
+            border: '1px solid rgba(59,130,246,0.2)',
+          }}>
+            <button
+              title={showWorldMap ? 'World map active' : 'Cannot switch back to world map (irreversible)'}
+              onClick={undefined}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px',
+                fontSize: 12, cursor: 'default', border: 'none',
+                borderRight: '1px solid rgba(59,130,246,0.2)',
+                background: showWorldMap ? 'rgba(6,182,212,0.15)' : 'transparent',
+                color: showWorldMap ? '#06b6d4' : '#334155',
+                opacity: showWorldMap ? 1 : 0.35,
+                transition: 'all 0.15s',
+              }}
+            >
+              <Globe size={13} />
+              <span>World</span>
+            </button>
+            <button
+              title={showWorldMap ? 'Switch to plain canvas (irreversible — warns first)' : 'Plain canvas active'}
+              onClick={showWorldMap ? onToggleWorldMap : undefined}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px',
+                fontSize: 12, border: 'none',
+                cursor: showWorldMap ? 'pointer' : 'default',
+                background: !showWorldMap ? 'rgba(59,130,246,0.15)' : 'transparent',
+                color: !showWorldMap ? '#93c5fd' : '#475569',
+                transition: 'all 0.15s',
+              }}
+            >
+              <Square size={13} />
+              <span>Plain</span>
+            </button>
+          </div>
 
           {/* World Clock */}
           <button

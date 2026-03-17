@@ -17,6 +17,8 @@ interface RelationshipLayerProps {
   arrowSizeMult: number;
   drawingFromId?: string | null;
   drawPath?: { x: number; y: number }[];
+  /** Horizontal offset for world-wrap ghost copies. Default 0. */
+  offsetX?: number;
 }
 
 /** Convert an array of points into a smooth SVG path using midpoint quadratic beziers */
@@ -63,6 +65,7 @@ export default function RelationshipLayer({
   arrowSizeMult,
   drawingFromId,
   drawPath = [],
+  offsetX = 0,
 }: RelationshipLayerProps) {
   const { deleteRelationship, setSelectedRelationship, selectedRelationshipId } = useMapStore();
   const [hoveredRelId, setHoveredRelId] = useState<string | null>(null);
@@ -85,6 +88,9 @@ export default function RelationshipLayer({
   const htmlZf = zoom > 1 ? Math.pow(zoom, 1.3) : zoom;
   const htmlScale = 1 / htmlZf;
 
+  // Ghost copies (offsetX !== 0) render arrows only, no interactive HTML overlays
+  const isGhost = offsetX !== 0;
+
   return (
     <>
       {/* SVG layer for arrows */}
@@ -93,6 +99,8 @@ export default function RelationshipLayer({
         width={width}
         height={height}
       >
+        {/* Translate all content by offsetX for world-wrap ghost copies */}
+        <g transform={offsetX !== 0 ? `translate(${offsetX}, 0)` : undefined}>
         <defs>
           {/* Animated flow */}
           <style>{`
@@ -255,8 +263,8 @@ export default function RelationshipLayer({
           );
         })}
 
-        {/* Preview line while connecting (click-mode) */}
-        {connectingEntity && (
+        {/* Preview line while connecting (click-mode) — center copy only */}
+        {!isGhost && connectingEntity && (
           <line
             x1={connectingEntity.position.x}
             y1={connectingEntity.position.y}
@@ -270,9 +278,8 @@ export default function RelationshipLayer({
           />
         )}
 
-        {/* Freehand path preview while drawing */}
-        {drawingFromId && drawPath.length > 1 && (() => {
-          // Build path: drawn points + line to current cursor
+        {/* Freehand path preview while drawing — center copy only */}
+        {!isGhost && drawingFromId && drawPath.length > 1 && (() => {
           const allPts = [...drawPath, mousePos];
           return (
             <path
@@ -285,10 +292,11 @@ export default function RelationshipLayer({
             />
           );
         })()}
+        </g>
       </svg>
 
-      {/* HTML overlay: action toolbar for selected relationship */}
-      {relationships.map((rel) => {
+      {/* HTML overlay: action toolbar for selected relationship — center copy only */}
+      {!isGhost && relationships.map((rel) => {
         const isSelected = selectedRelationshipId === rel.id;
         if (!isSelected) return null;
         const from = entityMap.get(rel.fromEntityId);
@@ -341,8 +349,8 @@ export default function RelationshipLayer({
         );
       })}
 
-      {/* HTML note boxes for relationship descriptions */}
-      {relationships.map((rel) => {
+      {/* HTML note boxes for relationship descriptions — center copy only */}
+      {!isGhost && relationships.map((rel) => {
         if (!rel.description) return null;
         const from = entityMap.get(rel.fromEntityId);
         const to = entityMap.get(rel.toEntityId);
