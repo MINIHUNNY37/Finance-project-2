@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, BarChart2, Search, RefreshCw, TrendingUp, TrendingDown, CheckCircle, XCircle, Clock, Star, ExternalLink, LinkIcon } from 'lucide-react';
+import { X, Plus, Trash2, BarChart2, Search, RefreshCw, TrendingUp, TrendingDown, CheckCircle, XCircle, Clock, Star, ExternalLink, LinkIcon, ChevronDown } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import type { Entity, EntitySubItem, EntityStatistic, EntityCatalyst, EntityLink } from '../types';
 import { ENTITY_ICONS, ENTITY_COLORS, SECTOR_PRESETS } from '../types';
@@ -26,6 +26,34 @@ const STAT_CATEGORIES: { id: string; label: string; presets: string[] }[] = [
   { id: 'ops',       label: 'Operations', presets: ['Employees', 'ROE', 'ROA', 'Profit Margin', 'FCF'] },
 ];
 
+// Top 5 most investor-relevant stats per entity icon
+const KEY_STATS_BY_ICON: Record<string, string[]> = {
+  '🏢': ['Revenue', 'Net Income', 'P/E Ratio', 'Market Cap', 'EPS'],
+  '🏭': ['Revenue', 'EBITDA', 'Operating Margin', 'CapEx', 'Gross Profit'],
+  '🏦': ['Net Interest Margin', 'ROE', 'Book Value', 'NPL Ratio', 'Tier 1 Capital'],
+  '🛢️': ['Production (bbl/d)', 'Proven Reserves', 'EBITDA', 'Break-even Price', 'Revenue'],
+  '⚡': ['Capacity (GW)', 'Revenue', 'EBITDA', 'CapEx', 'ROE'],
+  '💊': ['Revenue', 'R&D Spend', 'Pipeline Count', 'Gross Margin', 'EPS'],
+  '🚗': ['Vehicle Deliveries', 'Revenue', 'EBITDA Margin', 'Free Cash Flow', 'Gross Margin'],
+  '✈️': ['Passengers (PAX)', 'Revenue', 'EBITDA', 'Load Factor', 'Operating Margin'],
+  '🚢': ['Revenue', 'TEU Volume', 'EBITDA', 'Fleet Size', 'Freight Rates'],
+  '💻': ['Revenue Growth', 'Gross Margin', 'ARR', 'Free Cash Flow', 'P/E Ratio'],
+  '📱': ['MAU / DAU', 'Revenue', 'ARPU', 'Gross Margin', 'Free Cash Flow'],
+  '🌾': ['Production Volume', 'Revenue', 'EBITDA', 'Yield/Acre', 'CapEx'],
+  '⛏️': ['Production (oz/t)', 'AISC', 'Revenue', 'EBITDA', 'Reserves'],
+  '🏗️': ['Order Backlog', 'Revenue', 'EBITDA Margin', 'New Orders', 'ROE'],
+  '🛒': ['Same-Store Sales', 'Revenue', 'Gross Margin', 'Inventory Turns', 'EBITDA'],
+  '📺': ['Subscribers', 'Revenue', 'ARPU', 'Churn Rate', 'EBITDA'],
+  '🔬': ['Revenue', 'R&D Spend', 'Gross Margin', 'Pipeline Count', 'EPS'],
+  '🏥': ['Revenue', 'Patient Volume', 'EBITDA', 'Operating Margin', 'ROE'],
+  '🌐': ['Revenue', 'Market Cap', 'P/E Ratio', 'EBITDA', 'Free Cash Flow'],
+  '💰': ['AUM', 'Revenue', 'ROE', 'P/E Ratio', 'Dividend Yield'],
+  '📦': ['Revenue', 'Volume (TEU)', 'EBITDA', 'On-time Delivery %', 'CapEx'],
+  '🔋': ['Capacity (GWh)', 'Revenue', 'Gross Margin', 'CapEx', 'Market Share'],
+  '🌱': ['Revenue', 'Carbon Credits', 'EBITDA', 'ESG Score', 'CapEx'],
+  '🏨': ['RevPAR', 'Revenue', 'EBITDA Margin', 'Occupancy Rate', 'ADR'],
+};
+
 export default function EntityDialog({
   isOpen, onClose, onSave, initialData, defaultPosition, defaultCountry,
 }: EntityDialogProps) {
@@ -35,6 +63,8 @@ export default function EntityDialog({
   } = useMapStore();
 
   const [activeTab, setActiveTab] = useState<Tab>('basic');
+  const [showAdvancedStats, setShowAdvancedStats] = useState(false);
+  const [showAdvancedInvest, setShowAdvancedInvest] = useState(false);
   const [newStatPreset, setNewStatPreset] = useState('');
   const [newDetailPreset, setNewDetailPreset] = useState('');
   const [activeStatFilter, setActiveStatFilter] = useState<string | null>(null);
@@ -274,6 +304,29 @@ export default function EntityDialog({
                 </div>
               </div>
 
+              {/* Entity Type */}
+              <div style={{ marginTop: 10, marginBottom: 16 }}>
+                <label style={labelStyle}>Entity Type</label>
+                <div style={{
+                  marginTop: 8, display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '8px 12px', borderRadius: 8,
+                  background: 'rgba(15,23,42,0.5)',
+                  border: `1px solid ${icon ? `${color}44` : 'rgba(59,130,246,0.15)'}`,
+                }}>
+                  {icon
+                    ? <>
+                        <span style={{ fontSize: 20 }}>{icon}</span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: color }}>
+                          {ENTITY_ICONS.find((ic) => ic.value === icon)?.label ?? 'Custom'}
+                        </span>
+                      </>
+                    : <span style={{ fontSize: 12, color: '#475569', fontStyle: 'italic' }}>
+                        Select an icon above to set the entity type
+                      </span>
+                  }
+                </div>
+              </div>
+
               {/* Color */}
               <div style={{ marginBottom: 16 }}>
                 <label style={labelStyle}>Color</label>
@@ -506,57 +559,6 @@ export default function EntityDialog({
                   </div>
                 )}
 
-                {/* ── Sector & Tags ── */}
-                <div style={{ marginBottom: 18 }}>
-                  <label style={labelStyle}>Sector</label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8 }}>
-                    {SECTOR_PRESETS.map((s) => (
-                      <button key={s} onClick={() => setSector(sector === s ? '' : s)}
-                        style={{ padding: '3px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer',
-                          background: sector === s ? `${color}30` : 'rgba(59,130,246,0.06)',
-                          border: `1px solid ${sector === s ? color : 'rgba(59,130,246,0.2)'}`,
-                          color: sector === s ? color : '#64748b', fontWeight: sector === s ? 600 : 400 }}>
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div style={{ marginBottom: 18 }}>
-                  <label style={labelStyle}>Tags / Themes</label>
-                  <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-                    <input className="input-field" value={tagInput}
-                      onChange={(e) => setTagInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && tagInput.trim()) {
-                          if (!tags.includes(tagInput.trim())) setTags([...tags, tagInput.trim()]);
-                          setTagInput('');
-                        }
-                      }}
-                      placeholder="e.g. AI Infrastructure, EV, Cyclical" style={{ flex: 1, fontSize: 11 }} />
-                    <button className="btn-ghost" style={{ padding: '4px 10px', fontSize: 11 }}
-                      disabled={!tagInput.trim()}
-                      onClick={() => { if (tagInput.trim() && !tags.includes(tagInput.trim())) setTags([...tags, tagInput.trim()]); setTagInput(''); }}>
-                      <Plus size={11} />
-                    </button>
-                  </div>
-                  {tags.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8 }}>
-                      {tags.map((t) => (
-                        <span key={t} style={{ display: 'inline-flex', alignItems: 'center', gap: 4,
-                          background: `${color}18`, border: `1px solid ${color}40`, borderRadius: 6,
-                          padding: '2px 8px', fontSize: 10, color: `${color}cc` }}>
-                          {t}
-                          <button onClick={() => setTags(tags.filter((x) => x !== t))}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 0 }}>
-                            <X size={9} />
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
                 {/* ── Conviction Score ── */}
                 <div style={{ marginBottom: 18 }}>
                   <label style={labelStyle}>Conviction (1–5)</label>
@@ -629,116 +631,195 @@ export default function EntityDialog({
                     placeholder="Dominant AI infrastructure play. Data center revenue growing 100%+ YoY..."
                     rows={3} style={{ resize: 'vertical' }} />
                 </div>
-                <div style={{ marginBottom: 18 }}>
-                  <label style={labelStyle}>Exit Criteria — What Would Change My Mind</label>
-                  <textarea className="input-field mt-1" value={exitCriteria}
-                    onChange={(e) => setExitCriteria(e.target.value)}
-                    placeholder="Revenue growth decelerates below 30%. Competition from AMD closes gap..."
-                    rows={2} style={{ resize: 'vertical' }} />
-                </div>
 
-                {/* ── Catalyst Checklist ── */}
-                <div style={{ marginBottom: 18 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <label style={labelStyle}>Catalyst Checklist</label>
-                    <button className="btn-ghost" style={{ padding: '3px 8px', fontSize: 11 }}
-                      onClick={() => setCatalysts([...catalysts, {
-                        id: uuidv4(), event: '', status: 'pending', createdAt: new Date().toISOString(),
-                      }])}>
-                      <Plus size={11} style={{ display: 'inline', marginRight: 3 }} />Add
-                    </button>
-                  </div>
-                  {catalysts.length === 0 && (
-                    <div style={{ color: '#475569', fontSize: 11, textAlign: 'center', padding: '8px 0' }}>
-                      Track upcoming events: earnings, product launches, rate decisions...
-                    </div>
-                  )}
-                  {catalysts.map((cat) => {
-                    const statusIcon = cat.status === 'hit' ? <CheckCircle size={13} style={{ color: '#22c55e' }} />
-                      : cat.status === 'miss' ? <XCircle size={13} style={{ color: '#ef4444' }} />
-                      : <Clock size={13} style={{ color: '#f59e0b' }} />;
-                    return (
-                      <div key={cat.id} style={{
-                        padding: '10px 12px', borderRadius: 10, marginBottom: 6,
-                        background: 'rgba(15,23,42,0.5)',
-                        border: `1px solid ${cat.status === 'hit' ? 'rgba(34,197,94,0.25)' : cat.status === 'miss' ? 'rgba(239,68,68,0.25)' : 'rgba(59,130,246,0.15)'}`,
-                      }}>
-                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
-                          <button onClick={() => {
-                            const next = cat.status === 'pending' ? 'hit' : cat.status === 'hit' ? 'miss' : 'pending';
-                            setCatalysts(catalysts.map((c) => c.id === cat.id ? { ...c, status: next as EntityCatalyst['status'] } : c));
-                          }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, flexShrink: 0 }}
-                            title={`Status: ${cat.status} (click to cycle)`}>
-                            {statusIcon}
-                          </button>
-                          <input className="input-field" value={cat.event}
-                            onChange={(e) => setCatalysts(catalysts.map((c) => c.id === cat.id ? { ...c, event: e.target.value } : c))}
-                            placeholder="Event (e.g. Q3 Earnings)"
-                            style={{ flex: 1, fontSize: 11 }} />
-                          <input type="date" value={cat.expectedDate || ''}
-                            onChange={(e) => setCatalysts(catalysts.map((c) => c.id === cat.id ? { ...c, expectedDate: e.target.value } : c))}
-                            style={{ fontSize: 10, padding: '3px 6px', background: 'rgba(15,23,42,0.6)',
-                              border: '1px solid rgba(59,130,246,0.2)', borderRadius: 6, color: '#94a3b8', colorScheme: 'dark' }} />
-                          <button onClick={() => setCatalysts(catalysts.filter((c) => c.id !== cat.id))}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 2 }}>
-                            <Trash2 size={12} />
+                {/* ── Advanced Invest (collapsible) ── */}
+                <div style={{ marginBottom: 14 }}>
+                  <button
+                    onClick={() => setShowAdvancedInvest((v) => !v)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      background: 'none', border: '1px solid rgba(59,130,246,0.2)',
+                      borderRadius: 7, padding: '5px 10px', fontSize: 11, cursor: 'pointer',
+                      color: showAdvancedInvest ? '#3b82f6' : '#475569',
+                      width: '100%', justifyContent: 'space-between',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <Star size={11} /> Advanced Details
+                      <span style={{ fontSize: 10, color: '#334155' }}>— sector, tags, catalysts &amp; more</span>
+                    </span>
+                    <ChevronDown size={11} style={{ transform: showAdvancedInvest ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+                  </button>
+
+                  {showAdvancedInvest && (
+                    <div className="fade-in" style={{ marginTop: 10 }}>
+                      {/* Sector */}
+                      <div style={{ marginBottom: 18 }}>
+                        <label style={labelStyle}>Sector</label>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8 }}>
+                          {SECTOR_PRESETS.map((s) => (
+                            <button key={s} onClick={() => setSector(sector === s ? '' : s)}
+                              style={{ padding: '3px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer',
+                                background: sector === s ? `${color}30` : 'rgba(59,130,246,0.06)',
+                                border: `1px solid ${sector === s ? color : 'rgba(59,130,246,0.2)'}`,
+                                color: sector === s ? color : '#64748b', fontWeight: sector === s ? 600 : 400 }}>
+                              {s}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Tags */}
+                      <div style={{ marginBottom: 18 }}>
+                        <label style={labelStyle}>Tags / Themes</label>
+                        <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                          <input className="input-field" value={tagInput}
+                            onChange={(e) => setTagInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && tagInput.trim()) {
+                                if (!tags.includes(tagInput.trim())) setTags([...tags, tagInput.trim()]);
+                                setTagInput('');
+                              }
+                            }}
+                            placeholder="e.g. AI Infrastructure, EV, Cyclical" style={{ flex: 1, fontSize: 11 }} />
+                          <button className="btn-ghost" style={{ padding: '4px 10px', fontSize: 11 }}
+                            disabled={!tagInput.trim()}
+                            onClick={() => { if (tagInput.trim() && !tags.includes(tagInput.trim())) setTags([...tags, tagInput.trim()]); setTagInput(''); }}>
+                            <Plus size={11} />
                           </button>
                         </div>
-                        {cat.status !== 'pending' && (
-                          <input className="input-field" value={cat.outcome || ''}
-                            onChange={(e) => setCatalysts(catalysts.map((c) => c.id === cat.id ? { ...c, outcome: e.target.value } : c))}
-                            placeholder={`Outcome: what actually happened?`}
-                            style={{ fontSize: 11, marginLeft: 26 }} />
+                        {tags.length > 0 && (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8 }}>
+                            {tags.map((t) => (
+                              <span key={t} style={{ display: 'inline-flex', alignItems: 'center', gap: 4,
+                                background: `${color}18`, border: `1px solid ${color}40`, borderRadius: 6,
+                                padding: '2px 8px', fontSize: 10, color: `${color}cc` }}>
+                                {t}
+                                <button onClick={() => setTags(tags.filter((x) => x !== t))}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 0 }}>
+                                  <X size={9} />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
                         )}
                       </div>
-                    );
-                  })}
-                </div>
 
-                {/* ── Research Links ── */}
-                <div style={{ marginBottom: 14 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <label style={labelStyle}>Research Links</label>
-                  </div>
-                  <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-                    <input className="input-field" value={linkTitle}
-                      onChange={(e) => setLinkTitle(e.target.value)} placeholder="Title" style={{ flex: 1, fontSize: 11 }} />
-                    <input className="input-field" value={linkUrl}
-                      onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://..."
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && linkUrl.trim()) {
-                          setLinks([...links, { id: uuidv4(), url: linkUrl.trim(), title: linkTitle.trim() || linkUrl.trim(), addedAt: new Date().toISOString() }]);
-                          setLinkUrl(''); setLinkTitle('');
-                        }
-                      }}
-                      style={{ flex: 2, fontSize: 11 }} />
-                    <button className="btn-ghost" style={{ padding: '4px 8px', fontSize: 11 }}
-                      disabled={!linkUrl.trim()}
-                      onClick={() => {
-                        if (!linkUrl.trim()) return;
-                        setLinks([...links, { id: uuidv4(), url: linkUrl.trim(), title: linkTitle.trim() || linkUrl.trim(), addedAt: new Date().toISOString() }]);
-                        setLinkUrl(''); setLinkTitle('');
-                      }}>
-                      <Plus size={11} />
-                    </button>
-                  </div>
-                  {links.map((lnk) => (
-                    <div key={lnk.id} style={{
-                      display: 'flex', alignItems: 'center', gap: 6, padding: '5px 8px', borderRadius: 7,
-                      background: 'rgba(15,23,42,0.4)', border: '1px solid rgba(59,130,246,0.12)', marginBottom: 4,
-                    }}>
-                      <LinkIcon size={10} style={{ color: '#3b82f6', flexShrink: 0 }} />
-                      <a href={lnk.url} target="_blank" rel="noopener noreferrer"
-                        style={{ flex: 1, fontSize: 11, color: '#93c5fd', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                        onClick={(e) => e.stopPropagation()}>
-                        {lnk.title} <ExternalLink size={9} style={{ display: 'inline', marginLeft: 3 }} />
-                      </a>
-                      <button onClick={() => setLinks(links.filter((l) => l.id !== lnk.id))}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: 0 }}>
-                        <X size={10} />
-                      </button>
+                      {/* Exit Criteria */}
+                      <div style={{ marginBottom: 18 }}>
+                        <label style={labelStyle}>Exit Criteria — What Would Change My Mind</label>
+                        <textarea className="input-field mt-1" value={exitCriteria}
+                          onChange={(e) => setExitCriteria(e.target.value)}
+                          placeholder="Revenue growth decelerates below 30%. Competition from AMD closes gap..."
+                          rows={2} style={{ resize: 'vertical' }} />
+                      </div>
+
+                      {/* Catalyst Checklist */}
+                      <div style={{ marginBottom: 18 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                          <label style={labelStyle}>Catalyst Checklist</label>
+                          <button className="btn-ghost" style={{ padding: '3px 8px', fontSize: 11 }}
+                            onClick={() => setCatalysts([...catalysts, {
+                              id: uuidv4(), event: '', status: 'pending', createdAt: new Date().toISOString(),
+                            }])}>
+                            <Plus size={11} style={{ display: 'inline', marginRight: 3 }} />Add
+                          </button>
+                        </div>
+                        {catalysts.length === 0 && (
+                          <div style={{ color: '#475569', fontSize: 11, textAlign: 'center', padding: '8px 0' }}>
+                            Track upcoming events: earnings, product launches, rate decisions...
+                          </div>
+                        )}
+                        {catalysts.map((cat) => {
+                          const statusIcon = cat.status === 'hit' ? <CheckCircle size={13} style={{ color: '#22c55e' }} />
+                            : cat.status === 'miss' ? <XCircle size={13} style={{ color: '#ef4444' }} />
+                            : <Clock size={13} style={{ color: '#f59e0b' }} />;
+                          return (
+                            <div key={cat.id} style={{
+                              padding: '10px 12px', borderRadius: 10, marginBottom: 6,
+                              background: 'rgba(15,23,42,0.5)',
+                              border: `1px solid ${cat.status === 'hit' ? 'rgba(34,197,94,0.25)' : cat.status === 'miss' ? 'rgba(239,68,68,0.25)' : 'rgba(59,130,246,0.15)'}`,
+                            }}>
+                              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                                <button onClick={() => {
+                                  const next = cat.status === 'pending' ? 'hit' : cat.status === 'hit' ? 'miss' : 'pending';
+                                  setCatalysts(catalysts.map((c) => c.id === cat.id ? { ...c, status: next as EntityCatalyst['status'] } : c));
+                                }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, flexShrink: 0 }}
+                                  title={`Status: ${cat.status} (click to cycle)`}>
+                                  {statusIcon}
+                                </button>
+                                <input className="input-field" value={cat.event}
+                                  onChange={(e) => setCatalysts(catalysts.map((c) => c.id === cat.id ? { ...c, event: e.target.value } : c))}
+                                  placeholder="Event (e.g. Q3 Earnings)"
+                                  style={{ flex: 1, fontSize: 11 }} />
+                                <input type="date" value={cat.expectedDate || ''}
+                                  onChange={(e) => setCatalysts(catalysts.map((c) => c.id === cat.id ? { ...c, expectedDate: e.target.value } : c))}
+                                  style={{ fontSize: 10, padding: '3px 6px', background: 'rgba(15,23,42,0.6)',
+                                    border: '1px solid rgba(59,130,246,0.2)', borderRadius: 6, color: '#94a3b8', colorScheme: 'dark' }} />
+                                <button onClick={() => setCatalysts(catalysts.filter((c) => c.id !== cat.id))}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 2 }}>
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                              {cat.status !== 'pending' && (
+                                <input className="input-field" value={cat.outcome || ''}
+                                  onChange={(e) => setCatalysts(catalysts.map((c) => c.id === cat.id ? { ...c, outcome: e.target.value } : c))}
+                                  placeholder={`Outcome: what actually happened?`}
+                                  style={{ fontSize: 11, marginLeft: 26 }} />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Research Links */}
+                      <div style={{ marginBottom: 14 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                          <label style={labelStyle}>Research Links</label>
+                        </div>
+                        <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                          <input className="input-field" value={linkTitle}
+                            onChange={(e) => setLinkTitle(e.target.value)} placeholder="Title" style={{ flex: 1, fontSize: 11 }} />
+                          <input className="input-field" value={linkUrl}
+                            onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://..."
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && linkUrl.trim()) {
+                                setLinks([...links, { id: uuidv4(), url: linkUrl.trim(), title: linkTitle.trim() || linkUrl.trim(), addedAt: new Date().toISOString() }]);
+                                setLinkUrl(''); setLinkTitle('');
+                              }
+                            }}
+                            style={{ flex: 2, fontSize: 11 }} />
+                          <button className="btn-ghost" style={{ padding: '4px 8px', fontSize: 11 }}
+                            disabled={!linkUrl.trim()}
+                            onClick={() => {
+                              if (!linkUrl.trim()) return;
+                              setLinks([...links, { id: uuidv4(), url: linkUrl.trim(), title: linkTitle.trim() || linkUrl.trim(), addedAt: new Date().toISOString() }]);
+                              setLinkUrl(''); setLinkTitle('');
+                            }}>
+                            <Plus size={11} />
+                          </button>
+                        </div>
+                        {links.map((lnk) => (
+                          <div key={lnk.id} style={{
+                            display: 'flex', alignItems: 'center', gap: 6, padding: '5px 8px', borderRadius: 7,
+                            background: 'rgba(15,23,42,0.4)', border: '1px solid rgba(59,130,246,0.12)', marginBottom: 4,
+                          }}>
+                            <LinkIcon size={10} style={{ color: '#3b82f6', flexShrink: 0 }} />
+                            <a href={lnk.url} target="_blank" rel="noopener noreferrer"
+                              style={{ flex: 1, fontSize: 11, color: '#93c5fd', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                              onClick={(e) => e.stopPropagation()}>
+                              {lnk.title} <ExternalLink size={9} style={{ display: 'inline', marginLeft: 3 }} />
+                            </a>
+                            <button onClick={() => setLinks(links.filter((l) => l.id !== lnk.id))}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: 0 }}>
+                              <X size={10} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             );
@@ -747,11 +828,11 @@ export default function EntityDialog({
           {/* === STATISTICS TAB === */}
           {activeTab === 'stats' && (
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                 <div>
                   <label style={labelStyle}>Key Statistics</label>
                   <div style={{ fontSize: 11, color: '#475569', marginTop: 3 }}>
-                    Stat names are saved as templates. Values can be updated any time.
+                    Stat names are templates — fill values any time.
                   </div>
                 </div>
                 <button className="btn-ghost" style={{ padding: '4px 10px', fontSize: 12, flexShrink: 0 }} onClick={addStat}>
@@ -759,114 +840,166 @@ export default function EntityDialog({
                 </button>
               </div>
 
-              {statistics.length === 0 && !activeStatFilter && (
-                <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', padding: '12px 0' }}>
-                  <BarChart2 size={24} style={{ margin: '0 auto 8px', color: '#334155' }} />
-                  No statistics yet. Use quick add below.
+              {/* ── Icon-based Key Stats (top 5) ── */}
+              {(() => {
+                const keyStats = KEY_STATS_BY_ICON[icon] ?? KEY_STATS_BY_ICON['🏢'];
+                return (
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 11, color: '#64748b', marginBottom: 7, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {icon && <span style={{ fontSize: 14 }}>{icon}</span>}
+                      <span>
+                        {ENTITY_ICONS.find((ic) => ic.value === icon)?.label ?? 'Company'} key stats
+                        <span style={{ color: '#334155', marginLeft: 4 }}>— click to add</span>
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {keyStats.map((statName) => {
+                        const alreadyAdded = statistics.some((s) => s.name === statName);
+                        return (
+                          <button
+                            key={statName}
+                            onClick={() => { if (!alreadyAdded) setStatistics([...statistics, { id: uuidv4(), name: statName, value: '' }]); }}
+                            style={{
+                              background: alreadyAdded ? `${color}30` : `${color}15`,
+                              border: `1px solid ${alreadyAdded ? color : `${color}50`}`,
+                              borderRadius: 7, padding: '5px 10px', fontSize: 12, fontWeight: 600,
+                              color: alreadyAdded ? color : `${color}cc`,
+                              cursor: alreadyAdded ? 'default' : 'pointer',
+                              transition: 'all 0.1s',
+                              opacity: alreadyAdded ? 0.7 : 1,
+                            }}
+                            onMouseEnter={(e) => { if (!alreadyAdded) (e.currentTarget as HTMLElement).style.background = `${color}28`; }}
+                            onMouseLeave={(e) => { if (!alreadyAdded) (e.currentTarget as HTMLElement).style.background = `${color}15`; }}
+                          >
+                            {alreadyAdded ? '✓ ' : '+ '}{statName}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {statistics.length === 0 && (
+                <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', padding: '8px 0 12px' }}>
+                  <BarChart2 size={22} style={{ margin: '0 auto 6px', color: '#334155' }} />
+                  Click a stat above to add it, or use Add for a custom one.
                 </div>
               )}
 
-              {/* Preset suggestions — right-click a preset to filter stat cards */}
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <div style={{ fontSize: 11, color: '#64748b' }}>
-                    Quick add:
-                    {activeStatFilter === null
-                      ? <span style={{ color: '#334155', marginLeft: 4 }}>(right click to filter)</span>
-                      : <span style={{ color: '#f59e0b', marginLeft: 4, cursor: 'pointer' }} onClick={() => setActiveStatFilter(null)}>
-                          {activeStatFilter} · <span style={{ textDecoration: 'underline' }}>clear</span>
-                        </span>
-                    }
-                  </div>
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
-                  {STAT_CATEGORIES.flatMap((c) => c.presets).map((statName) => {
-                    const isActive = activeStatFilter === statName;
-                    return (
+              {/* ── Advanced Stats (collapsible) ── */}
+              <div style={{ marginBottom: 14 }}>
+                <button
+                  onClick={() => setShowAdvancedStats((v) => !v)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    background: 'none', border: '1px solid rgba(59,130,246,0.2)',
+                    borderRadius: 7, padding: '5px 10px', fontSize: 11, cursor: 'pointer',
+                    color: showAdvancedStats ? '#3b82f6' : '#475569',
+                    width: '100%', justifyContent: 'space-between',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <BarChart2 size={11} /> Advanced Stats
+                    <span style={{ fontSize: 10, color: '#334155' }}>— all categories + custom</span>
+                  </span>
+                  <ChevronDown size={11} style={{ transform: showAdvancedStats ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+                </button>
+
+                {showAdvancedStats && (
+                  <div className="fade-in" style={{ marginTop: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <div style={{ fontSize: 11, color: '#64748b' }}>
+                        Quick add:
+                        {activeStatFilter === null
+                          ? <span style={{ color: '#334155', marginLeft: 4 }}>(right-click to filter)</span>
+                          : <span style={{ color: '#f59e0b', marginLeft: 4, cursor: 'pointer' }} onClick={() => setActiveStatFilter(null)}>
+                              {activeStatFilter} · <span style={{ textDecoration: 'underline' }}>clear</span>
+                            </span>
+                        }
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
+                      {STAT_CATEGORIES.flatMap((c) => c.presets).map((statName) => {
+                        const isActive = activeStatFilter === statName;
+                        return (
+                          <button
+                            key={statName}
+                            onClick={() => setStatistics([...statistics, { id: uuidv4(), name: statName, value: '' }])}
+                            onContextMenu={(e) => { e.preventDefault(); setActiveStatFilter(activeStatFilter === statName ? null : statName); }}
+                            style={{
+                              background: isActive ? `${color}33` : `${color}1a`,
+                              border: `1px solid ${isActive ? `${color}99` : `${color}40`}`,
+                              borderRadius: 6, padding: '3px 8px', fontSize: 11,
+                              color: isActive ? color : `${color}cc`,
+                              cursor: 'pointer', transition: 'all 0.1s', fontWeight: isActive ? 600 : 400,
+                            }}
+                            onMouseEnter={(e) => { if (!isActive) (e.currentTarget as HTMLElement).style.background = `${color}30`; }}
+                            onMouseLeave={(e) => { if (!isActive) (e.currentTarget as HTMLElement).style.background = `${color}1a`; }}
+                          >
+                            + {statName}
+                          </button>
+                        );
+                      })}
+                      {customStatPresets.map((preset) => {
+                        const isActive = activeStatFilter === preset;
+                        return (
+                          <span key={preset} style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                            <button
+                              onClick={() => setStatistics([...statistics, { id: uuidv4(), name: preset, value: '' }])}
+                              onContextMenu={(e) => { e.preventDefault(); setActiveStatFilter(activeStatFilter === preset ? null : preset); }}
+                              style={{
+                                background: isActive ? `${color}33` : `${color}1a`,
+                                border: `1px solid ${isActive ? `${color}99` : `${color}40`}`,
+                                borderRadius: '6px 0 0 6px', padding: '3px 8px', fontSize: 11,
+                                color: isActive ? color : `${color}cc`, cursor: 'pointer', fontWeight: isActive ? 600 : 400,
+                              }}
+                            >+ {preset}</button>
+                            <button
+                              onClick={() => removeCustomStatPreset(preset)}
+                              title="Remove preset"
+                              style={{
+                                background: `${color}1a`, border: `1px solid ${color}40`,
+                                borderLeft: 'none', borderRadius: '0 6px 6px 0', padding: '3px 5px',
+                                fontSize: 10, color: '#64748b', cursor: 'pointer',
+                              }}
+                            >×</button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                      <input
+                        className="input-field"
+                        value={newStatPreset}
+                        onChange={(e) => setNewStatPreset(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && newStatPreset.trim()) {
+                            addCustomStatPreset(newStatPreset.trim());
+                            setStatistics([...statistics, { id: uuidv4(), name: newStatPreset.trim(), value: '' }]);
+                            setNewStatPreset('');
+                          }
+                        }}
+                        placeholder="Save custom preset…"
+                        style={{ flex: 1, fontSize: 11, padding: '4px 8px' }}
+                      />
                       <button
-                        key={statName}
-                        onClick={() => setStatistics([...statistics, { id: uuidv4(), name: statName, value: '' }])}
-                        onContextMenu={(e) => {
-                          e.preventDefault();
-                          setActiveStatFilter(activeStatFilter === statName ? null : statName);
+                        className="btn-ghost"
+                        style={{ padding: '4px 10px', fontSize: 11, flexShrink: 0 }}
+                        disabled={!newStatPreset.trim()}
+                        onClick={() => {
+                          if (!newStatPreset.trim()) return;
+                          addCustomStatPreset(newStatPreset.trim());
+                          setStatistics([...statistics, { id: uuidv4(), name: newStatPreset.trim(), value: '' }]);
+                          setNewStatPreset('');
                         }}
-                        style={{
-                          background: isActive ? `${color}33` : `${color}1a`,
-                          border: `1px solid ${isActive ? `${color}99` : `${color}40`}`,
-                          borderRadius: 6, padding: '3px 8px', fontSize: 11,
-                          color: isActive ? color : `${color}cc`,
-                          cursor: 'pointer', transition: 'all 0.1s',
-                          fontWeight: isActive ? 600 : 400,
-                        }}
-                        onMouseEnter={(e) => { if (!isActive) (e.currentTarget as HTMLElement).style.background = `${color}30`; }}
-                        onMouseLeave={(e) => { if (!isActive) (e.currentTarget as HTMLElement).style.background = `${color}1a`; }}
                       >
-                        + {statName}
+                        <Plus size={11} style={{ display: 'inline', marginRight: 3 }} />Save & Add
                       </button>
-                    );
-                  })}
-                  {/* User-saved custom presets */}
-                  {customStatPresets.map((preset) => {
-                    const isActive = activeStatFilter === preset;
-                    return (
-                      <span key={preset} style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                        <button
-                          onClick={() => setStatistics([...statistics, { id: uuidv4(), name: preset, value: '' }])}
-                          onContextMenu={(e) => {
-                            e.preventDefault();
-                            setActiveStatFilter(activeStatFilter === preset ? null : preset);
-                          }}
-                          style={{
-                            background: isActive ? `${color}33` : `${color}1a`,
-                            border: `1px solid ${isActive ? `${color}99` : `${color}40`}`,
-                            borderRadius: '6px 0 0 6px', padding: '3px 8px', fontSize: 11,
-                            color: isActive ? color : `${color}cc`,
-                            cursor: 'pointer', fontWeight: isActive ? 600 : 400,
-                          }}
-                        >+ {preset}</button>
-                        <button
-                          onClick={() => removeCustomStatPreset(preset)}
-                          title="Remove preset"
-                          style={{
-                            background: `${color}1a`, border: `1px solid ${color}40`,
-                            borderLeft: 'none', borderRadius: '0 6px 6px 0', padding: '3px 5px',
-                            fontSize: 10, color: '#64748b', cursor: 'pointer',
-                          }}
-                        >×</button>
-                      </span>
-                    );
-                  })}
-                </div>
-                {/* Add custom preset */}
-                <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
-                  <input
-                    className="input-field"
-                    value={newStatPreset}
-                    onChange={(e) => setNewStatPreset(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && newStatPreset.trim()) {
-                        addCustomStatPreset(newStatPreset.trim());
-                        setStatistics([...statistics, { id: uuidv4(), name: newStatPreset.trim(), value: '' }]);
-                        setNewStatPreset('');
-                      }
-                    }}
-                    placeholder="Save custom preset…"
-                    style={{ flex: 1, fontSize: 11, padding: '4px 8px' }}
-                  />
-                  <button
-                    className="btn-ghost"
-                    style={{ padding: '4px 10px', fontSize: 11, flexShrink: 0 }}
-                    disabled={!newStatPreset.trim()}
-                    onClick={() => {
-                      if (!newStatPreset.trim()) return;
-                      addCustomStatPreset(newStatPreset.trim());
-                      setStatistics([...statistics, { id: uuidv4(), name: newStatPreset.trim(), value: '' }]);
-                      setNewStatPreset('');
-                    }}
-                  >
-                    <Plus size={11} style={{ display: 'inline', marginRight: 3 }} />Save & Add
-                  </button>
-                </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {activeStatFilter !== null && statistics.filter(s => s.name === activeStatFilter).length === 0 && (
