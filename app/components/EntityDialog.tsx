@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, BarChart2 } from 'lucide-react';
+import { X, Plus, Trash2, BarChart2, Search, RefreshCw, TrendingUp, TrendingDown } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import type { Entity, EntitySubItem, EntityStatistic } from '../types';
 import { ENTITY_ICONS, ENTITY_COLORS } from '../types';
@@ -16,7 +16,7 @@ interface EntityDialogProps {
   defaultCountry?: string;
 }
 
-type Tab = 'basic' | 'details' | 'stats';
+type Tab = 'basic' | 'details' | 'stats' | 'invest';
 
 const STAT_CATEGORIES: { id: string; label: string; presets: string[] }[] = [
   { id: 'income',    label: 'Income',     presets: ['Revenue', 'Net Income', 'Gross Profit', 'Operating Income', 'EBITDA'] },
@@ -46,6 +46,21 @@ export default function EntityDialog({
   const [subItems, setSubItems] = useState<EntitySubItem[]>([]);
   const [statistics, setStatistics] = useState<EntityStatistic[]>([]);
   const [country, setCountry] = useState('');
+  // Ticker / live price
+  const [ticker, setTicker] = useState('');
+  const [livePrice, setLivePrice] = useState<number | undefined>();
+  const [priceChange, setPriceChange] = useState<number | undefined>();
+  const [priceChangePct, setPriceChangePct] = useState<number | undefined>();
+  const [marketCap, setMarketCap] = useState('');
+  const [peRatio, setPeRatio] = useState('');
+  const [week52Low, setWeek52Low] = useState<number | undefined>();
+  const [week52High, setWeek52High] = useState<number | undefined>();
+  const [lastPriceFetch, setLastPriceFetch] = useState<string | undefined>();
+  const [tickerFetching, setTickerFetching] = useState(false);
+  const [tickerError, setTickerError] = useState('');
+  // Investment thesis
+  const [targetPrice, setTargetPrice] = useState<string>('');
+  const [entryPrice, setEntryPrice] = useState<string>('');
 
   useEffect(() => {
     if (initialData) {
@@ -57,16 +72,62 @@ export default function EntityDialog({
       setSubItems(initialData.subItems || []);
       setStatistics(initialData.statistics || []);
       setCountry(initialData.country || defaultCountry || '');
+      setTicker(initialData.ticker || '');
+      setLivePrice(initialData.livePrice);
+      setPriceChange(initialData.priceChange);
+      setPriceChangePct(initialData.priceChangePct);
+      setMarketCap(initialData.marketCap || '');
+      setPeRatio(initialData.peRatio || '');
+      setWeek52Low(initialData.week52Low);
+      setWeek52High(initialData.week52High);
+      setLastPriceFetch(initialData.lastPriceFetch);
+      setTargetPrice(initialData.targetPrice != null ? String(initialData.targetPrice) : '');
+      setEntryPrice(initialData.entryPrice != null ? String(initialData.entryPrice) : '');
     } else {
       // Empty icon forces the user to explicitly pick one before saving
       setName(''); setIcon(''); setSubtitle(''); setDescription('');
       setColor(ENTITY_COLORS[0]); setSubItems([]); setStatistics([]);
       setCountry(defaultCountry || '');
+      setTicker(''); setLivePrice(undefined); setPriceChange(undefined);
+      setPriceChangePct(undefined); setMarketCap(''); setPeRatio('');
+      setWeek52Low(undefined); setWeek52High(undefined); setLastPriceFetch(undefined);
+      setTargetPrice(''); setEntryPrice('');
     }
+    setTickerError('');
     setActiveTab('basic');
   }, [initialData, defaultCountry, isOpen]);
 
   if (!isOpen) return null;
+
+  // Fetch live stock data
+  const handleFetchTicker = async () => {
+    const sym = ticker.trim().toUpperCase();
+    if (!sym) return;
+    setTickerFetching(true);
+    setTickerError('');
+    try {
+      const res = await fetch(`/api/stocks/${encodeURIComponent(sym)}`);
+      if (!res.ok) {
+        const err = await res.json();
+        setTickerError(err.error || 'Failed to fetch');
+      } else {
+        const data = await res.json();
+        setLivePrice(data.price);
+        setPriceChange(data.change);
+        setPriceChangePct(data.changePct);
+        setMarketCap(data.marketCap);
+        setPeRatio(data.peRatio);
+        setWeek52Low(data.week52Low);
+        setWeek52High(data.week52High);
+        setLastPriceFetch(new Date().toISOString());
+        setTickerError('');
+      }
+    } catch {
+      setTickerError('Network error');
+    } finally {
+      setTickerFetching(false);
+    }
+  };
 
   // Sub-items
   const addSubItem = () => setSubItems([...subItems, { id: uuidv4(), title: '', description: '' }]);
@@ -82,11 +143,20 @@ export default function EntityDialog({
 
   const handleSave = () => {
     if (!name.trim() || !icon) return;
+    const tp = parseFloat(targetPrice);
+    const ep = parseFloat(entryPrice);
     onSave({
       name: name.trim(), icon, subtitle: subtitle.trim(),
       description: description.trim(), color, subItems, statistics,
       country: country.trim(),
       position: defaultPosition || { x: 400, y: 300 },
+      ticker: ticker.trim().toUpperCase() || undefined,
+      livePrice, priceChange, priceChangePct,
+      marketCap: marketCap || undefined,
+      peRatio: peRatio || undefined,
+      week52Low, week52High, lastPriceFetch,
+      targetPrice: !isNaN(tp) && targetPrice !== '' ? tp : undefined,
+      entryPrice: !isNaN(ep) && entryPrice !== '' ? ep : undefined,
     });
     onClose();
   };
@@ -95,6 +165,7 @@ export default function EntityDialog({
     { id: 'basic', label: 'Basic' },
     { id: 'details', label: 'Details' },
     { id: 'stats', label: 'Statistics' },
+    { id: 'invest', label: 'Invest' },
   ];
 
   return (
@@ -337,6 +408,154 @@ export default function EntityDialog({
             </div>
           )}
 
+          {/* === INVEST TAB === */}
+          {activeTab === 'invest' && (() => {
+            const tp = parseFloat(targetPrice);
+            const ep = parseFloat(entryPrice);
+            const base = livePrice ?? ep;
+            const upsidePct = base && !isNaN(tp) && targetPrice !== '' ? ((tp - base) / base) * 100 : null;
+            const mosPct = !isNaN(tp) && !isNaN(ep) && targetPrice !== '' && entryPrice !== '' && tp > 0
+              ? ((tp - ep) / tp) * 100 : null;
+            const upsideColor = upsidePct == null ? '#94a3b8' : upsidePct >= 20 ? '#22c55e' : upsidePct >= 5 ? '#84cc16' : upsidePct >= -5 ? '#f59e0b' : '#ef4444';
+            return (
+              <div>
+                {/* Ticker section */}
+                <div style={{ marginBottom: 20 }}>
+                  <label style={labelStyle}>Ticker Symbol</label>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                    <input
+                      className="input-field"
+                      value={ticker}
+                      onChange={(e) => setTicker(e.target.value.toUpperCase())}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleFetchTicker(); }}
+                      placeholder="e.g. AAPL, TSLA"
+                      style={{ flex: 1, fontFamily: 'monospace', letterSpacing: '0.05em' }}
+                    />
+                    <button
+                      onClick={handleFetchTicker}
+                      disabled={!ticker.trim() || tickerFetching}
+                      style={{
+                        padding: '6px 14px', borderRadius: 8, cursor: ticker.trim() && !tickerFetching ? 'pointer' : 'not-allowed',
+                        background: ticker.trim() && !tickerFetching ? 'rgba(59,130,246,0.2)' : 'rgba(59,130,246,0.05)',
+                        border: '1px solid rgba(59,130,246,0.4)', color: '#93c5fd',
+                        display: 'flex', alignItems: 'center', gap: 5, fontSize: 12,
+                      }}
+                    >
+                      {tickerFetching
+                        ? <RefreshCw size={13} style={{ animation: 'spin 1s linear infinite' }} />
+                        : <Search size={13} />}
+                      {tickerFetching ? 'Fetching…' : 'Fetch'}
+                    </button>
+                  </div>
+                  {tickerError && (
+                    <div style={{ marginTop: 5, fontSize: 11, color: '#ef4444' }}>{tickerError}</div>
+                  )}
+                </div>
+
+                {/* Live price display */}
+                {livePrice != null && (
+                  <div style={{
+                    marginBottom: 20, padding: '14px 16px',
+                    background: 'rgba(15,23,42,0.7)',
+                    border: `1px solid ${entity_color_or_default(color)}44`,
+                    borderRadius: 12,
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                      <div>
+                        <div style={{ fontSize: 11, color: '#475569', marginBottom: 2 }}>Live Price</div>
+                        <div style={{ fontSize: 24, fontWeight: 700, color: '#e2e8f0' }}>
+                          ${livePrice.toFixed(2)}
+                        </div>
+                      </div>
+                      {priceChangePct != null && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 600,
+                          color: priceChangePct >= 0 ? '#22c55e' : '#ef4444' }}>
+                          {priceChangePct >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                          {priceChangePct >= 0 ? '+' : ''}{priceChangePct.toFixed(2)}%
+                          <span style={{ fontSize: 11, fontWeight: 400 }}>
+                            ({priceChange != null ? (priceChange >= 0 ? '+' : '') + priceChange.toFixed(2) : ''})
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px', marginTop: 12 }}>
+                      {[
+                        ['Market Cap', marketCap || '—'],
+                        ['P/E Ratio', peRatio || '—'],
+                        ['52W Low', week52Low != null ? `$${week52Low.toFixed(2)}` : '—'],
+                        ['52W High', week52High != null ? `$${week52High.toFixed(2)}` : '—'],
+                      ].map(([label, val]) => (
+                        <div key={label}>
+                          <div style={{ fontSize: 10, color: '#475569' }}>{label}</div>
+                          <div style={{ fontSize: 12, color: '#94a3b8', fontWeight: 500 }}>{val}</div>
+                        </div>
+                      ))}
+                    </div>
+                    {lastPriceFetch && (
+                      <div style={{ fontSize: 10, color: '#334155', marginTop: 8 }}>
+                        Last updated: {new Date(lastPriceFetch).toLocaleString()}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Price targets */}
+                <div style={{ marginBottom: 14 }}>
+                  <label style={labelStyle}>Entry Price (your cost basis)</label>
+                  <input
+                    className="input-field mt-1"
+                    type="number"
+                    step="0.01"
+                    value={entryPrice}
+                    onChange={(e) => setEntryPrice(e.target.value)}
+                    placeholder="e.g. 150.00"
+                  />
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={labelStyle}>Target Price</label>
+                  <input
+                    className="input-field mt-1"
+                    type="number"
+                    step="0.01"
+                    value={targetPrice}
+                    onChange={(e) => setTargetPrice(e.target.value)}
+                    placeholder="e.g. 220.00"
+                  />
+                </div>
+
+                {/* Upside / MoS display */}
+                {(upsidePct != null || mosPct != null) && (
+                  <div style={{
+                    padding: '14px 16px', borderRadius: 12,
+                    background: `${upsideColor}18`,
+                    border: `1px solid ${upsideColor}44`,
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-around', textAlign: 'center' }}>
+                      {upsidePct != null && (
+                        <div>
+                          <div style={{ fontSize: 10, color: '#64748b', marginBottom: 4 }}>
+                            Upside {livePrice != null ? '(from current)' : '(from entry)'}
+                          </div>
+                          <div style={{ fontSize: 22, fontWeight: 700, color: upsideColor }}>
+                            {upsidePct >= 0 ? '+' : ''}{upsidePct.toFixed(1)}%
+                          </div>
+                        </div>
+                      )}
+                      {mosPct != null && (
+                        <div>
+                          <div style={{ fontSize: 10, color: '#64748b', marginBottom: 4 }}>Margin of Safety</div>
+                          <div style={{ fontSize: 22, fontWeight: 700, color: mosPct >= 20 ? '#22c55e' : mosPct >= 0 ? '#f59e0b' : '#ef4444' }}>
+                            {mosPct.toFixed(1)}%
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           {/* === STATISTICS TAB === */}
           {activeTab === 'stats' && (
             <div>
@@ -531,3 +750,5 @@ const labelStyle: React.CSSProperties = {
   fontSize: 11, fontWeight: 600, color: '#94a3b8',
   textTransform: 'uppercase', letterSpacing: '0.06em',
 };
+
+function entity_color_or_default(c: string) { return c || '#3b82f6'; }

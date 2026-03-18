@@ -4,7 +4,7 @@ import React, { useRef, useState, useCallback } from 'react';
 import {
   Edit2, Trash2, Link2, ChevronDown, ChevronUp,
   Lock, Unlock, GitMerge, Maximize2, Minimize2,
-  Zap, Minus, X,
+  Zap, Minus, X, TrendingUp, TrendingDown,
 } from 'lucide-react';
 import type { Entity, ArrowStyle } from '../types';
 import { RELATIONSHIP_COLORS } from '../types';
@@ -485,6 +485,41 @@ export default function EntityCard({
                 {entity.subtitle}
               </div>
             )}
+            {/* Live price row */}
+            {entity.livePrice != null && (
+              <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#e2e8f0' }}>
+                  ${entity.livePrice.toFixed(2)}
+                </span>
+                {entity.priceChangePct != null && (
+                  <span style={{
+                    fontSize: 10, fontWeight: 600,
+                    color: entity.priceChangePct >= 0 ? '#22c55e' : '#ef4444',
+                    display: 'flex', alignItems: 'center', gap: 2,
+                  }}>
+                    {entity.priceChangePct >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+                    {entity.priceChangePct >= 0 ? '+' : ''}{entity.priceChangePct.toFixed(2)}%
+                  </span>
+                )}
+              </div>
+            )}
+            {/* Upside indicator */}
+            {(() => {
+              const base = entity.livePrice ?? entity.entryPrice;
+              const tp = entity.targetPrice;
+              if (base == null || tp == null) return null;
+              const upside = ((tp - base) / base) * 100;
+              const col = upside >= 20 ? '#22c55e' : upside >= 5 ? '#84cc16' : upside >= -5 ? '#f59e0b' : '#ef4444';
+              return (
+                <div style={{
+                  marginTop: 5, fontSize: 10, fontWeight: 700, color: col,
+                  background: `${col}20`, border: `1px solid ${col}44`,
+                  borderRadius: 6, padding: '2px 8px', textAlign: 'center',
+                }}>
+                  Target {upside >= 0 ? '+' : ''}{upside.toFixed(1)}%
+                </div>
+              );
+            })()}
             {entity.statistics?.length > 0 && (() => {
               const previewStats = getLatestStatsByLabel(entity.statistics, globalViewDate).slice(0, 2);
               return previewStats.length > 0 ? (
@@ -596,19 +631,30 @@ export default function EntityCard({
             }}
           >
             <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>{entity.icon}</span>
-            <span
-              style={{
-                color: entity.color,
-                fontWeight: 700,
-                fontSize: 12,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                maxWidth: 120,
-              }}
-            >
-              {entity.name}
-            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', maxWidth: 120 }}>
+              <span
+                style={{
+                  color: entity.color,
+                  fontWeight: 700,
+                  fontSize: 12,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {entity.name}
+              </span>
+              {entity.livePrice != null && (
+                <span style={{ fontSize: 10, color: 'rgba(148,163,184,0.8)', marginTop: 1 }}>
+                  ${entity.livePrice.toFixed(2)}
+                  {entity.priceChangePct != null && (
+                    <span style={{ marginLeft: 3, color: entity.priceChangePct >= 0 ? '#22c55e' : '#ef4444' }}>
+                      {entity.priceChangePct >= 0 ? '+' : ''}{entity.priceChangePct.toFixed(1)}%
+                    </span>
+                  )}
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Triangle pointer */}

@@ -30,6 +30,19 @@ export interface Entity {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+  // Ticker / live price fields
+  ticker?: string;
+  livePrice?: number;
+  priceChange?: number;   // absolute change
+  priceChangePct?: number; // % change
+  marketCap?: string;
+  peRatio?: string;
+  week52Low?: number;
+  week52High?: number;
+  lastPriceFetch?: string; // ISO timestamp
+  // Investment thesis fields
+  targetPrice?: number;
+  entryPrice?: number;
 }
 
 export type ArrowStyle = 'normal' | 'animated';
