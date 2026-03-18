@@ -4,11 +4,13 @@ import React, { useState } from 'react';
 import {
   Save, Share2, Map, Plus, Link2, X,
   ChevronDown, TrendingUp, LogIn, LogOut, User,
-  ZoomIn, ZoomOut, RotateCcw, Lock, Unlock, Clock, Globe, Square, BarChart3,
+  ZoomIn, ZoomOut, RotateCcw, Lock, Unlock, Clock, Globe, Square, BarChart3, Newspaper, Zap,
 } from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
 import ShareDialog from './ShareDialog';
 import ComparisonOverlay from './ComparisonOverlay';
+import NewsFeed from './NewsFeed';
+import ScenarioPropagator from './ScenarioPropagator';
 import MapsDialog from './MapsDialog';
 import WorldClockPanel from './WorldClockPanel';
 import CalendarPicker from './CalendarPicker';
@@ -39,6 +41,8 @@ export default function Toolbar({
   const [showMaps, setShowMaps] = useState(false);
   const [showClock, setShowClock] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
+  const [showNews, setShowNews] = useState(false);
+  const [showScenario, setShowScenario] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
@@ -258,6 +262,18 @@ export default function Toolbar({
             <BarChart3 size={13} />Compare
           </button>
 
+          {/* News */}
+          <button className="btn-ghost" onClick={() => setShowNews(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', fontSize: 12 }}>
+            <Newspaper size={13} />News
+          </button>
+
+          {/* Scenario */}
+          <button className="btn-ghost" onClick={() => setShowScenario(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', fontSize: 12 }}>
+            <Zap size={13} />Scenario
+          </button>
+
           {/* Share */}
           <button className="btn-ghost" onClick={() => setShowShare(true)}
             style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', fontSize: 12 }}>
@@ -300,6 +316,8 @@ export default function Toolbar({
       <ShareDialog isOpen={showShare} onClose={() => setShowShare(false)} />
       <MapsDialog isOpen={showMaps} onClose={() => setShowMaps(false)} session={session} onSignIn={onSignIn} />
       <ComparisonOverlay isOpen={showComparison} onClose={() => setShowComparison(false)} />
+      <NewsFeed isOpen={showNews} onClose={() => setShowNews(false)} />
+      <ScenarioPropagator isOpen={showScenario} onClose={() => setShowScenario(false)} />
       {showClock && <WorldClockPanel onClose={() => setShowClock(false)} />}
 
       {/* Login prompt modal */}
