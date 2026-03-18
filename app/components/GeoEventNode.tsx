@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useCallback } from 'react';
+import React, { useRef, useCallback, useState } from 'react';
 import type { GeoEvent } from '../types';
 import { GEO_EVENT_TYPES } from '../types';
 import { useMapStore } from '../store/mapStore';
@@ -13,26 +13,25 @@ interface GeoEventNodeProps {
   zoom: number;
 }
 
+// Base hit-area size in map-space pixels (before zoom + user size scaling)
+const BASE = 50;
+
 const PULSE_KEYFRAMES = `
 @keyframes geo-pulse-1 {
-  0%   { transform: translate(-50%,-50%) scale(0.6); opacity: 0.7; }
-  100% { transform: translate(-50%,-50%) scale(2.6); opacity: 0; }
+  0%   { transform: translate(-50%,-50%) scale(0.5); opacity: 0.7; }
+  100% { transform: translate(-50%,-50%) scale(2.8); opacity: 0; }
 }
 @keyframes geo-pulse-2 {
-  0%   { transform: translate(-50%,-50%) scale(0.6); opacity: 0.5; }
-  100% { transform: translate(-50%,-50%) scale(2.0); opacity: 0; }
+  0%   { transform: translate(-50%,-50%) scale(0.5); opacity: 0.5; }
+  100% { transform: translate(-50%,-50%) scale(2.1); opacity: 0; }
 }
 @keyframes geo-pulse-3 {
-  0%   { transform: translate(-50%,-50%) scale(0.6); opacity: 0.3; }
+  0%   { transform: translate(-50%,-50%) scale(0.5); opacity: 0.3; }
   100% { transform: translate(-50%,-50%) scale(1.5); opacity: 0; }
 }
 @keyframes geo-diamond-glow {
   0%, 100% { box-shadow: 0 0 8px 2px var(--geo-color), 0 0 0 1px var(--geo-color-dim); }
-  50%       { box-shadow: 0 0 18px 5px var(--geo-color), 0 0 0 1px var(--geo-color-dim); }
-}
-@keyframes geo-float {
-  0%, 100% { transform: translate(-50%, -50%) translateY(0px) rotate(45deg); }
-  50%       { transform: translate(-50%, -50%) translateY(-3px) rotate(45deg); }
+  50%       { box-shadow: 0 0 20px 6px var(--geo-color), 0 0 0 1px var(--geo-color-dim); }
 }
 `;
 
@@ -42,10 +41,13 @@ export default function GeoEventNode({
   const { moveGeoEvent, deleteGeoEvent } = useMapStore();
   const isDragging = useRef(false);
   const dragStart = useRef<{ mouseX: number; mouseY: number; evX: number; evY: number } | null>(null);
+  const [grabbing, setGrabbing] = useState(false);
 
   const meta = GEO_EVENT_TYPES.find((t) => t.value === event.type) ?? GEO_EVENT_TYPES[0];
   const color = meta.color;
-  const scale = 1 / zoom;
+  const userSize = event.size ?? 1;
+  // Combined scale: undo canvas zoom × user size multiplier
+  const totalScale = (1 / zoom) * userSize;
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -53,6 +55,7 @@ export default function GeoEventNode({
       e.preventDefault();
       e.stopPropagation();
       isDragging.current = false;
+      setGrabbing(true);
       dragStart.current = {
         mouseX: e.clientX,
         mouseY: e.clientY,
@@ -64,7 +67,7 @@ export default function GeoEventNode({
         if (!dragStart.current) return;
         const dx = (ev.clientX - dragStart.current.mouseX) / zoom;
         const dy = (ev.clientY - dragStart.current.mouseY) / zoom;
-        if (Math.abs(dx) > 2 || Math.abs(dy) > 2) isDragging.current = true;
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) isDragging.current = true;
         if (isDragging.current) {
           moveGeoEvent(event.id, {
             x: Math.max(40, Math.min(mapWidth - 40, dragStart.current.evX + dx)),
@@ -76,7 +79,9 @@ export default function GeoEventNode({
       const onUp = () => {
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup', onUp);
+        setGrabbing(false);
         if (!isDragging.current) onEdit(event);
+        isDragging.current = false;
         dragStart.current = null;
       };
 
@@ -87,34 +92,48 @@ export default function GeoEventNode({
   );
 
   const formattedDate = (() => {
-    const start = event.startDate ? new Date(event.startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '';
-    const end = event.endDate ? new Date(event.endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '';
-    if (start && end) return `${start} – ${end}`;
-    return start;
+    const fmt = (d: string) => new Date(d).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    if (event.startDate && event.endDate) return `${fmt(event.startDate)} – ${fmt(event.endDate)}`;
+    return event.startDate ? fmt(event.startDate) : '';
   })();
 
   return (
     <>
       <style>{PULSE_KEYFRAMES}</style>
-      <div
-        onMouseDown={handleMouseDown}
-        onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); deleteGeoEvent(event.id); }}
-        style={{
-          position: 'absolute',
-          left: event.position.x,
-          top: event.position.y,
-          transform: 'translate(-50%, -50%)',
-          cursor: 'grab',
-          userSelect: 'none',
-          // Fixed visual size regardless of zoom
-          width: 0, height: 0,
-        }}
-      >
-        {/* Scaling wrapper — undoes canvas zoom for constant screen size */}
-        <div style={{ transform: `scale(${scale})`, transformOrigin: 'center center' }}>
 
-          {/* Pulse rings — 3 concentric expanding circles */}
-          {[1.8, 1.3, 1.0].map((delay, i) => (
+      {/*
+        Outer: zero-size anchor at map coordinates.
+        Inner: actual hit area, centered via left/top offset, scaled from its own center.
+        This pattern gives a reliable hit area that scales with zoom + user size.
+      */}
+      <div style={{
+        position: 'absolute',
+        left: event.position.x,
+        top: event.position.y,
+        width: 0,
+        height: 0,
+        pointerEvents: 'none',
+      }}>
+        <div
+          onMouseDown={handleMouseDown}
+          onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); deleteGeoEvent(event.id); }}
+          style={{
+            position: 'absolute',
+            // Center the BASE×BASE box on the anchor point
+            left: -BASE,
+            top: -BASE,
+            width: BASE * 2,
+            height: BASE * 2,
+            // Scale from center outward, combining zoom-undo + user size
+            transform: `scale(${totalScale})`,
+            transformOrigin: 'center center',
+            cursor: grabbing ? 'grabbing' : 'grab',
+            userSelect: 'none',
+            pointerEvents: 'all',
+          }}
+        >
+          {/* Pulse rings */}
+          {[1.6, 1.0, 0.4].map((delay, i) => (
             <div
               key={i}
               style={{
@@ -123,7 +142,7 @@ export default function GeoEventNode({
                 width: 56, height: 56,
                 borderRadius: '50%',
                 border: `2px solid ${color}`,
-                animation: `geo-pulse-${i + 1} 2.4s ${delay}s ease-out infinite`,
+                animation: `geo-pulse-${i + 1} 2.6s ${delay}s ease-out infinite`,
                 pointerEvents: 'none',
               }}
             />
@@ -133,28 +152,27 @@ export default function GeoEventNode({
           <div style={{
             position: 'absolute',
             left: '50%', top: '50%',
-            width: 40, height: 40,
+            width: 42, height: 42,
             transform: 'translate(-50%, -50%) rotate(45deg)',
-            background: `linear-gradient(135deg, ${color}30, ${color}18)`,
+            background: `linear-gradient(135deg, ${color}35, ${color}18)`,
             border: `2px solid ${color}`,
-            borderRadius: 6,
-            animation: 'geo-diamond-glow 2.4s ease-in-out infinite',
-            // CSS variable for keyframe shadow
+            borderRadius: 7,
+            animation: 'geo-diamond-glow 2.6s ease-in-out infinite',
             ['--geo-color' as string]: color,
             ['--geo-color-dim' as string]: `${color}66`,
           }}>
-            {/* Emoji — counter-rotate so it stays upright */}
+            {/* Emoji — counter-rotate to stay upright */}
             <div style={{
               position: 'absolute', inset: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transform: 'rotate(-45deg)',
-              fontSize: 17, lineHeight: 1,
+              fontSize: 18, lineHeight: 1,
             }}>
               {meta.emoji}
             </div>
           </div>
 
-          {/* Label below */}
+          {/* Name + date label below */}
           <div style={{
             position: 'absolute',
             top: 'calc(50% + 28px)',
@@ -173,12 +191,10 @@ export default function GeoEventNode({
             </div>
             {formattedDate && (
               <div style={{
-                fontSize: 9.5, fontWeight: 500,
-                color: color,
+                fontSize: 9.5, fontWeight: 500, color,
                 textShadow: '0 1px 3px rgba(0,0,0,0.8)',
-                background: 'rgba(8,15,30,0.6)',
-                padding: '1px 5px', borderRadius: 4,
-                display: 'inline-block',
+                background: 'rgba(8,15,30,0.65)',
+                padding: '1px 5px', borderRadius: 4, display: 'inline-block',
               }}>
                 {formattedDate}
               </div>
@@ -188,11 +204,10 @@ export default function GeoEventNode({
           {/* Type badge top-right */}
           <div style={{
             position: 'absolute',
-            top: 'calc(50% - 36px)',
-            left: 'calc(50% + 14px)',
-            fontSize: 9, fontWeight: 600,
-            color: color,
-            background: 'rgba(8,15,30,0.75)',
+            top: 'calc(50% - 38px)',
+            left: 'calc(50% + 16px)',
+            fontSize: 9, fontWeight: 600, color,
+            background: 'rgba(8,15,30,0.8)',
             border: `1px solid ${color}55`,
             borderRadius: 4, padding: '1px 5px',
             textTransform: 'uppercase', letterSpacing: '0.05em',

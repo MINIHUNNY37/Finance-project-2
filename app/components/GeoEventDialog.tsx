@@ -22,6 +22,7 @@ export default function GeoEventDialog({
   const [endDate, setEndDate] = useState('');
   const [hasEndDate, setHasEndDate] = useState(false);
   const [details, setDetails] = useState('');
+  const [size, setSize] = useState(1);
 
   useEffect(() => {
     if (initialData) {
@@ -31,9 +32,10 @@ export default function GeoEventDialog({
       setEndDate(initialData.endDate || '');
       setHasEndDate(!!initialData.endDate);
       setDetails(initialData.details || '');
+      setSize(initialData.size ?? 1);
     } else {
       setName(''); setType('war'); setStartDate(''); setEndDate('');
-      setHasEndDate(false); setDetails('');
+      setHasEndDate(false); setDetails(''); setSize(1);
     }
   }, [initialData, isOpen]);
 
@@ -50,6 +52,7 @@ export default function GeoEventDialog({
       startDate,
       endDate: hasEndDate && endDate ? endDate : undefined,
       details: details.trim(),
+      size,
       position: initialData?.position ?? defaultPosition ?? { x: 400, y: 300 },
     });
     onClose();
@@ -181,6 +184,52 @@ export default function GeoEventDialog({
                   />
                 </>
               )}
+            </div>
+          </div>
+
+          {/* Size */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={labelStyle}>
+              Size
+              <span style={{ marginLeft: 8, color: color, fontSize: 11, textTransform: 'none', letterSpacing: 0, fontWeight: 600 }}>
+                {size.toFixed(1)}×
+              </span>
+            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
+              <span style={{ fontSize: 10, color: '#8899b0', width: 20, textAlign: 'center' }}>S</span>
+              <input
+                type="range"
+                min={0.5} max={3} step={0.1}
+                value={size}
+                onChange={(e) => setSize(parseFloat(e.target.value))}
+                style={{ flex: 1, accentColor: color, cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: 10, color: '#8899b0', width: 20, textAlign: 'center' }}>XL</span>
+              <button
+                onClick={() => setSize(1)}
+                style={{
+                  fontSize: 10, padding: '2px 8px', borderRadius: 5, cursor: 'pointer',
+                  background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)',
+                  color: '#93c5fd',
+                }}
+              >Reset</button>
+            </div>
+            {/* Visual preview of the 3 sizes */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, paddingLeft: 30, paddingRight: 60 }}>
+              {[0.5, 1.0, 1.5, 2.0, 2.5, 3.0].map((v) => (
+                <div
+                  key={v}
+                  onClick={() => setSize(v)}
+                  style={{
+                    width: v * 10 + 6, height: v * 10 + 6,
+                    borderRadius: 3, transform: 'rotate(45deg)',
+                    background: Math.abs(size - v) < 0.05 ? `${color}60` : `${color}20`,
+                    border: `1px solid ${Math.abs(size - v) < 0.05 ? color : `${color}40`}`,
+                    cursor: 'pointer', transition: 'all 0.1s',
+                    flexShrink: 0,
+                  }}
+                />
+              ))}
             </div>
           </div>
 

@@ -188,6 +188,7 @@ export interface GeoEvent {
   endDate?: string;
   details: string;
   position: { x: number; y: number };
+  size?: number;   // 0.5 – 3.0, default 1
   createdAt: string;
 }
 
