@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, BarChart2, Search, RefreshCw, TrendingUp, TrendingDown } from 'lucide-react';
+import { X, Plus, Trash2, BarChart2, Search, RefreshCw, TrendingUp, TrendingDown, CheckCircle, XCircle, Clock, Star, ExternalLink, LinkIcon } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
-import type { Entity, EntitySubItem, EntityStatistic } from '../types';
-import { ENTITY_ICONS, ENTITY_COLORS } from '../types';
+import type { Entity, EntitySubItem, EntityStatistic, EntityCatalyst, EntityLink } from '../types';
+import { ENTITY_ICONS, ENTITY_COLORS, SECTOR_PRESETS } from '../types';
 import { useMapStore } from '../store/mapStore';
 
 interface EntityDialogProps {
@@ -61,6 +61,20 @@ export default function EntityDialog({
   // Investment thesis
   const [targetPrice, setTargetPrice] = useState<string>('');
   const [entryPrice, setEntryPrice] = useState<string>('');
+  // Thesis log
+  const [thesis, setThesis] = useState('');
+  const [exitCriteria, setExitCriteria] = useState('');
+  const [conviction, setConviction] = useState<number>(0);
+  // Catalysts
+  const [catalysts, setCatalysts] = useState<EntityCatalyst[]>([]);
+  // Sector / tags
+  const [sector, setSector] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
+  // Links
+  const [links, setLinks] = useState<EntityLink[]>([]);
+  const [linkUrl, setLinkUrl] = useState('');
+  const [linkTitle, setLinkTitle] = useState('');
 
   useEffect(() => {
     if (initialData) {
@@ -83,6 +97,13 @@ export default function EntityDialog({
       setLastPriceFetch(initialData.lastPriceFetch);
       setTargetPrice(initialData.targetPrice != null ? String(initialData.targetPrice) : '');
       setEntryPrice(initialData.entryPrice != null ? String(initialData.entryPrice) : '');
+      setThesis(initialData.thesis || '');
+      setExitCriteria(initialData.exitCriteria || '');
+      setConviction(initialData.conviction || 0);
+      setCatalysts(initialData.catalysts || []);
+      setSector(initialData.sector || '');
+      setTags(initialData.tags || []);
+      setLinks(initialData.links || []);
     } else {
       // Empty icon forces the user to explicitly pick one before saving
       setName(''); setIcon(''); setSubtitle(''); setDescription('');
@@ -92,6 +113,9 @@ export default function EntityDialog({
       setPriceChangePct(undefined); setMarketCap(''); setPeRatio('');
       setWeek52Low(undefined); setWeek52High(undefined); setLastPriceFetch(undefined);
       setTargetPrice(''); setEntryPrice('');
+      setThesis(''); setExitCriteria(''); setConviction(0);
+      setCatalysts([]); setSector(''); setTags([]);
+      setLinks([]); setLinkUrl(''); setLinkTitle('');
     }
     setTickerError('');
     setActiveTab('basic');
@@ -157,6 +181,13 @@ export default function EntityDialog({
       week52Low, week52High, lastPriceFetch,
       targetPrice: !isNaN(tp) && targetPrice !== '' ? tp : undefined,
       entryPrice: !isNaN(ep) && entryPrice !== '' ? ep : undefined,
+      thesis: thesis.trim() || undefined,
+      exitCriteria: exitCriteria.trim() || undefined,
+      conviction: conviction > 0 ? conviction : undefined,
+      catalysts: catalysts.length > 0 ? catalysts : undefined,
+      sector: sector || undefined,
+      tags: tags.length > 0 ? tags : undefined,
+      links: links.length > 0 ? links : undefined,
     });
     onClose();
   };
@@ -419,53 +450,35 @@ export default function EntityDialog({
             const upsideColor = upsidePct == null ? '#94a3b8' : upsidePct >= 20 ? '#22c55e' : upsidePct >= 5 ? '#84cc16' : upsidePct >= -5 ? '#f59e0b' : '#ef4444';
             return (
               <div>
-                {/* Ticker section */}
+                {/* ── Ticker section ── */}
                 <div style={{ marginBottom: 20 }}>
                   <label style={labelStyle}>Ticker Symbol</label>
                   <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                    <input
-                      className="input-field"
-                      value={ticker}
+                    <input className="input-field" value={ticker}
                       onChange={(e) => setTicker(e.target.value.toUpperCase())}
                       onKeyDown={(e) => { if (e.key === 'Enter') handleFetchTicker(); }}
                       placeholder="e.g. AAPL, TSLA"
-                      style={{ flex: 1, fontFamily: 'monospace', letterSpacing: '0.05em' }}
-                    />
-                    <button
-                      onClick={handleFetchTicker}
-                      disabled={!ticker.trim() || tickerFetching}
-                      style={{
-                        padding: '6px 14px', borderRadius: 8, cursor: ticker.trim() && !tickerFetching ? 'pointer' : 'not-allowed',
+                      style={{ flex: 1, fontFamily: 'monospace', letterSpacing: '0.05em' }} />
+                    <button onClick={handleFetchTicker} disabled={!ticker.trim() || tickerFetching}
+                      style={{ padding: '6px 14px', borderRadius: 8, cursor: ticker.trim() && !tickerFetching ? 'pointer' : 'not-allowed',
                         background: ticker.trim() && !tickerFetching ? 'rgba(59,130,246,0.2)' : 'rgba(59,130,246,0.05)',
                         border: '1px solid rgba(59,130,246,0.4)', color: '#93c5fd',
-                        display: 'flex', alignItems: 'center', gap: 5, fontSize: 12,
-                      }}
-                    >
-                      {tickerFetching
-                        ? <RefreshCw size={13} style={{ animation: 'spin 1s linear infinite' }} />
-                        : <Search size={13} />}
+                        display: 'flex', alignItems: 'center', gap: 5, fontSize: 12 }}>
+                      {tickerFetching ? <RefreshCw size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Search size={13} />}
                       {tickerFetching ? 'Fetching…' : 'Fetch'}
                     </button>
                   </div>
-                  {tickerError && (
-                    <div style={{ marginTop: 5, fontSize: 11, color: '#ef4444' }}>{tickerError}</div>
-                  )}
+                  {tickerError && <div style={{ marginTop: 5, fontSize: 11, color: '#ef4444' }}>{tickerError}</div>}
                 </div>
 
                 {/* Live price display */}
                 {livePrice != null && (
-                  <div style={{
-                    marginBottom: 20, padding: '14px 16px',
-                    background: 'rgba(15,23,42,0.7)',
-                    border: `1px solid ${entity_color_or_default(color)}44`,
-                    borderRadius: 12,
-                  }}>
+                  <div style={{ marginBottom: 20, padding: '14px 16px', background: 'rgba(15,23,42,0.7)',
+                    border: `1px solid ${entity_color_or_default(color)}44`, borderRadius: 12 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                       <div>
                         <div style={{ fontSize: 11, color: '#475569', marginBottom: 2 }}>Live Price</div>
-                        <div style={{ fontSize: 24, fontWeight: 700, color: '#e2e8f0' }}>
-                          ${livePrice.toFixed(2)}
-                        </div>
+                        <div style={{ fontSize: 24, fontWeight: 700, color: '#e2e8f0' }}>${livePrice.toFixed(2)}</div>
                       </div>
                       {priceChangePct != null && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 600,
@@ -479,9 +492,7 @@ export default function EntityDialog({
                       )}
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px', marginTop: 12 }}>
-                      {[
-                        ['Market Cap', marketCap || '—'],
-                        ['P/E Ratio', peRatio || '—'],
+                      {[['Market Cap', marketCap || '—'], ['P/E Ratio', peRatio || '—'],
                         ['52W Low', week52Low != null ? `$${week52Low.toFixed(2)}` : '—'],
                         ['52W High', week52High != null ? `$${week52High.toFixed(2)}` : '—'],
                       ].map(([label, val]) => (
@@ -491,45 +502,102 @@ export default function EntityDialog({
                         </div>
                       ))}
                     </div>
-                    {lastPriceFetch && (
-                      <div style={{ fontSize: 10, color: '#334155', marginTop: 8 }}>
-                        Last updated: {new Date(lastPriceFetch).toLocaleString()}
-                      </div>
-                    )}
+                    {lastPriceFetch && <div style={{ fontSize: 10, color: '#334155', marginTop: 8 }}>Last updated: {new Date(lastPriceFetch).toLocaleString()}</div>}
                   </div>
                 )}
 
-                {/* Price targets */}
-                <div style={{ marginBottom: 14 }}>
-                  <label style={labelStyle}>Entry Price (your cost basis)</label>
-                  <input
-                    className="input-field mt-1"
-                    type="number"
-                    step="0.01"
-                    value={entryPrice}
-                    onChange={(e) => setEntryPrice(e.target.value)}
-                    placeholder="e.g. 150.00"
-                  />
+                {/* ── Sector & Tags ── */}
+                <div style={{ marginBottom: 18 }}>
+                  <label style={labelStyle}>Sector</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8 }}>
+                    {SECTOR_PRESETS.map((s) => (
+                      <button key={s} onClick={() => setSector(sector === s ? '' : s)}
+                        style={{ padding: '3px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer',
+                          background: sector === s ? `${color}30` : 'rgba(59,130,246,0.06)',
+                          border: `1px solid ${sector === s ? color : 'rgba(59,130,246,0.2)'}`,
+                          color: sector === s ? color : '#64748b', fontWeight: sector === s ? 600 : 400 }}>
+                        {s}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div style={{ marginBottom: 16 }}>
-                  <label style={labelStyle}>Target Price</label>
-                  <input
-                    className="input-field mt-1"
-                    type="number"
-                    step="0.01"
-                    value={targetPrice}
-                    onChange={(e) => setTargetPrice(e.target.value)}
-                    placeholder="e.g. 220.00"
-                  />
+
+                <div style={{ marginBottom: 18 }}>
+                  <label style={labelStyle}>Tags / Themes</label>
+                  <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                    <input className="input-field" value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && tagInput.trim()) {
+                          if (!tags.includes(tagInput.trim())) setTags([...tags, tagInput.trim()]);
+                          setTagInput('');
+                        }
+                      }}
+                      placeholder="e.g. AI Infrastructure, EV, Cyclical" style={{ flex: 1, fontSize: 11 }} />
+                    <button className="btn-ghost" style={{ padding: '4px 10px', fontSize: 11 }}
+                      disabled={!tagInput.trim()}
+                      onClick={() => { if (tagInput.trim() && !tags.includes(tagInput.trim())) setTags([...tags, tagInput.trim()]); setTagInput(''); }}>
+                      <Plus size={11} />
+                    </button>
+                  </div>
+                  {tags.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8 }}>
+                      {tags.map((t) => (
+                        <span key={t} style={{ display: 'inline-flex', alignItems: 'center', gap: 4,
+                          background: `${color}18`, border: `1px solid ${color}40`, borderRadius: 6,
+                          padding: '2px 8px', fontSize: 10, color: `${color}cc` }}>
+                          {t}
+                          <button onClick={() => setTags(tags.filter((x) => x !== t))}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 0 }}>
+                            <X size={9} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Conviction Score ── */}
+                <div style={{ marginBottom: 18 }}>
+                  <label style={labelStyle}>Conviction (1–5)</label>
+                  <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <button key={n} onClick={() => setConviction(conviction === n ? 0 : n)}
+                        style={{ width: 36, height: 36, borderRadius: 8, cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: n <= conviction ? `${color}25` : 'rgba(15,23,42,0.5)',
+                          border: `1px solid ${n <= conviction ? color : 'rgba(59,130,246,0.2)'}`,
+                          transition: 'all 0.12s' }}>
+                        <Star size={16} fill={n <= conviction ? color : 'none'}
+                          color={n <= conviction ? color : '#334155'} />
+                      </button>
+                    ))}
+                    {conviction > 0 && (
+                      <span style={{ fontSize: 11, color: '#64748b', alignSelf: 'center', marginLeft: 4 }}>
+                        {['', 'Very Low', 'Low', 'Moderate', 'High', 'Very High'][conviction]}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* ── Price Targets ── */}
+                <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={labelStyle}>Entry Price</label>
+                    <input className="input-field mt-1" type="number" step="0.01" value={entryPrice}
+                      onChange={(e) => setEntryPrice(e.target.value)} placeholder="e.g. 150.00" />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={labelStyle}>Target Price</label>
+                    <input className="input-field mt-1" type="number" step="0.01" value={targetPrice}
+                      onChange={(e) => setTargetPrice(e.target.value)} placeholder="e.g. 220.00" />
+                  </div>
                 </div>
 
                 {/* Upside / MoS display */}
                 {(upsidePct != null || mosPct != null) && (
-                  <div style={{
-                    padding: '14px 16px', borderRadius: 12,
-                    background: `${upsideColor}18`,
-                    border: `1px solid ${upsideColor}44`,
-                  }}>
+                  <div style={{ padding: '12px 16px', borderRadius: 12, marginBottom: 18,
+                    background: `${upsideColor}18`, border: `1px solid ${upsideColor}44` }}>
                     <div style={{ display: 'flex', justifyContent: 'space-around', textAlign: 'center' }}>
                       {upsidePct != null && (
                         <div>
@@ -552,6 +620,126 @@ export default function EntityDialog({
                     </div>
                   </div>
                 )}
+
+                {/* ── Thesis Log ── */}
+                <div style={{ marginBottom: 14 }}>
+                  <label style={labelStyle}>Investment Thesis — Why I Own This</label>
+                  <textarea className="input-field mt-1" value={thesis}
+                    onChange={(e) => setThesis(e.target.value)}
+                    placeholder="Dominant AI infrastructure play. Data center revenue growing 100%+ YoY..."
+                    rows={3} style={{ resize: 'vertical' }} />
+                </div>
+                <div style={{ marginBottom: 18 }}>
+                  <label style={labelStyle}>Exit Criteria — What Would Change My Mind</label>
+                  <textarea className="input-field mt-1" value={exitCriteria}
+                    onChange={(e) => setExitCriteria(e.target.value)}
+                    placeholder="Revenue growth decelerates below 30%. Competition from AMD closes gap..."
+                    rows={2} style={{ resize: 'vertical' }} />
+                </div>
+
+                {/* ── Catalyst Checklist ── */}
+                <div style={{ marginBottom: 18 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <label style={labelStyle}>Catalyst Checklist</label>
+                    <button className="btn-ghost" style={{ padding: '3px 8px', fontSize: 11 }}
+                      onClick={() => setCatalysts([...catalysts, {
+                        id: uuidv4(), event: '', status: 'pending', createdAt: new Date().toISOString(),
+                      }])}>
+                      <Plus size={11} style={{ display: 'inline', marginRight: 3 }} />Add
+                    </button>
+                  </div>
+                  {catalysts.length === 0 && (
+                    <div style={{ color: '#475569', fontSize: 11, textAlign: 'center', padding: '8px 0' }}>
+                      Track upcoming events: earnings, product launches, rate decisions...
+                    </div>
+                  )}
+                  {catalysts.map((cat) => {
+                    const statusIcon = cat.status === 'hit' ? <CheckCircle size={13} style={{ color: '#22c55e' }} />
+                      : cat.status === 'miss' ? <XCircle size={13} style={{ color: '#ef4444' }} />
+                      : <Clock size={13} style={{ color: '#f59e0b' }} />;
+                    return (
+                      <div key={cat.id} style={{
+                        padding: '10px 12px', borderRadius: 10, marginBottom: 6,
+                        background: 'rgba(15,23,42,0.5)',
+                        border: `1px solid ${cat.status === 'hit' ? 'rgba(34,197,94,0.25)' : cat.status === 'miss' ? 'rgba(239,68,68,0.25)' : 'rgba(59,130,246,0.15)'}`,
+                      }}>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                          <button onClick={() => {
+                            const next = cat.status === 'pending' ? 'hit' : cat.status === 'hit' ? 'miss' : 'pending';
+                            setCatalysts(catalysts.map((c) => c.id === cat.id ? { ...c, status: next as EntityCatalyst['status'] } : c));
+                          }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, flexShrink: 0 }}
+                            title={`Status: ${cat.status} (click to cycle)`}>
+                            {statusIcon}
+                          </button>
+                          <input className="input-field" value={cat.event}
+                            onChange={(e) => setCatalysts(catalysts.map((c) => c.id === cat.id ? { ...c, event: e.target.value } : c))}
+                            placeholder="Event (e.g. Q3 Earnings)"
+                            style={{ flex: 1, fontSize: 11 }} />
+                          <input type="date" value={cat.expectedDate || ''}
+                            onChange={(e) => setCatalysts(catalysts.map((c) => c.id === cat.id ? { ...c, expectedDate: e.target.value } : c))}
+                            style={{ fontSize: 10, padding: '3px 6px', background: 'rgba(15,23,42,0.6)',
+                              border: '1px solid rgba(59,130,246,0.2)', borderRadius: 6, color: '#94a3b8', colorScheme: 'dark' }} />
+                          <button onClick={() => setCatalysts(catalysts.filter((c) => c.id !== cat.id))}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 2 }}>
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                        {cat.status !== 'pending' && (
+                          <input className="input-field" value={cat.outcome || ''}
+                            onChange={(e) => setCatalysts(catalysts.map((c) => c.id === cat.id ? { ...c, outcome: e.target.value } : c))}
+                            placeholder={`Outcome: what actually happened?`}
+                            style={{ fontSize: 11, marginLeft: 26 }} />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* ── Research Links ── */}
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <label style={labelStyle}>Research Links</label>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                    <input className="input-field" value={linkTitle}
+                      onChange={(e) => setLinkTitle(e.target.value)} placeholder="Title" style={{ flex: 1, fontSize: 11 }} />
+                    <input className="input-field" value={linkUrl}
+                      onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://..."
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && linkUrl.trim()) {
+                          setLinks([...links, { id: uuidv4(), url: linkUrl.trim(), title: linkTitle.trim() || linkUrl.trim(), addedAt: new Date().toISOString() }]);
+                          setLinkUrl(''); setLinkTitle('');
+                        }
+                      }}
+                      style={{ flex: 2, fontSize: 11 }} />
+                    <button className="btn-ghost" style={{ padding: '4px 8px', fontSize: 11 }}
+                      disabled={!linkUrl.trim()}
+                      onClick={() => {
+                        if (!linkUrl.trim()) return;
+                        setLinks([...links, { id: uuidv4(), url: linkUrl.trim(), title: linkTitle.trim() || linkUrl.trim(), addedAt: new Date().toISOString() }]);
+                        setLinkUrl(''); setLinkTitle('');
+                      }}>
+                      <Plus size={11} />
+                    </button>
+                  </div>
+                  {links.map((lnk) => (
+                    <div key={lnk.id} style={{
+                      display: 'flex', alignItems: 'center', gap: 6, padding: '5px 8px', borderRadius: 7,
+                      background: 'rgba(15,23,42,0.4)', border: '1px solid rgba(59,130,246,0.12)', marginBottom: 4,
+                    }}>
+                      <LinkIcon size={10} style={{ color: '#3b82f6', flexShrink: 0 }} />
+                      <a href={lnk.url} target="_blank" rel="noopener noreferrer"
+                        style={{ flex: 1, fontSize: 11, color: '#93c5fd', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                        onClick={(e) => e.stopPropagation()}>
+                        {lnk.title} <ExternalLink size={9} style={{ display: 'inline', marginLeft: 3 }} />
+                      </a>
+                      <button onClick={() => setLinks(links.filter((l) => l.id !== lnk.id))}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: 0 }}>
+                        <X size={10} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             );
           })()}

@@ -12,6 +12,23 @@ export interface EntityStatistic {
   asOf?: string;  // optional timestamp e.g. "FY2024" or "2024-12-31"
 }
 
+export interface EntityCatalyst {
+  id: string;
+  event: string;          // e.g. "Q3 Earnings Report"
+  expectedDate?: string;  // ISO date e.g. "2025-10-28"
+  status: 'pending' | 'hit' | 'miss';
+  outcome?: string;       // what actually happened
+  createdAt: string;
+}
+
+export interface EntityLink {
+  id: string;
+  url: string;
+  title: string;
+  note?: string;
+  addedAt: string;
+}
+
 export interface Entity {
   id: string;
   name: string;
@@ -43,6 +60,17 @@ export interface Entity {
   // Investment thesis fields
   targetPrice?: number;
   entryPrice?: number;
+  // Thesis log
+  thesis?: string;        // "why I own this"
+  exitCriteria?: string;  // "what would change my mind"
+  conviction?: number;    // 1–5
+  // Catalyst checklist
+  catalysts?: EntityCatalyst[];
+  // Sector / theme
+  sector?: string;
+  tags?: string[];
+  // Research hub
+  links?: EntityLink[];
 }
 
 export type ArrowStyle = 'normal' | 'animated';
@@ -125,4 +153,11 @@ export const ENTITY_COLORS = [
 
 export const RELATIONSHIP_COLORS = [
   '#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899',
+];
+
+export const SECTOR_PRESETS = [
+  'Technology', 'Healthcare', 'Financials', 'Energy', 'Consumer Discretionary',
+  'Consumer Staples', 'Industrials', 'Materials', 'Real Estate', 'Utilities',
+  'Communication Services', 'Semiconductors', 'AI / ML', 'Crypto / Blockchain',
+  'Defense', 'Macro / Rates', 'Commodities',
 ];

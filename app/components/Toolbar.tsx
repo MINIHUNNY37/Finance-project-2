@@ -4,10 +4,11 @@ import React, { useState } from 'react';
 import {
   Save, Share2, Map, Plus, Link2, X,
   ChevronDown, TrendingUp, LogIn, LogOut, User,
-  ZoomIn, ZoomOut, RotateCcw, Lock, Unlock, Clock, Globe, Square,
+  ZoomIn, ZoomOut, RotateCcw, Lock, Unlock, Clock, Globe, Square, BarChart3,
 } from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
 import ShareDialog from './ShareDialog';
+import ComparisonOverlay from './ComparisonOverlay';
 import MapsDialog from './MapsDialog';
 import WorldClockPanel from './WorldClockPanel';
 import CalendarPicker from './CalendarPicker';
@@ -37,6 +38,7 @@ export default function Toolbar({
   const [showShare, setShowShare] = useState(false);
   const [showMaps, setShowMaps] = useState(false);
   const [showClock, setShowClock] = useState(false);
+  const [showComparison, setShowComparison] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
@@ -250,6 +252,12 @@ export default function Toolbar({
             <Map size={13} />Maps
           </button>
 
+          {/* Compare */}
+          <button className="btn-ghost" onClick={() => setShowComparison(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', fontSize: 12 }}>
+            <BarChart3 size={13} />Compare
+          </button>
+
           {/* Share */}
           <button className="btn-ghost" onClick={() => setShowShare(true)}
             style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', fontSize: 12 }}>
@@ -291,6 +299,7 @@ export default function Toolbar({
 
       <ShareDialog isOpen={showShare} onClose={() => setShowShare(false)} />
       <MapsDialog isOpen={showMaps} onClose={() => setShowMaps(false)} session={session} onSignIn={onSignIn} />
+      <ComparisonOverlay isOpen={showComparison} onClose={() => setShowComparison(false)} />
       {showClock && <WorldClockPanel onClose={() => setShowClock(false)} />}
 
       {/* Login prompt modal */}

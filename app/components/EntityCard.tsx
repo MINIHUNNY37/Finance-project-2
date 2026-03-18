@@ -5,6 +5,7 @@ import {
   Edit2, Trash2, Link2, ChevronDown, ChevronUp,
   Lock, Unlock, GitMerge,
   Zap, Minus, X, TrendingUp, TrendingDown,
+  Star, CheckCircle, XCircle, Clock,
 } from 'lucide-react';
 import type { Entity, ArrowStyle } from '../types';
 import { RELATIONSHIP_COLORS } from '../types';
@@ -465,6 +466,22 @@ export default function EntityCard({
                 {entity.subtitle}
               </div>
             )}
+            {/* Conviction stars */}
+            {entity.conviction != null && entity.conviction > 0 && (
+              <div style={{ display: 'flex', gap: 2, marginTop: 4, justifyContent: 'center' }}>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <Star key={n} size={10} fill={n <= entity.conviction! ? entity.color : 'none'}
+                    color={n <= entity.conviction! ? entity.color : '#334155'} />
+                ))}
+              </div>
+            )}
+            {/* Sector badge */}
+            {entity.sector && (
+              <div style={{ marginTop: 4, fontSize: 9, color: '#64748b', background: 'rgba(59,130,246,0.08)',
+                border: '1px solid rgba(59,130,246,0.15)', borderRadius: 4, padding: '1px 6px', textAlign: 'center' }}>
+                {entity.sector}
+              </div>
+            )}
             {/* Live price row */}
             {entity.livePrice != null && (
               <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -574,6 +591,52 @@ export default function EntityCard({
                     </div>
                   ) : null;
                 })()}
+                {/* Thesis */}
+                {entity.thesis && (
+                  <div style={{ marginTop: 6, borderTop: '1px solid rgba(59,130,246,0.15)', paddingTop: 6 }}>
+                    <div style={{ fontSize: 9, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>Thesis</div>
+                    <div style={{ fontSize: 10, color: '#94a3b8', lineHeight: 1.4 }}>{entity.thesis}</div>
+                  </div>
+                )}
+                {entity.exitCriteria && (
+                  <div style={{ marginTop: 4 }}>
+                    <div style={{ fontSize: 9, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, opacity: 0.8 }}>Exit If</div>
+                    <div style={{ fontSize: 10, color: '#fca5a5', lineHeight: 1.4 }}>{entity.exitCriteria}</div>
+                  </div>
+                )}
+                {/* Catalysts */}
+                {entity.catalysts && entity.catalysts.length > 0 && (
+                  <div style={{ marginTop: 6, borderTop: '1px solid rgba(59,130,246,0.15)', paddingTop: 6 }}>
+                    <div style={{ fontSize: 9, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Catalysts</div>
+                    {entity.catalysts.map((cat) => (
+                      <div key={cat.id} style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
+                        {cat.status === 'hit' ? <CheckCircle size={10} style={{ color: '#22c55e', flexShrink: 0 }} />
+                          : cat.status === 'miss' ? <XCircle size={10} style={{ color: '#ef4444', flexShrink: 0 }} />
+                          : <Clock size={10} style={{ color: '#f59e0b', flexShrink: 0 }} />}
+                        <span style={{ fontSize: 10, color: cat.status === 'hit' ? '#86efac' : cat.status === 'miss' ? '#fca5a5' : '#94a3b8',
+                          textDecoration: cat.status !== 'pending' ? 'line-through' : 'none', flex: 1 }}>
+                          {cat.event}
+                        </span>
+                        {cat.expectedDate && (
+                          <span style={{ fontSize: 8, color: '#475569' }}>
+                            {new Date(cat.expectedDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* Tags */}
+                {entity.tags && entity.tags.length > 0 && (
+                  <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                    {entity.tags.map((t) => (
+                      <span key={t} style={{ fontSize: 8, color: '#64748b', background: 'rgba(59,130,246,0.06)',
+                        border: '1px solid rgba(59,130,246,0.12)', borderRadius: 3, padding: '1px 5px' }}>
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
