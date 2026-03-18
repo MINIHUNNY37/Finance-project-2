@@ -62,10 +62,37 @@ export default function Sidebar({
   const [newFolderName, setNewFolderName] = useState('');
   const [newFolderColor, setNewFolderColor] = useState(ENTITY_COLORS[0]);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
-  const [showFolders, setShowFolders] = useState(false);
+
+  // Drag-and-drop: entity → folder
+  const [dragEntityId, setDragEntityId] = useState<string | null>(null);
+  const [dropFolderId, setDropFolderId] = useState<string | null>(null);
+
+  // Connection folder filter
+  const [connectionFolderFilter, setConnectionFolderFilter] = useState<string | null>(null);
 
   const toggleFolderExpand = (id: string) => {
     setExpandedFolders((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  };
+
+  const handleEntityDrop = (targetFolderId: string | null) => {
+    if (!dragEntityId) return;
+    const entity = currentMap.entities.find((e) => e.id === dragEntityId);
+    if (!entity) return;
+    if (targetFolderId === null) {
+      // Drop onto "Unorganized" → remove from current folder
+      if (entity.folderId) {
+        useMapStore.getState().removeEntityFromFolder(dragEntityId, entity.folderId);
+      }
+    } else {
+      // Drop onto a folder
+      if (entity.folderId && entity.folderId !== targetFolderId) {
+        useMapStore.getState().removeEntityFromFolder(dragEntityId, entity.folderId);
+      }
+      useMapStore.getState().addEntityToFolder(dragEntityId, targetFolderId);
+      setExpandedFolders((prev) => new Set([...prev, targetFolderId]));
+    }
+    setDragEntityId(null);
+    setDropFolderId(null);
   };
 
   const handleCreateFolder = () => {
@@ -309,9 +336,180 @@ export default function Sidebar({
             {/* ── ENTITIES TAB ── */}
             {activeTab === 'entities' && (
               <div>
-                <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8, paddingLeft: 4 }}>
-                  All Entities ({currentMap.entities.length})
+                {/* ── Folders section (TOP) ── */}
+                <div style={{ marginBottom: 12 }}>
+                  {/* Folders header */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, paddingLeft: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <FolderOpen size={12} style={{ color: '#64748b' }} />
+                      <span style={{ fontSize: 10, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
+                        Folders ({currentMap.folders.length})
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setCreatingFolder(true)}
+                      title="New Folder"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6', padding: '2px 4px', borderRadius: 4, display: 'flex' }}
+                    >
+                      <Plus size={12} />
+                    </button>
+                  </div>
+
+                  {/* Create folder form */}
+                  {creatingFolder && (
+                    <div className="fade-in" style={{ background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 8, padding: 10, marginBottom: 8 }}>
+                      <input
+                        className="input-field"
+                        value={newFolderName}
+                        onChange={(e) => setNewFolderName(e.target.value)}
+                        placeholder="Folder name..."
+                        autoFocus
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleCreateFolder(); if (e.key === 'Escape') setCreatingFolder(false); }}
+                        style={{ marginBottom: 8, fontSize: 12 }}
+                      />
+                      <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+                        {ENTITY_COLORS.slice(0, 5).map((c) => (
+                          <button key={c} onClick={() => setNewFolderColor(c)} style={{ width: 18, height: 18, borderRadius: '50%', background: c, border: newFolderColor === c ? '2px solid white' : 'none', cursor: 'pointer' }} />
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button className="btn-primary" style={{ flex: 1, padding: '4px 6px', fontSize: 11 }} onClick={handleCreateFolder}>Create</button>
+                        <button className="btn-ghost" style={{ padding: '4px 6px', fontSize: 11 }} onClick={() => setCreatingFolder(false)}>Cancel</button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Folder rows — each is a drag-drop target */}
+                  {currentMap.folders.length === 0 && !creatingFolder && (
+                    <div style={{ fontSize: 11, color: '#334155', textAlign: 'center', padding: '4px 0 8px', fontStyle: 'italic' }}>
+                      No folders — click + to create one
+                    </div>
+                  )}
+                  {currentMap.folders.map((folder) => {
+                    const entityMap = new Map(currentMap.entities.map((e) => [e.id, e]));
+                    const folderEntities = folder.entityIds.map((id) => entityMap.get(id)).filter(Boolean) as typeof currentMap.entities;
+                    const isExpanded = expandedFolders.has(folder.id);
+                    const isDragOver = dropFolderId === folder.id;
+                    return (
+                      <div key={folder.id} style={{ marginBottom: 3 }}>
+                        {/* Folder header row — drop target */}
+                        <div
+                          onClick={() => toggleFolderExpand(folder.id)}
+                          onDragOver={(e) => { e.preventDefault(); setDropFolderId(folder.id); }}
+                          onDragLeave={() => setDropFolderId(null)}
+                          onDrop={() => handleEntityDrop(folder.id)}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 6,
+                            padding: '5px 8px', borderRadius: 7, cursor: 'pointer',
+                            background: isDragOver
+                              ? `${folder.color}25`
+                              : isExpanded ? 'rgba(59,130,246,0.07)' : 'transparent',
+                            border: `1px solid ${isDragOver ? folder.color : isExpanded ? 'rgba(59,130,246,0.18)' : 'transparent'}`,
+                            transition: 'all 0.1s',
+                            outline: isDragOver ? `2px dashed ${folder.color}` : 'none',
+                            outlineOffset: -2,
+                          }}
+                        >
+                          {isExpanded
+                            ? <FolderOpen size={12} style={{ color: folder.color, flexShrink: 0 }} />
+                            : <Folder size={12} style={{ color: folder.color, flexShrink: 0 }} />}
+                          <span style={{ flex: 1, fontSize: 11, color: isDragOver ? folder.color : '#e2e8f0', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {folder.name}
+                          </span>
+                          {isDragOver && <span style={{ fontSize: 9, color: folder.color }}>Drop here</span>}
+                          <span style={{ fontSize: 10, color: '#475569' }}>{folderEntities.length}</span>
+                          <ChevronDown size={10} style={{ color: '#475569', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }} />
+                          <button
+                            onClick={(e) => { e.stopPropagation(); deleteFolder(folder.id); }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '0 1px', display: 'flex', flexShrink: 0 }}
+                            title="Delete folder"
+                          >
+                            <Trash2 size={10} />
+                          </button>
+                        </div>
+
+                        {/* Folder contents — entity rows, each draggable */}
+                        {isExpanded && (
+                          <div className="fade-in" style={{ marginLeft: 10, marginTop: 2, paddingLeft: 6, borderLeft: `2px solid ${folder.color}30` }}>
+                            {folderEntities.length === 0 && (
+                              <div style={{ fontSize: 10, color: '#475569', padding: '4px 8px', fontStyle: 'italic' }}>
+                                Empty — drag entities here
+                              </div>
+                            )}
+                            {folderEntities.map((entity) => (
+                              <div
+                                key={entity.id}
+                                draggable
+                                onDragStart={() => setDragEntityId(entity.id)}
+                                onDragEnd={() => { setDragEntityId(null); setDropFolderId(null); }}
+                                onClick={() => { setSelectedEntity(entity.id); onFocusEntity(entity.position); setActiveTab('info'); }}
+                                style={{
+                                  display: 'flex', alignItems: 'center', gap: 6,
+                                  padding: '4px 8px', borderRadius: 6, cursor: 'grab', marginBottom: 1,
+                                  background: selectedEntityId === entity.id ? `${entity.color}18` : 'transparent',
+                                  border: `1px solid ${selectedEntityId === entity.id ? entity.color + '44' : 'transparent'}`,
+                                  opacity: entity.hidden ? 0.4 : 1,
+                                  transition: 'all 0.1s',
+                                }}
+                                onMouseEnter={(e) => { if (selectedEntityId !== entity.id) (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.06)'; }}
+                                onMouseLeave={(e) => { if (selectedEntityId !== entity.id) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                              >
+                                <span style={{ fontSize: 13 }}>{entity.icon}</span>
+                                <span style={{ flex: 1, fontSize: 11, color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entity.name}</span>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); toggleEntityHidden(entity.id); }}
+                                  title={entity.hidden ? 'Show' : 'Hide'}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '1px 2px', display: 'flex', opacity: 0.5 }}
+                                  onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = '1')}
+                                  onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = '0.5')}
+                                >
+                                  {entity.hidden ? <EyeOff size={11} /> : <Eye size={11} />}
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); removeEntityFromFolder(entity.id, folder.id); }}
+                                  title="Remove from folder"
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '1px 2px', display: 'flex', opacity: 0.5 }}
+                                  onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = '1')}
+                                  onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = '0.5')}
+                                >
+                                  <X size={10} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
+
+                {/* ── Divider ── */}
+                <div style={{ borderTop: '1px solid rgba(59,130,246,0.1)', marginBottom: 10 }} />
+
+                {/* ── All Entities (flat) — each row is draggable ── */}
+                {/* "Unorganized" drop zone header when dragging */}
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setDropFolderId('__unorganized__'); }}
+                  onDragLeave={() => setDropFolderId(null)}
+                  onDrop={() => handleEntityDrop(null)}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    marginBottom: 6, paddingLeft: 4, paddingRight: 4,
+                    borderRadius: 6, padding: '3px 6px',
+                    background: dropFolderId === '__unorganized__' ? 'rgba(100,116,139,0.12)' : 'transparent',
+                    border: `1px solid ${dropFolderId === '__unorganized__' ? 'rgba(100,116,139,0.4)' : 'transparent'}`,
+                    outline: dropFolderId === '__unorganized__' ? '2px dashed rgba(100,116,139,0.5)' : 'none',
+                    outlineOffset: -2, transition: 'all 0.1s',
+                  }}
+                >
+                  <span style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    All Entities ({currentMap.entities.length})
+                  </span>
+                  {dropFolderId === '__unorganized__' && (
+                    <span style={{ fontSize: 9, color: '#94a3b8' }}>Drop to remove from folder</span>
+                  )}
+                </div>
+
                 {currentMap.entities.length === 0 ? (
                   <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', padding: '20px 8px', lineHeight: 1.5 }}>
                     Click &quot;Add Entity&quot; to place a company on the map
@@ -320,14 +518,13 @@ export default function Sidebar({
                   currentMap.entities.map((entity) => (
                     <div
                       key={entity.id}
-                      onClick={() => {
-                        setSelectedEntity(entity.id);
-                        onFocusEntity(entity.position);
-                        setActiveTab('info');
-                      }}
+                      draggable
+                      onDragStart={() => setDragEntityId(entity.id)}
+                      onDragEnd={() => { setDragEntityId(null); setDropFolderId(null); }}
+                      onClick={() => { setSelectedEntity(entity.id); onFocusEntity(entity.position); setActiveTab('info'); }}
                       style={{
                         display: 'flex', alignItems: 'center', gap: 8,
-                        padding: '7px 8px', borderRadius: 8, cursor: 'pointer', marginBottom: 2,
+                        padding: '7px 8px', borderRadius: 8, cursor: 'grab', marginBottom: 2,
                         background: selectedEntityId === entity.id ? `${entity.color}18` : 'transparent',
                         border: `1px solid ${selectedEntityId === entity.id ? entity.color + '44' : 'transparent'}`,
                         opacity: entity.hidden ? 0.4 : 1,
@@ -348,9 +545,19 @@ export default function Sidebar({
                         <div style={{ fontSize: 12, fontWeight: 600, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {entity.name}
                         </div>
-                        {entity.country && (
-                          <div style={{ fontSize: 10, color: '#475569' }}>{entity.country}</div>
-                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 1 }}>
+                          {entity.folderId && (() => {
+                            const f = currentMap.folders.find((fl) => fl.id === entity.folderId);
+                            return f ? (
+                              <span style={{ fontSize: 9, color: f.color, background: `${f.color}18`, border: `1px solid ${f.color}30`, borderRadius: 3, padding: '0 4px' }}>
+                                {f.name}
+                              </span>
+                            ) : null;
+                          })()}
+                          {entity.country && (
+                            <span style={{ fontSize: 10, color: '#475569' }}>{entity.country}</span>
+                          )}
+                        </div>
                       </div>
                       {/* Hide/show toggle */}
                       <button
@@ -390,141 +597,52 @@ export default function Sidebar({
                     </div>
                   ))
                 )}
-
-                {/* ── Inline Folders section ── */}
-                <div style={{ marginTop: 16, borderTop: '1px solid rgba(59,130,246,0.1)', paddingTop: 12 }}>
-                  <button
-                    onClick={() => setShowFolders((v) => !v)}
-                    style={{
-                      width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px', marginBottom: showFolders ? 8 : 0,
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <FolderOpen size={12} style={{ color: '#64748b' }} />
-                      <span style={{ fontSize: 10, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
-                        Folders ({currentMap.folders.length})
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <ChevronDown size={11} style={{ color: '#475569', transform: showFolders ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
-                      <div
-                        onClick={(e) => { e.stopPropagation(); setCreatingFolder(true); setShowFolders(true); }}
-                        style={{ cursor: 'pointer', color: '#3b82f6', padding: '2px 4px', borderRadius: 4 }}
-                        title="New Folder"
-                      >
-                        <Plus size={12} />
-                      </div>
-                    </div>
-                  </button>
-
-                  {showFolders && (
-                    <div className="fade-in">
-                      {/* Create folder form */}
-                      {creatingFolder && (
-                        <div style={{ background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 8, padding: 10, marginBottom: 8 }}>
-                          <input
-                            className="input-field"
-                            value={newFolderName}
-                            onChange={(e) => setNewFolderName(e.target.value)}
-                            placeholder="Folder name..."
-                            autoFocus
-                            onKeyDown={(e) => { if (e.key === 'Enter') handleCreateFolder(); if (e.key === 'Escape') setCreatingFolder(false); }}
-                            style={{ marginBottom: 8, fontSize: 12 }}
-                          />
-                          <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
-                            {ENTITY_COLORS.slice(0, 5).map((c) => (
-                              <button key={c} onClick={() => setNewFolderColor(c)} style={{ width: 18, height: 18, borderRadius: '50%', background: c, border: newFolderColor === c ? '2px solid white' : 'none', cursor: 'pointer' }} />
-                            ))}
-                          </div>
-                          <div style={{ display: 'flex', gap: 6 }}>
-                            <button className="btn-primary" style={{ flex: 1, padding: '4px 6px', fontSize: 11 }} onClick={handleCreateFolder}>Create</button>
-                            <button className="btn-ghost" style={{ padding: '4px 6px', fontSize: 11 }} onClick={() => setCreatingFolder(false)}>Cancel</button>
-                          </div>
-                        </div>
-                      )}
-
-                      {currentMap.folders.length === 0 && !creatingFolder && (
-                        <div style={{ fontSize: 11, color: '#475569', textAlign: 'center', padding: '8px 0', fontStyle: 'italic' }}>No folders yet</div>
-                      )}
-
-                      {currentMap.folders.map((folder) => {
-                        const entityMap = new Map(currentMap.entities.map((e) => [e.id, e]));
-                        const folderEntities = folder.entityIds.map((id) => entityMap.get(id)).filter(Boolean);
-                        const isExpanded = expandedFolders.has(folder.id);
-                        return (
-                          <div key={folder.id} style={{ marginBottom: 4 }}>
-                            <div
-                              onClick={() => toggleFolderExpand(folder.id)}
-                              style={{
-                                display: 'flex', alignItems: 'center', gap: 6,
-                                padding: '5px 8px', borderRadius: 7, cursor: 'pointer',
-                                background: isExpanded ? 'rgba(59,130,246,0.07)' : 'transparent',
-                                border: `1px solid ${isExpanded ? 'rgba(59,130,246,0.18)' : 'transparent'}`,
-                                transition: 'all 0.12s',
-                              }}
-                            >
-                              {isExpanded ? <FolderOpen size={12} style={{ color: folder.color, flexShrink: 0 }} /> : <Folder size={12} style={{ color: folder.color, flexShrink: 0 }} />}
-                              <span style={{ flex: 1, fontSize: 11, color: '#e2e8f0', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{folder.name}</span>
-                              <span style={{ fontSize: 10, color: '#475569' }}>{folderEntities.length}</span>
-                              <button onClick={(e) => { e.stopPropagation(); deleteFolder(folder.id); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: 0, display: 'flex' }}>
-                                <Trash2 size={10} />
-                              </button>
-                            </div>
-                            {isExpanded && (
-                              <div style={{ marginLeft: 14, marginTop: 2 }}>
-                                {folderEntities.length === 0 && <div style={{ fontSize: 10, color: '#475569', padding: '3px 8px', fontStyle: 'italic' }}>Empty</div>}
-                                {folderEntities.map((entity) => entity && (
-                                  <div key={entity.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 8px', borderRadius: 5, cursor: 'pointer' }}
-                                    onClick={() => setSelectedEntity(entity.id)}
-                                    onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(59,130,246,0.07)')}
-                                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                                  >
-                                    <span style={{ fontSize: 12 }}>{entity.icon}</span>
-                                    <span style={{ flex: 1, fontSize: 11, color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entity.name}</span>
-                                    <button onClick={(e) => { e.stopPropagation(); removeEntityFromFolder(entity.id, folder.id); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: 0, display: 'flex' }}>
-                                      <X size={10} />
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-
-                      {/* Unorganized with folder assignment */}
-                      {currentMap.entities.filter((e) => !e.folderId).length > 0 && currentMap.folders.length > 0 && (
-                        <div style={{ marginTop: 6 }}>
-                          <div style={{ fontSize: 9, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4, paddingLeft: 4 }}>Unorganized</div>
-                          {currentMap.entities.filter((e) => !e.folderId).map((entity) => (
-                            <div key={entity.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 8px', borderRadius: 5 }}>
-                              <span style={{ fontSize: 12 }}>{entity.icon}</span>
-                              <span style={{ flex: 1, fontSize: 10, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entity.name}</span>
-                              <select
-                                style={{ background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 4, color: '#64748b', fontSize: 10, padding: '1px 4px', cursor: 'pointer' }}
-                                defaultValue=""
-                                onChange={(e) => { if (e.target.value) useMapStore.getState().addEntityToFolder(entity.id, e.target.value); }}
-                              >
-                                <option value="">+ folder</option>
-                                {currentMap.folders.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-                              </select>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
               </div>
             )}
 
             {/* ── CONNECTIONS TAB ── */}
             {activeTab === 'connections' && (
               <div>
+                {/* Folder filter chips */}
+                {currentMap.folders.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10, paddingLeft: 2 }}>
+                    <button
+                      onClick={() => setConnectionFolderFilter(null)}
+                      style={{
+                        padding: '2px 8px', borderRadius: 12, fontSize: 9, cursor: 'pointer',
+                        border: `1px solid ${connectionFolderFilter === null ? '#3b82f6' : 'rgba(59,130,246,0.2)'}`,
+                        background: connectionFolderFilter === null ? 'rgba(59,130,246,0.15)' : 'transparent',
+                        color: connectionFolderFilter === null ? '#93c5fd' : '#64748b',
+                        fontWeight: connectionFolderFilter === null ? 600 : 400,
+                      }}
+                    >All</button>
+                    {currentMap.folders.map((f) => (
+                      <button
+                        key={f.id}
+                        onClick={() => setConnectionFolderFilter(connectionFolderFilter === f.id ? null : f.id)}
+                        style={{
+                          padding: '2px 8px', borderRadius: 12, fontSize: 9, cursor: 'pointer',
+                          border: `1px solid ${connectionFolderFilter === f.id ? f.color : 'rgba(59,130,246,0.2)'}`,
+                          background: connectionFolderFilter === f.id ? `${f.color}20` : 'transparent',
+                          color: connectionFolderFilter === f.id ? f.color : '#64748b',
+                          fontWeight: connectionFolderFilter === f.id ? 700 : 400,
+                        }}
+                      >
+                        {f.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingLeft: 4 }}>
                   <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                    All Connections ({currentMap.relationships.length})
+                    {connectionFolderFilter
+                      ? (() => {
+                          const folder = currentMap.folders.find((f) => f.id === connectionFolderFilter);
+                          const folderEntityIds = new Set(folder?.entityIds ?? []);
+                          const count = currentMap.relationships.filter((r) => folderEntityIds.has(r.fromEntityId) || folderEntityIds.has(r.toEntityId)).length;
+                          return `${folder?.name ?? ''} (${count})`;
+                        })()
+                      : `All Connections (${currentMap.relationships.length})`}
                   </div>
                   <button
                     onClick={onToggleDrawMode}
@@ -554,12 +672,19 @@ export default function Sidebar({
                     Right-click and drag from one entity to another to draw a connection
                   </div>
                 )}
-                {currentMap.relationships.length === 0 ? (
-                  <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', padding: '20px 8px', lineHeight: 1.5 }}>
-                    Select two entities and use Connect to create a connection
-                  </div>
-                ) : (
-                  currentMap.relationships.map((rel) => {
+                {(() => {
+                  const folderEntityIds = connectionFolderFilter
+                    ? new Set(currentMap.folders.find((f) => f.id === connectionFolderFilter)?.entityIds ?? [])
+                    : null;
+                  const visRels = folderEntityIds
+                    ? currentMap.relationships.filter((r) => folderEntityIds.has(r.fromEntityId) || folderEntityIds.has(r.toEntityId))
+                    : currentMap.relationships;
+                  return visRels.length === 0 ? (
+                    <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', padding: '20px 8px', lineHeight: 1.5 }}>
+                      {connectionFolderFilter ? 'No connections for this folder' : 'Select two entities and use Connect to create a connection'}
+                    </div>
+                  ) : (
+                  visRels.map((rel) => {
                     const from = currentMap.entities.find((e) => e.id === rel.fromEntityId);
                     const to = currentMap.entities.find((e) => e.id === rel.toEntityId);
                     if (!from || !to) return null;
@@ -631,7 +756,8 @@ export default function Sidebar({
                       </div>
                     );
                   })
-                )}
+                  );
+                })()}
               </div>
             )}
 
