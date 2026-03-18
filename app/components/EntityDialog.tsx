@@ -54,6 +54,78 @@ const KEY_STATS_BY_ICON: Record<string, string[]> = {
   '🏨': ['RevPAR', 'Revenue', 'EBITDA Margin', 'Occupancy Rate', 'ADR'],
 };
 
+// Simple explanations for key stats (hover tooltips)
+const STAT_DESCRIPTIONS: Record<string, string> = {
+  'Revenue': 'All the money a company earns from selling stuff. Like counting every dollar from your lemonade stand.',
+  'Net Income': "What's left after paying all the bills. If you earned $10 and spent $7, your net income is $3.",
+  'P/E Ratio': 'How much people pay for each $1 of profit. Higher means investors expect big growth ahead.',
+  'Market Cap': 'Total price of all shares added together — how much the whole company is worth right now.',
+  'EPS': 'Earnings Per Share — how much profit each single share earns. More is better!',
+  'EBITDA': 'Profit before interest, taxes, and some big costs are taken out. Shows how well the core business runs.',
+  'Operating Margin': 'How many cents the company keeps as profit from every dollar it earns. Bigger means more efficient.',
+  'CapEx': 'Money spent on big equipment or buildings to grow the business. Like buying a better lemonade cart.',
+  'Gross Profit': 'Sales minus the direct cost to make the product — the first level of profit before other expenses.',
+  'Net Interest Margin': 'For banks: the gap between what they earn on loans vs what they pay on savings. Bigger gap = more profit.',
+  'ROE': 'Return on Equity — how much profit the company earns with the money shareholders put in.',
+  'Book Value': "The company's total stuff minus everything it owes. Like counting your toys minus money you borrowed.",
+  'NPL Ratio': "Non-Performing Loans — how many bank loans aren't being repaid. Lower is much safer.",
+  'Tier 1 Capital': "A bank's safety cushion for hard times. Thicker cushion means a safer, stronger bank.",
+  'Production (bbl/d)': 'Barrels of oil pumped every day. More barrels usually means more money.',
+  'Proven Reserves': 'Oil or minerals confirmed underground. Like knowing exactly how many cookies are left in the jar.',
+  'Break-even Price': 'The oil price needed to just cover costs. Below this price the company loses money.',
+  'Capacity (GW)': 'Maximum electricity the company can generate — like how many light bulbs it could power at once.',
+  'R&D Spend': 'Money spent inventing new things. Companies investing here are planning for the future.',
+  'Pipeline Count': 'Number of new drugs or products in development. More pipeline = more chances of future hits.',
+  'Gross Margin': 'Percentage of revenue left after making the product. Shows how efficient production is.',
+  'Vehicle Deliveries': 'How many cars were actually handed to customers this period. More deliveries = more revenue.',
+  'EBITDA Margin': 'EBITDA as a percent of revenue. Shows how profitable the core operations are.',
+  'Free Cash Flow': 'Cash left after all spending — money the company can invest or give back to shareholders.',
+  'Passengers (PAX)': 'Number of people who flew. More passengers means more ticket and fee revenue.',
+  'Load Factor': 'How full the planes are on average. 85% means 85 out of every 100 seats had a passenger.',
+  'TEU Volume': 'Number of standard shipping containers moved. Bigger volume means bigger business.',
+  'Fleet Size': 'How many ships or planes owned. A bigger fleet can carry more goods and earn more.',
+  'Freight Rates': 'How much it costs to ship a container. Higher rates mean more revenue for the shipper.',
+  'Revenue Growth': 'How fast sales are growing vs last year. Fast growth means the company is winning more customers.',
+  'ARR': 'Annual Recurring Revenue — reliable yearly income from subscriptions. More predictable than one-time sales.',
+  'MAU / DAU': 'Monthly / Daily Active Users — how many people use the app regularly. More users usually means more revenue.',
+  'ARPU': 'Average Revenue Per User — how much money each user brings in. Higher means the product is more valuable.',
+  'Churn Rate': 'How many subscribers cancel each month. Lower churn means happier, stickier customers.',
+  'Production Volume': 'How much the company produces (crops, goods). Higher volume usually means more revenue.',
+  'Yield/Acre': 'How many crops grow per acre of land. Higher yield means smarter, more efficient farming.',
+  'Production (oz/t)': 'Ounces of gold or silver mined per tonne of rock. Higher grade means cheaper cost per ounce.',
+  'AISC': 'All-In Sustaining Cost — total cost to mine one ounce. If this is below the gold price, they profit.',
+  'Reserves': 'Confirmed minerals still in the ground. More reserves means the company can keep mining longer.',
+  'Order Backlog': 'Future work already contracted. Like having a big stack of orders waiting to be filled.',
+  'New Orders': 'Fresh contracts signed recently. Growing new orders signal strong future revenue.',
+  'Same-Store Sales': 'Sales growth at stores open over a year. Shows if the business is getting stronger, not just bigger.',
+  'Inventory Turns': 'How quickly products sell and get restocked. Fast turns means less waste and more efficiency.',
+  'Subscribers': 'Total paying members. More subscribers means more predictable monthly income.',
+  'Patient Volume': 'Number of patients treated. More patients means more healthcare revenue for the company.',
+  'AUM': 'Assets Under Management — total money clients trust the firm to invest. Bigger AUM earns more fees.',
+  'Dividend Yield': 'Annual dividend as a % of share price. Like interest on a savings account for investors.',
+  'Volume (TEU)': 'Shipping containers handled — shows the scale of the logistics operation.',
+  'On-time Delivery %': 'Percentage of deliveries arriving on schedule. Higher means more reliable and happier customers.',
+  'Capacity (GWh)': 'Total battery energy that can be stored or produced. Shows scale of the energy business.',
+  'Market Share': 'Percentage of total industry sales the company has. More share means a stronger competitive position.',
+  'Carbon Credits': 'Credits earned by cutting CO2 emissions. Can be sold for extra income.',
+  'ESG Score': 'Environmental, Social, Governance score — how responsibly the company behaves. Higher is better.',
+  'RevPAR': 'Revenue Per Available Room — how much each hotel room earns on average per night.',
+  'Occupancy Rate': 'Percentage of hotel rooms that have guests. 90% means 9 out of 10 rooms are filled.',
+  'ADR': 'Average Daily Rate — average price charged per room per night. Higher means more premium positioning.',
+  'Profit Margin': 'Percentage of revenue that becomes profit. Keeping 20 cents from every dollar earned.',
+  'FCF': 'Free Cash Flow — cash left after all business spending. The best sign of a truly healthy company.',
+  'Employees': 'Total number of workers. Can show company size, but too many can hurt profitability.',
+  'ROA': 'Return on Assets — how efficiently the company turns what it owns into profit.',
+  'Dividend/Share': 'How much cash the company pays you for each share you own, every year.',
+  'Payout Ratio': 'Percentage of profits paid out as dividends. Very high ratios can be hard to sustain.',
+  'Total Assets': 'Everything the company owns — buildings, cash, equipment. Bigger usually means bigger business.',
+  'Total Liabilities': 'Everything the company owes. Lower relative to assets means a stronger financial position.',
+  'Cash & Equiv.': 'Money the company has on hand right now. More cash means more safety and flexibility.',
+  'Debt/Equity': 'How much the company borrowed vs how much shareholders own. Lower means less financial risk.',
+  'P/B Ratio': 'Price-to-Book — share price vs book value per share. Under 1 can mean the stock is cheap.',
+  'EV/EBITDA': 'Enterprise Value divided by EBITDA — a popular way to compare if a company is cheap or expensive.',
+};
+
 export default function EntityDialog({
   isOpen, onClose, onSave, initialData, defaultPosition, defaultCountry,
 }: EntityDialogProps) {
@@ -849,27 +921,31 @@ export default function EntityDialog({
                       {icon && <span style={{ fontSize: 14 }}>{icon}</span>}
                       <span>
                         {ENTITY_ICONS.find((ic) => ic.value === icon)?.label ?? 'Company'} key stats
-                        <span style={{ color: '#8899b0', marginLeft: 4 }}>— click to add</span>
+                        <span style={{ color: '#8899b0', marginLeft: 4 }}>— click to add · right-click to filter</span>
                       </span>
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       {keyStats.map((statName) => {
                         const alreadyAdded = statistics.some((s) => s.name === statName);
+                        const isFiltered = activeStatFilter === statName;
                         return (
                           <button
                             key={statName}
+                            title={STAT_DESCRIPTIONS[statName] ?? statName}
                             onClick={() => { if (!alreadyAdded) setStatistics([...statistics, { id: uuidv4(), name: statName, value: '' }]); }}
+                            onContextMenu={(e) => { e.preventDefault(); setActiveStatFilter(activeStatFilter === statName ? null : statName); }}
                             style={{
-                              background: alreadyAdded ? `${color}30` : `${color}15`,
-                              border: `1px solid ${alreadyAdded ? color : `${color}50`}`,
-                              borderRadius: 7, padding: '5px 10px', fontSize: 12, fontWeight: 600,
-                              color: alreadyAdded ? color : `${color}cc`,
+                              background: isFiltered ? `${color}40` : alreadyAdded ? `${color}30` : `${color}15`,
+                              border: `1px solid ${isFiltered ? color : alreadyAdded ? color : `${color}50`}`,
+                              borderRadius: 7, padding: '5px 10px', fontSize: 12, fontWeight: isFiltered ? 700 : 600,
+                              color: isFiltered ? color : alreadyAdded ? color : `${color}cc`,
                               cursor: alreadyAdded ? 'default' : 'pointer',
                               transition: 'all 0.1s',
                               opacity: alreadyAdded ? 0.7 : 1,
+                              outline: isFiltered ? `2px solid ${color}60` : 'none',
                             }}
-                            onMouseEnter={(e) => { if (!alreadyAdded) (e.currentTarget as HTMLElement).style.background = `${color}28`; }}
-                            onMouseLeave={(e) => { if (!alreadyAdded) (e.currentTarget as HTMLElement).style.background = `${color}15`; }}
+                            onMouseEnter={(e) => { if (!alreadyAdded && !isFiltered) (e.currentTarget as HTMLElement).style.background = `${color}28`; }}
+                            onMouseLeave={(e) => { if (!alreadyAdded && !isFiltered) (e.currentTarget as HTMLElement).style.background = `${color}15`; }}
                           >
                             {alreadyAdded ? '✓ ' : '+ '}{statName}
                           </button>
@@ -921,7 +997,9 @@ export default function EntityDialog({
                       </div>
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
-                      {STAT_CATEGORIES.flatMap((c) => c.presets).map((statName) => {
+                      {STAT_CATEGORIES.flatMap((c) => c.presets)
+                        .filter((statName) => !(KEY_STATS_BY_ICON[icon] ?? KEY_STATS_BY_ICON['🏢']).includes(statName))
+                        .map((statName) => {
                         const isActive = activeStatFilter === statName;
                         return (
                           <button
