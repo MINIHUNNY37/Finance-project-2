@@ -137,6 +137,7 @@ export default function EntityDialog({
   const [activeTab, setActiveTab] = useState<Tab>('basic');
   const [showAdvancedStats, setShowAdvancedStats] = useState(false);
   const [showAdvancedInvest, setShowAdvancedInvest] = useState(false);
+  const [hoveredKeyStat, setHoveredKeyStat] = useState<string | null>(null);
   const [newStatPreset, setNewStatPreset] = useState('');
   const [newDetailPreset, setNewDetailPreset] = useState('');
   const [activeStatFilter, setActiveStatFilter] = useState<string | null>(null);
@@ -928,27 +929,51 @@ export default function EntityDialog({
                       {keyStats.map((statName) => {
                         const alreadyAdded = statistics.some((s) => s.name === statName);
                         const isFiltered = activeStatFilter === statName;
+                        const isHovered = hoveredKeyStat === statName;
                         return (
-                          <button
-                            key={statName}
-                            title={STAT_DESCRIPTIONS[statName] ?? statName}
-                            onClick={() => { if (!alreadyAdded) setStatistics([...statistics, { id: uuidv4(), name: statName, value: '' }]); }}
-                            onContextMenu={(e) => { e.preventDefault(); setActiveStatFilter(activeStatFilter === statName ? null : statName); }}
-                            style={{
-                              background: isFiltered ? `${color}40` : alreadyAdded ? `${color}30` : `${color}15`,
-                              border: `1px solid ${isFiltered ? color : alreadyAdded ? color : `${color}50`}`,
-                              borderRadius: 7, padding: '5px 10px', fontSize: 12, fontWeight: isFiltered ? 700 : 600,
-                              color: isFiltered ? color : alreadyAdded ? color : `${color}cc`,
-                              cursor: alreadyAdded ? 'default' : 'pointer',
-                              transition: 'all 0.1s',
-                              opacity: alreadyAdded ? 0.7 : 1,
-                              outline: isFiltered ? `2px solid ${color}60` : 'none',
-                            }}
-                            onMouseEnter={(e) => { if (!alreadyAdded && !isFiltered) (e.currentTarget as HTMLElement).style.background = `${color}28`; }}
-                            onMouseLeave={(e) => { if (!alreadyAdded && !isFiltered) (e.currentTarget as HTMLElement).style.background = `${color}15`; }}
-                          >
-                            {alreadyAdded ? '✓ ' : '+ '}{statName}
-                          </button>
+                          <div key={statName} style={{ position: 'relative' }}>
+                            <button
+                              onClick={() => { if (!alreadyAdded) setStatistics([...statistics, { id: uuidv4(), name: statName, value: '' }]); }}
+                              onContextMenu={(e) => { e.preventDefault(); setActiveStatFilter(activeStatFilter === statName ? null : statName); }}
+                              onMouseEnter={() => setHoveredKeyStat(statName)}
+                              onMouseLeave={() => setHoveredKeyStat(null)}
+                              style={{
+                                background: isFiltered ? `${color}40` : alreadyAdded ? `${color}30` : `${color}15`,
+                                border: `1px solid ${isFiltered ? color : alreadyAdded ? color : `${color}50`}`,
+                                borderRadius: 7, padding: '5px 10px', fontSize: 12, fontWeight: isFiltered ? 700 : 600,
+                                color: isFiltered ? color : alreadyAdded ? color : `${color}cc`,
+                                cursor: alreadyAdded ? 'default' : 'pointer',
+                                transition: 'all 0.1s',
+                                opacity: alreadyAdded ? 0.7 : 1,
+                                outline: isFiltered ? `2px solid ${color}60` : 'none',
+                              }}
+                            >
+                              {alreadyAdded ? '✓ ' : '+ '}{statName}
+                            </button>
+                            {isHovered && STAT_DESCRIPTIONS[statName] && (
+                              <div style={{
+                                position: 'absolute', bottom: 'calc(100% + 8px)', left: '50%',
+                                transform: 'translateX(-50%)',
+                                background: 'rgba(8,15,30,0.97)',
+                                border: `1px solid ${color}55`,
+                                borderRadius: 10, padding: '9px 13px',
+                                fontSize: 11.5, color: '#cbd5e1',
+                                width: 210, lineHeight: 1.55,
+                                zIndex: 9999, pointerEvents: 'none',
+                                boxShadow: `0 8px 24px rgba(0,0,0,0.5), 0 0 0 1px ${color}22`,
+                              }}>
+                                <div style={{ fontWeight: 700, color: color, marginBottom: 4, fontSize: 12 }}>{statName}</div>
+                                {STAT_DESCRIPTIONS[statName]}
+                                {/* Arrow */}
+                                <div style={{
+                                  position: 'absolute', bottom: -5, left: '50%',
+                                  width: 8, height: 8, background: 'rgba(8,15,30,0.97)',
+                                  border: `1px solid ${color}55`, borderTop: 'none', borderLeft: 'none',
+                                  transform: 'translateX(-50%) rotate(45deg)',
+                                }} />
+                              </div>
+                            )}
+                          </div>
                         );
                       })}
                     </div>

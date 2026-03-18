@@ -7,11 +7,13 @@ import EntityCard from './EntityCard';
 import RelationshipLayer from './RelationshipLayer';
 import EntityDialog from './EntityDialog';
 import RelationshipDialog from './RelationshipDialog';
+import GeoEventNode from './GeoEventNode';
+import GeoEventDialog from './GeoEventDialog';
 import Toolbar from './Toolbar';
 import Sidebar from './Sidebar';
 import InvestmentPanel from './InvestmentPanel';
 import MapsDialog from './MapsDialog';
-import type { Entity, Relationship, ArrowStyle } from '../types';
+import type { Entity, Relationship, ArrowStyle, GeoEvent } from '../types';
 
 interface MapCanvasProps {
   session: { user?: { name?: string | null; email?: string | null; image?: string | null } } | null;
@@ -29,7 +31,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   const {
     currentMap, addEntity, updateEntity, deleteEntity,
     addRelationship, updateRelationship, setSelectedEntity, setConnectingFrom, connectingFromId,
-    mergeCloudMaps, setCurrentMapType,
+    mergeCloudMaps, setCurrentMapType, addGeoEvent, updateGeoEvent,
   } = useMapStore();
 
   // Derive showWorldMap from the current map's type (default to world for legacy maps)
@@ -88,6 +90,11 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   // Relationship dialog
   const [relDialogOpen, setRelDialogOpen] = useState(false);
   const [editingRel, setEditingRel] = useState<Relationship | undefined>();
+
+  // Geo event dialog
+  const [geoDialogOpen, setGeoDialogOpen] = useState(false);
+  const [editingGeoEvent, setEditingGeoEvent] = useState<GeoEvent | undefined>();
+  const [pendingGeoPosition, setPendingGeoPosition] = useState<{ x: number; y: number } | undefined>();
 
   // Draw-connection drag state
   const [drawingFromId, setDrawingFromId] = useState<string | null>(null);
@@ -504,6 +511,21 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
     </>
   );
 
+  const renderGeoEvents = () => (
+    <>
+      {(currentMap.geoEvents ?? []).map((ev) => (
+        <GeoEventNode
+          key={ev.id}
+          event={ev}
+          onEdit={(e) => { setEditingGeoEvent(e); setGeoDialogOpen(true); }}
+          mapWidth={dims.width}
+          mapHeight={dims.height}
+          zoom={zoom}
+        />
+      ))}
+    </>
+  );
+
   const renderRelationships = (offsetX: number) => (
     <RelationshipLayer
       entities={currentMap.entities}
@@ -536,6 +558,12 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
           setPendingPosition(pos);
           setPendingCountry(undefined);
           setEntityDialogOpen(true);
+        }}
+        onAddGeoEvent={() => {
+          setEditingGeoEvent(undefined);
+          const pos = screenToMap(dims.width / 2, dims.height / 2);
+          setPendingGeoPosition(pos);
+          setGeoDialogOpen(true);
         }}
         isConnecting={isConnecting}
         onToggleConnect={() => {
@@ -608,6 +636,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
               {/* Right ghost copy */}
               {renderRelationships(dims.width)}
               {renderEntities('R', dims.width)}
+              {renderGeoEvents()}
             </WorldMap>
           ) : (
             /* ── Plain background ── */
@@ -626,6 +655,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
               </svg>
               {renderRelationships(0)}
               {renderEntities('P', 0)}
+              {renderGeoEvents()}
             </div>
           )}
         </div>
@@ -717,6 +747,19 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
         onClose={() => { setRelDialogOpen(false); setEditingRel(undefined); }}
         onSave={handleRelSave}
         initialData={editingRel}
+      />
+      <GeoEventDialog
+        isOpen={geoDialogOpen}
+        onClose={() => { setGeoDialogOpen(false); setEditingGeoEvent(undefined); setPendingGeoPosition(undefined); }}
+        onSave={(data) => {
+          if (editingGeoEvent?.id) {
+            updateGeoEvent(editingGeoEvent.id, data);
+          } else {
+            addGeoEvent(data);
+          }
+        }}
+        initialData={editingGeoEvent}
+        defaultPosition={pendingGeoPosition}
       />
       <MapsDialog
         isOpen={showMapPicker}

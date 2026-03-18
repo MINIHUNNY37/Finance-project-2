@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
-import type { Entity, Relationship, Folder, ScenarioMap } from '../types';
+import type { Entity, Relationship, Folder, ScenarioMap, GeoEvent, GeoEventType } from '../types';
 
 interface MapState {
   currentMap: ScenarioMap;
@@ -54,6 +54,12 @@ interface MapState {
   addEntityToFolder: (entityId: string, folderId: string) => void;
   removeEntityFromFolder: (entityId: string, folderId: string) => void;
 
+  // GeoEvent actions
+  addGeoEvent: (event: Omit<GeoEvent, 'id' | 'createdAt'>) => string;
+  updateGeoEvent: (id: string, updates: Partial<GeoEvent>) => void;
+  deleteGeoEvent: (id: string) => void;
+  moveGeoEvent: (id: string, position: { x: number; y: number }) => void;
+
   // Map actions
   saveCurrentMap: () => void;
   loadMap: (id: string) => void;
@@ -78,6 +84,7 @@ const createDefaultMap = (): ScenarioMap => ({
   entities: [],
   relationships: [],
   folders: [],
+  geoEvents: [],
   ownerId: 'local',
   sharedWith: [],
   mapType: 'world',
@@ -301,6 +308,46 @@ export const useMapStore = create<MapState>()(
               f.id === folderId
                 ? { ...f, entityIds: f.entityIds.filter((id) => id !== entityId) }
                 : f
+            ),
+          },
+        }));
+      },
+
+      addGeoEvent: (eventData) => {
+        const id = uuidv4();
+        const event: GeoEvent = { ...eventData, id, createdAt: new Date().toISOString() };
+        set((state) => ({
+          currentMap: {
+            ...state.currentMap,
+            geoEvents: [...(state.currentMap.geoEvents ?? []), event],
+          },
+        }));
+        return id;
+      },
+      updateGeoEvent: (id, updates) => {
+        set((state) => ({
+          currentMap: {
+            ...state.currentMap,
+            geoEvents: (state.currentMap.geoEvents ?? []).map((e) =>
+              e.id === id ? { ...e, ...updates } : e
+            ),
+          },
+        }));
+      },
+      deleteGeoEvent: (id) => {
+        set((state) => ({
+          currentMap: {
+            ...state.currentMap,
+            geoEvents: (state.currentMap.geoEvents ?? []).filter((e) => e.id !== id),
+          },
+        }));
+      },
+      moveGeoEvent: (id, position) => {
+        set((state) => ({
+          currentMap: {
+            ...state.currentMap,
+            geoEvents: (state.currentMap.geoEvents ?? []).map((e) =>
+              e.id === id ? { ...e, position } : e
             ),
           },
         }));

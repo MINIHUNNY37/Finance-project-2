@@ -17,6 +17,7 @@ import CalendarPicker from './CalendarPicker';
 
 interface ToolbarProps {
   onAddEntity: () => void;
+  onAddGeoEvent: () => void;
   isConnecting: boolean;
   onToggleConnect: () => void;
   session: { user?: { name?: string | null; email?: string | null; image?: string | null } } | null;
@@ -31,7 +32,7 @@ interface ToolbarProps {
 }
 
 export default function Toolbar({
-  onAddEntity, isConnecting, onToggleConnect,
+  onAddEntity, onAddGeoEvent, isConnecting, onToggleConnect,
   session, onSignIn, onSignOut,
   zoom, onZoomIn, onZoomOut, onZoomReset,
   showWorldMap, onToggleWorldMap,
@@ -134,6 +135,21 @@ export default function Toolbar({
           <button className="btn-primary" onClick={onAddEntity}
             style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', fontSize: 12 }}>
             <Plus size={13} />Add Entity
+          </button>
+
+          {/* Add Geo Event */}
+          <button onClick={onAddGeoEvent} style={{
+            display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px',
+            borderRadius: 8, fontSize: 12, cursor: 'pointer',
+            border: '1px solid rgba(239,68,68,0.4)',
+            background: 'rgba(239,68,68,0.1)',
+            color: '#fca5a5',
+            transition: 'all 0.15s ease',
+          }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.2)'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.1)'; }}
+          >
+            🌍 Geo Event
           </button>
 
           {/* Connect toggle */}

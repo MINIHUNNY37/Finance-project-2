@@ -104,6 +104,7 @@ export interface ScenarioMap {
   entities: Entity[];
   relationships: Relationship[];
   folders: Folder[];
+  geoEvents: GeoEvent[];
   ownerId: string;
   sharedWith: string[];
   shareToken?: string;
@@ -154,6 +155,41 @@ export const ENTITY_COLORS = [
 export const RELATIONSHIP_COLORS = [
   '#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899',
 ];
+
+// ── Geopolitical Events ──────────────────────────────────────────────────────
+
+export type GeoEventType =
+  | 'war' | 'election' | 'sanctions' | 'central_bank' | 'regime_change'
+  | 'natural_disaster' | 'pandemic' | 'treaty' | 'crisis' | 'referendum'
+  | 'energy_crisis' | 'currency_crisis' | 'trade_war' | 'diplomatic';
+
+export const GEO_EVENT_TYPES: { value: GeoEventType; label: string; emoji: string; color: string }[] = [
+  { value: 'war',             label: 'War / Armed Conflict',     emoji: '⚔️',  color: '#ef4444' },
+  { value: 'election',        label: 'Election',                 emoji: '🗳️',  color: '#3b82f6' },
+  { value: 'sanctions',       label: 'Sanctions',                emoji: '🚫',  color: '#f97316' },
+  { value: 'central_bank',    label: 'Central Bank Decision',    emoji: '🏦',  color: '#8b5cf6' },
+  { value: 'regime_change',   label: 'Regime Change',            emoji: '🔄',  color: '#eab308' },
+  { value: 'natural_disaster',label: 'Natural Disaster',         emoji: '🌊',  color: '#14b8a6' },
+  { value: 'pandemic',        label: 'Pandemic / Health Crisis', emoji: '🦠',  color: '#22c55e' },
+  { value: 'treaty',          label: 'Treaty / Alliance',        emoji: '🤝',  color: '#06b6d4' },
+  { value: 'crisis',          label: 'Political Crisis / Coup',  emoji: '💥',  color: '#dc2626' },
+  { value: 'referendum',      label: 'Referendum / Vote',        emoji: '📊',  color: '#60a5fa' },
+  { value: 'energy_crisis',   label: 'Energy Crisis',            emoji: '⚡',  color: '#f59e0b' },
+  { value: 'currency_crisis', label: 'Currency Crisis',          emoji: '💱',  color: '#ec4899' },
+  { value: 'trade_war',       label: 'Trade War / Tariffs',      emoji: '📦',  color: '#d97706' },
+  { value: 'diplomatic',      label: 'Diplomatic Event',         emoji: '🌐',  color: '#38bdf8' },
+];
+
+export interface GeoEvent {
+  id: string;
+  name: string;
+  type: GeoEventType;
+  startDate: string;
+  endDate?: string;
+  details: string;
+  position: { x: number; y: number };
+  createdAt: string;
+}
 
 export const SECTOR_PRESETS = [
   'Technology', 'Healthcare', 'Financials', 'Energy', 'Consumer Discretionary',
