@@ -67,7 +67,6 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   const [dims, setDims] = useState({ width: 1200, height: 800 });
   const dimsRef = useRef({ width: 1200, height: 800 });
   const [zoom, setZoom] = useState(1);
-  const [fixedEntitySize, setFixedEntitySize] = useState(false);
   const [entitySizeMult, setEntitySizeMult] = useState(1);
   const [arrowSizeMult, setArrowSizeMult] = useState(1);
 
@@ -492,7 +491,6 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
           mapWidth={dims.width}
           mapHeight={dims.height}
           zoom={zoom}
-          fixedEntitySize={fixedEntitySize}
           entitySizeMult={entitySizeMult}
           onConnectWithSettings={handleConnectWithSettings}
           pendingRelSettings={pendingRelSettings}
@@ -552,8 +550,6 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
         onZoomIn={() => setZoom((z) => Math.min(MAX_ZOOM, z + ZOOM_STEP))}
         onZoomOut={() => setZoom((z) => Math.max(MIN_ZOOM, z - ZOOM_STEP))}
         onZoomReset={() => { setZoom(MIN_ZOOM); setPanOffset({ x: 0, y: 0 }); }}
-        fixedEntitySize={fixedEntitySize}
-        onToggleFixedEntitySize={() => setFixedEntitySize((v) => !v)}
         showWorldMap={showWorldMap}
         onToggleWorldMap={handleToggleWorldMap}
       />

@@ -5,7 +5,6 @@ import {
   Save, Share2, Map, Plus, Link2, X,
   ChevronDown, TrendingUp, LogIn, LogOut, User,
   ZoomIn, ZoomOut, RotateCcw, Lock, Unlock, Clock, Globe, Square,
-  Maximize2, Minimize2,
 } from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
 import ShareDialog from './ShareDialog';
@@ -24,8 +23,6 @@ interface ToolbarProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onZoomReset: () => void;
-  fixedEntitySize: boolean;
-  onToggleFixedEntitySize: () => void;
   showWorldMap: boolean;
   onToggleWorldMap: () => void;
 }
@@ -34,7 +31,6 @@ export default function Toolbar({
   onAddEntity, isConnecting, onToggleConnect,
   session, onSignIn, onSignOut,
   zoom, onZoomIn, onZoomOut, onZoomReset,
-  fixedEntitySize, onToggleFixedEntitySize,
   showWorldMap, onToggleWorldMap,
 }: ToolbarProps) {
   const { currentMap, saveCurrentMap, globalLocked, toggleGlobalLock } = useMapStore();
@@ -167,25 +163,6 @@ export default function Toolbar({
             </button>
             <IconBtn icon={<ZoomIn size={13} />} title="Zoom in (Ctrl +)" onClick={onZoomIn} />
           </div>
-
-          {/* Global entity size mode toggle */}
-          <button
-            onClick={onToggleFixedEntitySize}
-            title={fixedEntitySize
-              ? 'Entity size locked — same on-screen size at any zoom (click to auto-scale)'
-              : 'Entity size auto-scales — shrinks slightly at high zoom (click to lock size)'}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px',
-              borderRadius: 8, fontSize: 12, cursor: 'pointer',
-              border: `1px solid ${fixedEntitySize ? '#f59e0b' : 'rgba(59,130,246,0.2)'}`,
-              background: fixedEntitySize ? 'rgba(245,158,11,0.12)' : 'transparent',
-              color: fixedEntitySize ? '#f59e0b' : '#475569',
-              transition: 'all 0.15s',
-            }}
-          >
-            {fixedEntitySize ? <Maximize2 size={13} /> : <Minimize2 size={13} />}
-            <span>{fixedEntitySize ? 'Fixed size' : 'Auto size'}</span>
-          </button>
 
           {/* Global lock */}
           <button

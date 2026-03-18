@@ -73,20 +73,18 @@ export default function RelationshipLayer({
   const entityMap = new Map(entities.map((e) => [e.id, e]));
   const connectingEntity = connectingFromId ? entityMap.get(connectingFromId) : null;
 
-  // Arrow stroke scaling: same inverse-zoom formula as entities (exponent 1.2)
-  // screen_px = strokeWidth × zoom; with strokeWidth = base / zoom^1.2 → screen = base / zoom^0.2
-  // At zoom=1: arrows at base size. At high zoom: slightly thinner (cleaner country view).
-  const zf = zoom > 1 ? Math.pow(zoom, 1.2) : zoom;
+  // Fixed-size arrows: fully counter-scale with zoom so arrows/labels always
+  // appear the same size on screen regardless of zoom level (mirrors entity fixed-size mode).
   const arrowBaseStroke = 3.5 * arrowSizeMult;
-  const strokeNormal = arrowBaseStroke / zf;
-  const strokeSelected = (arrowBaseStroke * 1.4) / zf;
-  const strokeTrack = (arrowBaseStroke * 1.15) / zf;
-  const labelFontSize = (11 * arrowSizeMult) / zf;
+  const strokeNormal = arrowBaseStroke / zoom;
+  const strokeSelected = (arrowBaseStroke * 1.4) / zoom;
+  const strokeTrack = (arrowBaseStroke * 1.15) / zoom;
+  const labelFontSize = (11 * arrowSizeMult) / zoom;
+  // zf used by SVG marker path scaling — equals zoom for fixed-size mode
+  const zf = zoom;
 
-  // HTML elements (note boxes, action toolbar) in the scaled layer need
-  // the same counter-scale as entity cards so they shrink at high zoom.
-  const htmlZf = zoom > 1 ? Math.pow(zoom, 1.3) : zoom;
-  const htmlScale = 1 / htmlZf;
+  // HTML elements (note boxes, action toolbar) — counter-scale fully with zoom.
+  const htmlScale = 1 / zoom;
 
   // Ghost copies (offsetX !== 0) render arrows only, no interactive HTML overlays
   const isGhost = offsetX !== 0;

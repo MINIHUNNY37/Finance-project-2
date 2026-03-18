@@ -3,7 +3,7 @@
 import React, { useRef, useState, useCallback } from 'react';
 import {
   Edit2, Trash2, Link2, ChevronDown, ChevronUp,
-  Lock, Unlock, GitMerge, Maximize2, Minimize2,
+  Lock, Unlock, GitMerge,
   Zap, Minus, X, TrendingUp, TrendingDown,
 } from 'lucide-react';
 import type { Entity, ArrowStyle } from '../types';
@@ -27,7 +27,6 @@ interface EntityCardProps {
   mapWidth: number;
   mapHeight: number;
   zoom: number;
-  fixedEntitySize?: boolean;
   onConnectWithSettings: (fromId: string, settings: RelSettings) => void;
   pendingRelSettings: RelSettings | null;
   entitySizeMult?: number;
@@ -48,7 +47,6 @@ export default function EntityCard({
   mapWidth,
   mapHeight,
   zoom,
-  fixedEntitySize = false,
   onConnectWithSettings,
   pendingRelSettings,
   entitySizeMult = 1,
@@ -64,7 +62,6 @@ export default function EntityCard({
     setConnectingFrom,
     addRelationship,
     toggleEntityLock,
-    toggleEntityFixedSize,
     connectingFromId,
     selectedEntityId,
     globalLocked,
@@ -86,17 +83,10 @@ export default function EntityCard({
 
   const isSelected = selectedEntityId === entity.id;
   const isLocked = globalLocked || !!entity.locked;
-  const isFixedSize = entity.fixedSize || fixedEntitySize;
 
-  // Scale formula (exponent 1.3 gives a gentle shrink at high zoom):
-  // - fixedSize: scale(1/zoom) → constant visual size always
-  // - auto: scale(1/zoom^1.3) when zoom>1 → screen_size = native/zoom^0.3 (softly shrinks)
-  //         scale(1/zoom) when zoom≤1 → constant size when zoomed out
-  // entitySizeMult lets the user adjust the overall size.
-  const entityScale = (() => {
-    const z = isFixedSize ? zoom : (zoom > 1 ? Math.pow(zoom, 1.3) : zoom);
-    return (1 / z) * entitySizeMult;
-  })();
+  // Always fixed size: scale(1/zoom) → constant visual size on screen regardless of zoom.
+  // entitySizeMult lets the user adjust the overall size from the sidebar slider.
+  const entityScale = (1 / zoom) * entitySizeMult;
 
   // Drag to move
   const handleMouseDown = useCallback(
@@ -310,12 +300,6 @@ export default function EntityCard({
                 color="#a78bfa"
               />
               <ActionBtn
-                icon={entity.fixedSize ? <Maximize2 size={13} /> : <Minimize2 size={13} />}
-                title={entity.fixedSize ? 'Size locked (click to auto-scale)' : 'Lock size (keep fixed on zoom)'}
-                onClick={(e) => { e.stopPropagation(); toggleEntityFixedSize(entity.id); }}
-                color="#f59e0b"
-              />
-              <ActionBtn
                 icon={entity.locked ? <Unlock size={13} /> : <Lock size={13} />}
                 title={entity.locked ? 'Unlock position' : 'Lock position'}
                 onClick={(e) => { e.stopPropagation(); toggleEntityLock(entity.id); }}
@@ -470,11 +454,7 @@ export default function EntityCard({
                 <Lock size={9} />
               </div>
             )}
-            {entity.fixedSize && (
-              <div style={{ position: 'absolute', top: 6, left: 6, color: '#f59e0b', opacity: 0.7 }}>
-                <Maximize2 size={9} />
-              </div>
-            )}
+
 
             <div style={{ fontSize: 28, lineHeight: 1, marginBottom: 6 }}>{entity.icon}</div>
             <div style={{ color: entity.color, fontWeight: 700, fontSize: 13, textAlign: 'center', lineHeight: 1.3, maxWidth: 170 }}>

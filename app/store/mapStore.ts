@@ -120,7 +120,8 @@ export const useMapStore = create<MapState>()(
       addEntity: (entityData) => {
         const id = uuidv4();
         const now = new Date().toISOString();
-        const entity: Entity = { ...entityData, id, createdAt: now, updatedAt: now };
+        // Default fixedSize to true so new entities always appear at constant screen size
+        const entity: Entity = { fixedSize: true, ...entityData, id, createdAt: now, updatedAt: now };
         set((state) => ({
           currentMap: {
             ...state.currentMap,

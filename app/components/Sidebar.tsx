@@ -2,16 +2,15 @@
 
 import React, { useState } from 'react';
 import {
-  Layers, FolderOpen, Info, ChevronLeft, ChevronRight, Trash2,
-  GitMerge, Link2, Zap, Minus, X, Eye, EyeOff, ArrowRight,
+  Layers, FolderOpen, Folder, Info, ChevronLeft, ChevronRight, Trash2,
+  GitMerge, Link2, Zap, Minus, X, Eye, EyeOff, ArrowRight, Plus, ChevronDown,
 } from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
 import { isVisibleAtDate, getLatestStatsByLabel } from '../utils/dateFilter';
-import FolderPanel from './FolderPanel';
 import type { ArrowStyle } from '../types';
-import { RELATIONSHIP_COLORS } from '../types';
+import { RELATIONSHIP_COLORS, ENTITY_COLORS } from '../types';
 
-type Tab = 'entities' | 'connections' | 'folders' | 'info';
+type Tab = 'entities' | 'connections' | 'info';
 
 interface RelSettings {
   label: string;
@@ -55,7 +54,25 @@ export default function Sidebar({
     currentMap, selectedEntityId, setSelectedEntity, setConnectingFrom,
     deleteEntity, deleteRelationship, setSelectedRelationship, selectedRelationshipId,
     toggleEntityHidden, globalViewDate,
+    addFolder, deleteFolder, removeEntityFromFolder,
   } = useMapStore();
+
+  // Folder inline state
+  const [creatingFolder, setCreatingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [newFolderColor, setNewFolderColor] = useState(ENTITY_COLORS[0]);
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [showFolders, setShowFolders] = useState(false);
+
+  const toggleFolderExpand = (id: string) => {
+    setExpandedFolders((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  };
+
+  const handleCreateFolder = () => {
+    if (!newFolderName.trim()) return;
+    addFolder({ name: newFolderName.trim(), color: newFolderColor, entityIds: [], createdBy: 'local' });
+    setNewFolderName(''); setCreatingFolder(false);
+  };
 
   const [collapsed, setCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('entities');
@@ -78,7 +95,6 @@ export default function Sidebar({
   const tabs: { id: Tab; icon: React.ReactNode; label: string }[] = [
     { id: 'entities', icon: <Layers size={13} />, label: 'Entities' },
     { id: 'connections', icon: <ArrowRight size={13} />, label: 'Connections' },
-    { id: 'folders', icon: <FolderOpen size={13} />, label: 'Folders' },
     { id: 'info', icon: <Info size={13} />, label: 'Selected' },
   ];
 
@@ -374,6 +390,132 @@ export default function Sidebar({
                     </div>
                   ))
                 )}
+
+                {/* ── Inline Folders section ── */}
+                <div style={{ marginTop: 16, borderTop: '1px solid rgba(59,130,246,0.1)', paddingTop: 12 }}>
+                  <button
+                    onClick={() => setShowFolders((v) => !v)}
+                    style={{
+                      width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px', marginBottom: showFolders ? 8 : 0,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <FolderOpen size={12} style={{ color: '#64748b' }} />
+                      <span style={{ fontSize: 10, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
+                        Folders ({currentMap.folders.length})
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <ChevronDown size={11} style={{ color: '#475569', transform: showFolders ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+                      <div
+                        onClick={(e) => { e.stopPropagation(); setCreatingFolder(true); setShowFolders(true); }}
+                        style={{ cursor: 'pointer', color: '#3b82f6', padding: '2px 4px', borderRadius: 4 }}
+                        title="New Folder"
+                      >
+                        <Plus size={12} />
+                      </div>
+                    </div>
+                  </button>
+
+                  {showFolders && (
+                    <div className="fade-in">
+                      {/* Create folder form */}
+                      {creatingFolder && (
+                        <div style={{ background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 8, padding: 10, marginBottom: 8 }}>
+                          <input
+                            className="input-field"
+                            value={newFolderName}
+                            onChange={(e) => setNewFolderName(e.target.value)}
+                            placeholder="Folder name..."
+                            autoFocus
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleCreateFolder(); if (e.key === 'Escape') setCreatingFolder(false); }}
+                            style={{ marginBottom: 8, fontSize: 12 }}
+                          />
+                          <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+                            {ENTITY_COLORS.slice(0, 5).map((c) => (
+                              <button key={c} onClick={() => setNewFolderColor(c)} style={{ width: 18, height: 18, borderRadius: '50%', background: c, border: newFolderColor === c ? '2px solid white' : 'none', cursor: 'pointer' }} />
+                            ))}
+                          </div>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button className="btn-primary" style={{ flex: 1, padding: '4px 6px', fontSize: 11 }} onClick={handleCreateFolder}>Create</button>
+                            <button className="btn-ghost" style={{ padding: '4px 6px', fontSize: 11 }} onClick={() => setCreatingFolder(false)}>Cancel</button>
+                          </div>
+                        </div>
+                      )}
+
+                      {currentMap.folders.length === 0 && !creatingFolder && (
+                        <div style={{ fontSize: 11, color: '#475569', textAlign: 'center', padding: '8px 0', fontStyle: 'italic' }}>No folders yet</div>
+                      )}
+
+                      {currentMap.folders.map((folder) => {
+                        const entityMap = new Map(currentMap.entities.map((e) => [e.id, e]));
+                        const folderEntities = folder.entityIds.map((id) => entityMap.get(id)).filter(Boolean);
+                        const isExpanded = expandedFolders.has(folder.id);
+                        return (
+                          <div key={folder.id} style={{ marginBottom: 4 }}>
+                            <div
+                              onClick={() => toggleFolderExpand(folder.id)}
+                              style={{
+                                display: 'flex', alignItems: 'center', gap: 6,
+                                padding: '5px 8px', borderRadius: 7, cursor: 'pointer',
+                                background: isExpanded ? 'rgba(59,130,246,0.07)' : 'transparent',
+                                border: `1px solid ${isExpanded ? 'rgba(59,130,246,0.18)' : 'transparent'}`,
+                                transition: 'all 0.12s',
+                              }}
+                            >
+                              {isExpanded ? <FolderOpen size={12} style={{ color: folder.color, flexShrink: 0 }} /> : <Folder size={12} style={{ color: folder.color, flexShrink: 0 }} />}
+                              <span style={{ flex: 1, fontSize: 11, color: '#e2e8f0', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{folder.name}</span>
+                              <span style={{ fontSize: 10, color: '#475569' }}>{folderEntities.length}</span>
+                              <button onClick={(e) => { e.stopPropagation(); deleteFolder(folder.id); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: 0, display: 'flex' }}>
+                                <Trash2 size={10} />
+                              </button>
+                            </div>
+                            {isExpanded && (
+                              <div style={{ marginLeft: 14, marginTop: 2 }}>
+                                {folderEntities.length === 0 && <div style={{ fontSize: 10, color: '#475569', padding: '3px 8px', fontStyle: 'italic' }}>Empty</div>}
+                                {folderEntities.map((entity) => entity && (
+                                  <div key={entity.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 8px', borderRadius: 5, cursor: 'pointer' }}
+                                    onClick={() => setSelectedEntity(entity.id)}
+                                    onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(59,130,246,0.07)')}
+                                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                                  >
+                                    <span style={{ fontSize: 12 }}>{entity.icon}</span>
+                                    <span style={{ flex: 1, fontSize: 11, color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entity.name}</span>
+                                    <button onClick={(e) => { e.stopPropagation(); removeEntityFromFolder(entity.id, folder.id); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: 0, display: 'flex' }}>
+                                      <X size={10} />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+
+                      {/* Unorganized with folder assignment */}
+                      {currentMap.entities.filter((e) => !e.folderId).length > 0 && currentMap.folders.length > 0 && (
+                        <div style={{ marginTop: 6 }}>
+                          <div style={{ fontSize: 9, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4, paddingLeft: 4 }}>Unorganized</div>
+                          {currentMap.entities.filter((e) => !e.folderId).map((entity) => (
+                            <div key={entity.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 8px', borderRadius: 5 }}>
+                              <span style={{ fontSize: 12 }}>{entity.icon}</span>
+                              <span style={{ flex: 1, fontSize: 10, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entity.name}</span>
+                              <select
+                                style={{ background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 4, color: '#64748b', fontSize: 10, padding: '1px 4px', cursor: 'pointer' }}
+                                defaultValue=""
+                                onChange={(e) => { if (e.target.value) useMapStore.getState().addEntityToFolder(entity.id, e.target.value); }}
+                              >
+                                <option value="">+ folder</option>
+                                {currentMap.folders.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                              </select>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -492,9 +634,6 @@ export default function Sidebar({
                 )}
               </div>
             )}
-
-            {/* ── FOLDERS TAB ── */}
-            {activeTab === 'folders' && <FolderPanel />}
 
             {/* ── SELECTED TAB ── */}
             {activeTab === 'info' && (
