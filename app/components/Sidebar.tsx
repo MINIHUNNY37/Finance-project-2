@@ -61,7 +61,8 @@ export default function Sidebar({
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [newFolderColor, setNewFolderColor] = useState(ENTITY_COLORS[0]);
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  // '__unorg__' key keeps the Uncategorized section open by default
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['__unorg__']));
 
   // Drag-and-drop: entity → folder
   const [dragEntityId, setDragEntityId] = useState<string | null>(null);
@@ -97,7 +98,8 @@ export default function Sidebar({
 
   const handleCreateFolder = () => {
     if (!newFolderName.trim()) return;
-    addFolder({ name: newFolderName.trim(), color: newFolderColor, entityIds: [], createdBy: 'local' });
+    const id = addFolder({ name: newFolderName.trim(), color: newFolderColor, entityIds: [], createdBy: 'local' });
+    setExpandedFolders((prev) => new Set([...prev, id]));
     setNewFolderName(''); setCreatingFolder(false);
   };
 
@@ -334,24 +336,100 @@ export default function Sidebar({
           <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
 
             {/* ── ENTITIES TAB ── */}
-            {activeTab === 'entities' && (
-              <div>
-                {/* ── Folders section (TOP) ── */}
-                <div style={{ marginBottom: 12 }}>
-                  {/* Folders header */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, paddingLeft: 4 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <FolderOpen size={12} style={{ color: '#64748b' }} />
-                      <span style={{ fontSize: 10, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
-                        Folders ({currentMap.folders.length})
-                      </span>
+            {activeTab === 'entities' && (() => {
+              const entityMap = new Map(currentMap.entities.map((e) => [e.id, e]));
+              const unorganized = currentMap.entities.filter((e) => !e.folderId);
+              const isUnorgExpanded = expandedFolders.has('__unorg__');
+              const isDragOverUnorg = dropFolderId === '__unorganized__';
+
+              // Shared entity row renderer
+              const renderEntityRow = (entity: typeof currentMap.entities[0], inFolderId?: string) => (
+                <div
+                  key={entity.id}
+                  draggable
+                  onDragStart={() => setDragEntityId(entity.id)}
+                  onDragEnd={() => { setDragEntityId(null); setDropFolderId(null); }}
+                  onClick={() => { setSelectedEntity(entity.id); onFocusEntity(entity.position); setActiveTab('info'); }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 7,
+                    padding: '6px 8px', borderRadius: 7, cursor: 'grab', marginBottom: 1,
+                    background: selectedEntityId === entity.id ? `${entity.color}18` : 'transparent',
+                    border: `1px solid ${selectedEntityId === entity.id ? entity.color + '44' : 'transparent'}`,
+                    opacity: entity.hidden ? 0.4 : 1,
+                    transition: 'all 0.1s',
+                  }}
+                  onMouseEnter={(e) => { if (selectedEntityId !== entity.id) (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.06)'; }}
+                  onMouseLeave={(e) => { if (selectedEntityId !== entity.id) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                >
+                  <div style={{
+                    width: 26, height: 26, borderRadius: 6, flexShrink: 0,
+                    background: entity.color + '22', border: `1px solid ${entity.color}44`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13,
+                  }}>
+                    {entity.icon}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {entity.name}
                     </div>
+                    {entity.country && (
+                      <div style={{ fontSize: 10, color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {entity.country}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    title={entity.hidden ? 'Show' : 'Hide'}
+                    onClick={(e) => { e.stopPropagation(); toggleEntityHidden(entity.id); }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '2px 3px', display: 'flex', flexShrink: 0, opacity: entity.hidden ? 1 : 0.4, transition: 'opacity 0.1s' }}
+                    onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = '1')}
+                    onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = entity.hidden ? '1' : '0.4')}
+                  >
+                    {entity.hidden ? <EyeOff size={12} /> : <Eye size={12} />}
+                  </button>
+                  {inFolderId ? (
+                    <button
+                      title="Remove from folder"
+                      onClick={(e) => { e.stopPropagation(); removeEntityFromFolder(entity.id, inFolderId); }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '2px 3px', display: 'flex', flexShrink: 0, opacity: 0.4, transition: 'opacity 0.1s' }}
+                      onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = '1')}
+                      onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = '0.4')}
+                    >
+                      <X size={11} />
+                    </button>
+                  ) : selectedEntityId === entity.id ? (
+                    <button
+                      title="Delete entity"
+                      onClick={(e) => { e.stopPropagation(); deleteEntity(entity.id); setSelectedEntity(null); }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '2px 3px', display: 'flex', flexShrink: 0, opacity: 0.7, transition: 'opacity 0.1s' }}
+                      onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = '1')}
+                      onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = '0.7')}
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  ) : (
+                    <div style={{ width: 7, height: 7, borderRadius: '50%', background: entity.color, flexShrink: 0 }} />
+                  )}
+                </div>
+              );
+
+              return (
+                <div>
+                  {/* Header row: count + New Folder button */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingLeft: 2 }}>
+                    <span style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                      Entities ({currentMap.entities.length})
+                    </span>
                     <button
                       onClick={() => setCreatingFolder(true)}
                       title="New Folder"
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6', padding: '2px 4px', borderRadius: 4, display: 'flex' }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 4,
+                        background: 'none', border: '1px solid rgba(59,130,246,0.25)', borderRadius: 6,
+                        cursor: 'pointer', color: '#3b82f6', padding: '2px 7px', fontSize: 10,
+                      }}
                     >
-                      <Plus size={12} />
+                      <Plus size={10} /> Folder
                     </button>
                   </div>
 
@@ -379,20 +457,20 @@ export default function Sidebar({
                     </div>
                   )}
 
-                  {/* Folder rows — each is a drag-drop target */}
-                  {currentMap.folders.length === 0 && !creatingFolder && (
-                    <div style={{ fontSize: 11, color: '#334155', textAlign: 'center', padding: '4px 0 8px', fontStyle: 'italic' }}>
-                      No folders — click + to create one
+                  {currentMap.entities.length === 0 && (
+                    <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', padding: '20px 8px', lineHeight: 1.5 }}>
+                      Click &quot;Add Entity&quot; to place a company on the map
                     </div>
                   )}
+
+                  {/* ── Folder accordion sections ── */}
                   {currentMap.folders.map((folder) => {
-                    const entityMap = new Map(currentMap.entities.map((e) => [e.id, e]));
                     const folderEntities = folder.entityIds.map((id) => entityMap.get(id)).filter(Boolean) as typeof currentMap.entities;
                     const isExpanded = expandedFolders.has(folder.id);
                     const isDragOver = dropFolderId === folder.id;
                     return (
-                      <div key={folder.id} style={{ marginBottom: 3 }}>
-                        {/* Folder header row — drop target */}
+                      <div key={folder.id} style={{ marginBottom: 2 }}>
+                        {/* Folder header — click to toggle, drag target */}
                         <div
                           onClick={() => toggleFolderExpand(folder.id)}
                           onDragOver={(e) => { e.preventDefault(); setDropFolderId(folder.id); }}
@@ -400,205 +478,95 @@ export default function Sidebar({
                           onDrop={() => handleEntityDrop(folder.id)}
                           style={{
                             display: 'flex', alignItems: 'center', gap: 6,
-                            padding: '5px 8px', borderRadius: 7, cursor: 'pointer',
-                            background: isDragOver
-                              ? `${folder.color}25`
-                              : isExpanded ? 'rgba(59,130,246,0.07)' : 'transparent',
-                            border: `1px solid ${isDragOver ? folder.color : isExpanded ? 'rgba(59,130,246,0.18)' : 'transparent'}`,
-                            transition: 'all 0.1s',
+                            padding: '6px 8px', borderRadius: 7, cursor: 'pointer',
+                            background: isDragOver ? `${folder.color}20` : isExpanded ? `${folder.color}10` : 'rgba(15,23,42,0.4)',
+                            border: `1px solid ${isDragOver ? folder.color : isExpanded ? `${folder.color}40` : 'rgba(59,130,246,0.1)'}`,
                             outline: isDragOver ? `2px dashed ${folder.color}` : 'none',
-                            outlineOffset: -2,
+                            outlineOffset: -2, transition: 'all 0.12s',
                           }}
                         >
                           {isExpanded
-                            ? <FolderOpen size={12} style={{ color: folder.color, flexShrink: 0 }} />
-                            : <Folder size={12} style={{ color: folder.color, flexShrink: 0 }} />}
-                          <span style={{ flex: 1, fontSize: 11, color: isDragOver ? folder.color : '#e2e8f0', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            ? <FolderOpen size={13} style={{ color: folder.color, flexShrink: 0 }} />
+                            : <Folder size={13} style={{ color: folder.color, flexShrink: 0 }} />}
+                          <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: isDragOver ? folder.color : '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {folder.name}
                           </span>
-                          {isDragOver && <span style={{ fontSize: 9, color: folder.color }}>Drop here</span>}
-                          <span style={{ fontSize: 10, color: '#475569' }}>{folderEntities.length}</span>
-                          <ChevronDown size={10} style={{ color: '#475569', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }} />
+                          {isDragOver
+                            ? <span style={{ fontSize: 9, color: folder.color, flexShrink: 0 }}>Drop here</span>
+                            : <span style={{ fontSize: 10, color: '#475569', flexShrink: 0 }}>{folderEntities.length}</span>}
+                          <ChevronDown size={11} style={{ color: '#475569', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }} />
                           <button
                             onClick={(e) => { e.stopPropagation(); deleteFolder(folder.id); }}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '0 1px', display: 'flex', flexShrink: 0 }}
                             title="Delete folder"
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '0 1px', display: 'flex', flexShrink: 0, opacity: 0.5 }}
+                            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = '1')}
+                            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = '0.5')}
                           >
                             <Trash2 size={10} />
                           </button>
                         </div>
 
-                        {/* Folder contents — entity rows, each draggable */}
+                        {/* Folder body — entity rows */}
                         {isExpanded && (
-                          <div className="fade-in" style={{ marginLeft: 10, marginTop: 2, paddingLeft: 6, borderLeft: `2px solid ${folder.color}30` }}>
-                            {folderEntities.length === 0 && (
-                              <div style={{ fontSize: 10, color: '#475569', padding: '4px 8px', fontStyle: 'italic' }}>
+                          <div className="fade-in" style={{ marginLeft: 8, paddingLeft: 8, paddingTop: 2, paddingBottom: 2, borderLeft: `2px solid ${folder.color}35` }}>
+                            {folderEntities.length === 0 ? (
+                              <div style={{ fontSize: 10, color: '#334155', padding: '5px 4px', fontStyle: 'italic' }}>
                                 Empty — drag entities here
                               </div>
-                            )}
-                            {folderEntities.map((entity) => (
-                              <div
-                                key={entity.id}
-                                draggable
-                                onDragStart={() => setDragEntityId(entity.id)}
-                                onDragEnd={() => { setDragEntityId(null); setDropFolderId(null); }}
-                                onClick={() => { setSelectedEntity(entity.id); onFocusEntity(entity.position); setActiveTab('info'); }}
-                                style={{
-                                  display: 'flex', alignItems: 'center', gap: 6,
-                                  padding: '4px 8px', borderRadius: 6, cursor: 'grab', marginBottom: 1,
-                                  background: selectedEntityId === entity.id ? `${entity.color}18` : 'transparent',
-                                  border: `1px solid ${selectedEntityId === entity.id ? entity.color + '44' : 'transparent'}`,
-                                  opacity: entity.hidden ? 0.4 : 1,
-                                  transition: 'all 0.1s',
-                                }}
-                                onMouseEnter={(e) => { if (selectedEntityId !== entity.id) (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.06)'; }}
-                                onMouseLeave={(e) => { if (selectedEntityId !== entity.id) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-                              >
-                                <span style={{ fontSize: 13 }}>{entity.icon}</span>
-                                <span style={{ flex: 1, fontSize: 11, color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entity.name}</span>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); toggleEntityHidden(entity.id); }}
-                                  title={entity.hidden ? 'Show' : 'Hide'}
-                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '1px 2px', display: 'flex', opacity: 0.5 }}
-                                  onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = '1')}
-                                  onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = '0.5')}
-                                >
-                                  {entity.hidden ? <EyeOff size={11} /> : <Eye size={11} />}
-                                </button>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); removeEntityFromFolder(entity.id, folder.id); }}
-                                  title="Remove from folder"
-                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '1px 2px', display: 'flex', opacity: 0.5 }}
-                                  onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = '1')}
-                                  onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = '0.5')}
-                                >
-                                  <X size={10} />
-                                </button>
-                              </div>
-                            ))}
+                            ) : folderEntities.map((entity) => renderEntityRow(entity, folder.id))}
                           </div>
                         )}
                       </div>
                     );
                   })}
-                </div>
 
-                {/* ── Divider ── */}
-                <div style={{ borderTop: '1px solid rgba(59,130,246,0.1)', marginBottom: 10 }} />
-
-                {/* ── All Entities (flat) — each row is draggable ── */}
-                {/* "Unorganized" drop zone header when dragging */}
-                <div
-                  onDragOver={(e) => { e.preventDefault(); setDropFolderId('__unorganized__'); }}
-                  onDragLeave={() => setDropFolderId(null)}
-                  onDrop={() => handleEntityDrop(null)}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    marginBottom: 6, paddingLeft: 4, paddingRight: 4,
-                    borderRadius: 6, padding: '3px 6px',
-                    background: dropFolderId === '__unorganized__' ? 'rgba(100,116,139,0.12)' : 'transparent',
-                    border: `1px solid ${dropFolderId === '__unorganized__' ? 'rgba(100,116,139,0.4)' : 'transparent'}`,
-                    outline: dropFolderId === '__unorganized__' ? '2px dashed rgba(100,116,139,0.5)' : 'none',
-                    outlineOffset: -2, transition: 'all 0.1s',
-                  }}
-                >
-                  <span style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                    All Entities ({currentMap.entities.length})
-                  </span>
-                  {dropFolderId === '__unorganized__' && (
-                    <span style={{ fontSize: 9, color: '#94a3b8' }}>Drop to remove from folder</span>
-                  )}
-                </div>
-
-                {currentMap.entities.length === 0 ? (
-                  <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', padding: '20px 8px', lineHeight: 1.5 }}>
-                    Click &quot;Add Entity&quot; to place a company on the map
-                  </div>
-                ) : (
-                  currentMap.entities.map((entity) => (
-                    <div
-                      key={entity.id}
-                      draggable
-                      onDragStart={() => setDragEntityId(entity.id)}
-                      onDragEnd={() => { setDragEntityId(null); setDropFolderId(null); }}
-                      onClick={() => { setSelectedEntity(entity.id); onFocusEntity(entity.position); setActiveTab('info'); }}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 8,
-                        padding: '7px 8px', borderRadius: 8, cursor: 'grab', marginBottom: 2,
-                        background: selectedEntityId === entity.id ? `${entity.color}18` : 'transparent',
-                        border: `1px solid ${selectedEntityId === entity.id ? entity.color + '44' : 'transparent'}`,
-                        opacity: entity.hidden ? 0.4 : 1,
-                        transition: 'all 0.1s ease',
-                      }}
-                      onMouseEnter={(e) => { if (selectedEntityId !== entity.id) (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.06)'; }}
-                      onMouseLeave={(e) => { if (selectedEntityId !== entity.id) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-                    >
-                      <div style={{
-                        width: 28, height: 28, borderRadius: 6,
-                        background: entity.color + '22', border: `1px solid ${entity.color}44`,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 14, flexShrink: 0,
-                      }}>
-                        {entity.icon}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {entity.name}
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 1 }}>
-                          {entity.folderId && (() => {
-                            const f = currentMap.folders.find((fl) => fl.id === entity.folderId);
-                            return f ? (
-                              <span style={{ fontSize: 9, color: f.color, background: `${f.color}18`, border: `1px solid ${f.color}30`, borderRadius: 3, padding: '0 4px' }}>
-                                {f.name}
-                              </span>
-                            ) : null;
-                          })()}
-                          {entity.country && (
-                            <span style={{ fontSize: 10, color: '#475569' }}>{entity.country}</span>
-                          )}
-                        </div>
-                      </div>
-                      {/* Hide/show toggle */}
-                      <button
-                        title={entity.hidden ? 'Show entity' : 'Hide entity'}
-                        onClick={(e) => { e.stopPropagation(); toggleEntityHidden(entity.id); }}
+                  {/* ── Uncategorized accordion section ── */}
+                  {unorganized.length > 0 && (
+                    <div style={{ marginTop: currentMap.folders.length > 0 ? 6 : 0 }}>
+                      {/* Uncategorized header — also a drop target (remove from folder) */}
+                      <div
+                        onClick={() => setExpandedFolders((prev) => { const n = new Set(prev); n.has('__unorg__') ? n.delete('__unorg__') : n.add('__unorg__'); return n; })}
+                        onDragOver={(e) => { e.preventDefault(); setDropFolderId('__unorganized__'); }}
+                        onDragLeave={() => setDropFolderId(null)}
+                        onDrop={() => handleEntityDrop(null)}
                         style={{
-                          background: 'none', border: 'none', cursor: 'pointer',
-                          color: entity.hidden ? '#64748b' : '#475569',
-                          padding: '2px 4px', borderRadius: 4,
-                          display: 'flex', alignItems: 'center', flexShrink: 0,
-                          opacity: entity.hidden ? 1 : 0.5, transition: 'opacity 0.1s',
+                          display: 'flex', alignItems: 'center', gap: 6,
+                          padding: '6px 8px', borderRadius: 7, cursor: 'pointer',
+                          background: isDragOverUnorg ? 'rgba(100,116,139,0.15)' : isUnorgExpanded ? 'rgba(59,130,246,0.06)' : 'rgba(15,23,42,0.4)',
+                          border: `1px solid ${isDragOverUnorg ? 'rgba(100,116,139,0.5)' : isUnorgExpanded ? 'rgba(59,130,246,0.18)' : 'rgba(59,130,246,0.1)'}`,
+                          outline: isDragOverUnorg ? '2px dashed rgba(100,116,139,0.5)' : 'none',
+                          outlineOffset: -2, transition: 'all 0.12s',
+                          marginBottom: 2,
                         }}
-                        onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = '1')}
-                        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = entity.hidden ? '1' : '0.5')}
                       >
-                        {entity.hidden ? <EyeOff size={13} /> : <Eye size={13} />}
-                      </button>
-                      {/* Delete / color dot */}
-                      {selectedEntityId === entity.id ? (
-                        <button
-                          title="Delete entity"
-                          onClick={(e) => { e.stopPropagation(); deleteEntity(entity.id); setSelectedEntity(null); }}
-                          style={{
-                            background: 'none', border: 'none', cursor: 'pointer',
-                            color: '#ef4444', padding: '2px 4px', borderRadius: 4,
-                            display: 'flex', alignItems: 'center', flexShrink: 0,
-                            opacity: 0.7, transition: 'opacity 0.1s',
-                          }}
-                          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = '1')}
-                          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = '0.7')}
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      ) : (
-                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: entity.color, flexShrink: 0 }} />
+                        <Layers size={13} style={{ color: '#64748b', flexShrink: 0 }} />
+                        <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: isDragOverUnorg ? '#94a3b8' : '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {currentMap.folders.length > 0 ? 'Uncategorized' : 'All Entities'}
+                        </span>
+                        {isDragOverUnorg
+                          ? <span style={{ fontSize: 9, color: '#94a3b8', flexShrink: 0 }}>Remove from folder</span>
+                          : <span style={{ fontSize: 10, color: '#475569', flexShrink: 0 }}>{unorganized.length}</span>}
+                        <ChevronDown size={11} style={{ color: '#475569', transform: isUnorgExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }} />
+                      </div>
+
+                      {/* Uncategorized body */}
+                      {isUnorgExpanded && (
+                        <div className="fade-in" style={{ marginLeft: 8, paddingLeft: 8, paddingTop: 2, paddingBottom: 2, borderLeft: '2px solid rgba(59,130,246,0.15)' }}>
+                          {unorganized.map((entity) => renderEntityRow(entity))}
+                        </div>
                       )}
                     </div>
-                  ))
-                )}
-              </div>
-            )}
+                  )}
+
+                  {/* When all entities are in folders, no uncategorized needed */}
+                  {unorganized.length === 0 && currentMap.entities.length > 0 && currentMap.folders.length > 0 && (
+                    <div style={{ fontSize: 10, color: '#334155', textAlign: 'center', padding: '6px 0', fontStyle: 'italic' }}>
+                      All entities are organized in folders
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* ── CONNECTIONS TAB ── */}
             {activeTab === 'connections' && (
