@@ -89,7 +89,7 @@ export default function ShareDialog({ isOpen, onClose }: ShareDialogProps) {
             <Share2 size={18} style={{ color: '#06b6d4' }} />
             <h2 style={{ color: '#93c5fd', fontSize: 18, fontWeight: 700 }}>Share Map</h2>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8899b0' }}>
             <X size={20} />
           </button>
         </div>
@@ -97,7 +97,7 @@ export default function ShareDialog({ isOpen, onClose }: ShareDialogProps) {
         {/* Map info */}
         <div style={{ marginBottom: 20, padding: 12, background: 'rgba(15,23,42,0.5)', borderRadius: 10, border: '1px solid rgba(59,130,246,0.15)' }}>
           <div style={{ fontWeight: 600, color: '#e2e8f0', marginBottom: 4 }}>{currentMap.name}</div>
-          <div style={{ fontSize: 12, color: '#64748b' }}>
+          <div style={{ fontSize: 12, color: '#8899b0' }}>
             {currentMap.entities.length} entities · {currentMap.relationships.length} connections · {currentMap.folders.length} folders
           </div>
         </div>
@@ -107,7 +107,7 @@ export default function ShareDialog({ isOpen, onClose }: ShareDialogProps) {
           <div style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
             Map Code
           </div>
-          <div style={{ fontSize: 11, color: '#475569', marginBottom: 8, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 8, lineHeight: 1.5 }}>
             Copy this code and paste it in any Plotifolio session to import a full copy of this map.
           </div>
           <button

@@ -46,7 +46,7 @@ export default function RelationshipDialog({ isOpen, onClose, onSave, initialDat
       <div className="glass-panel fade-in" style={{ width: '100%', maxWidth: 420, borderRadius: 16, padding: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
           <h2 style={{ color: '#93c5fd', fontSize: 17, fontWeight: 700 }}>Edit Connection</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8899b0' }}>
             <X size={20} />
           </button>
         </div>
@@ -142,9 +142,9 @@ function StyleOption({ active, onClick, icon, label, description, color }: {
         transition: 'all 0.15s ease',
       }}
     >
-      <div style={{ color: active ? color : '#64748b' }}>{icon}</div>
+      <div style={{ color: active ? color : '#8899b0' }}>{icon}</div>
       <div style={{ fontSize: 12, fontWeight: 600, color: active ? color : '#94a3b8' }}>{label}</div>
-      <div style={{ fontSize: 10, color: '#475569', textAlign: 'center' }}>{description}</div>
+      <div style={{ fontSize: 10, color: '#94a3b8', textAlign: 'center' }}>{description}</div>
     </button>
   );
 }

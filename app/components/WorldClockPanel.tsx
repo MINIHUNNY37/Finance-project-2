@@ -114,20 +114,20 @@ export default function WorldClockPanel({ onClose }: Props) {
           <span style={{ fontSize: 13, fontWeight: 700, color: '#e2e8f0' }}>World Time</span>
         </div>
         <button onClick={onClose}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', display: 'flex' }}>
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex' }}>
           <X size={15} />
         </button>
       </div>
 
       {/* Local time hero */}
       <div style={{ padding: '14px 16px 10px', borderBottom: '1px solid rgba(59,130,246,0.08)' }}>
-        <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
+        <div style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
           Local — {localTz.replace(/_/g, ' ')}
         </div>
         <div style={{ fontSize: 28, fontWeight: 700, color: '#e2e8f0', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.5px' }}>
           {formatTime(now, localTz)}
         </div>
-        <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+        <div style={{ fontSize: 12, color: '#8899b0', marginTop: 2 }}>
           {formatDate(now, localTz)}
         </div>
       </div>
@@ -149,7 +149,7 @@ export default function WorldClockPanel({ onClose }: Props) {
               {/* Market-open indicator */}
               <div style={{
                 width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
-                background: open ? '#10b981' : '#334155',
+                background: open ? '#10b981' : '#8899b0',
                 boxShadow: open ? '0 0 6px #10b981' : 'none',
               }} />
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -160,14 +160,14 @@ export default function WorldClockPanel({ onClose }: Props) {
               <div style={{ fontVariantNumeric: 'tabular-nums', fontSize: 13, fontWeight: 600, color: '#e2e8f0', flexShrink: 0 }}>
                 {formatTime(now, tz)}
               </div>
-              <div style={{ fontSize: 10, color: '#475569', flexShrink: 0, minWidth: 56 }}>
+              <div style={{ fontSize: 10, color: '#94a3b8', flexShrink: 0, minWidth: 56 }}>
                 {formatDate(now, tz).split(',')[0]}
               </div>
               <button onClick={() => removeZone(tz)}
                 title="Remove"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#334155', padding: '2px', display: 'flex', flexShrink: 0 }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8899b0', padding: '2px', display: 'flex', flexShrink: 0 }}
                 onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = '#ef4444')}
-                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = '#334155')}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = '#8899b0')}
               >
                 <Trash2 size={11} />
               </button>
@@ -176,7 +176,7 @@ export default function WorldClockPanel({ onClose }: Props) {
         })}
 
         {worldClockTimezones.length === 0 && !showAdd && (
-          <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', padding: '12px 0' }}>
+          <div style={{ color: '#94a3b8', fontSize: 12, textAlign: 'center', padding: '12px 0' }}>
             No world clocks added yet
           </div>
         )}
@@ -189,7 +189,7 @@ export default function WorldClockPanel({ onClose }: Props) {
             background: 'rgba(15,23,42,0.7)', border: '1px solid rgba(59,130,246,0.2)',
             borderRadius: 10, padding: 10,
           }}>
-            <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>
+            <div style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>
               Add city
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 200, overflowY: 'auto' }}>
@@ -206,25 +206,25 @@ export default function WorldClockPanel({ onClose }: Props) {
                 </button>
               ))}
               {ALL_ZONES.filter((z) => !worldClockTimezones.includes(z.tz)).length === 0 && (
-                <div style={{ color: '#475569', fontSize: 12, padding: '8px 4px' }}>All cities added</div>
+                <div style={{ color: '#94a3b8', fontSize: 12, padding: '8px 4px' }}>All cities added</div>
               )}
             </div>
             <button onClick={() => setShowAdd(false)} style={{
               marginTop: 8, width: '100%', padding: '5px 0', borderRadius: 7,
               background: 'transparent', border: '1px solid rgba(59,130,246,0.15)',
-              color: '#475569', fontSize: 11, cursor: 'pointer',
+              color: '#94a3b8', fontSize: 11, cursor: 'pointer',
             }}>Cancel</button>
           </div>
         ) : (
           <button onClick={() => setShowAdd(true)} style={{
             width: '100%', padding: '6px 0', borderRadius: 8,
             background: 'transparent', border: '1px dashed rgba(59,130,246,0.25)',
-            color: '#475569', fontSize: 11, cursor: 'pointer',
+            color: '#94a3b8', fontSize: 11, cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
             transition: 'all 0.15s',
           }}
             onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(59,130,246,0.5)'; (e.currentTarget as HTMLElement).style.color = '#3b82f6'; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(59,130,246,0.25)'; (e.currentTarget as HTMLElement).style.color = '#475569'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(59,130,246,0.25)'; (e.currentTarget as HTMLElement).style.color = '#94a3b8'; }}
           >
             <Plus size={12} /> Add city
           </button>

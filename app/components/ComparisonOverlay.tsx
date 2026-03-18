@@ -101,7 +101,7 @@ export default function ComparisonOverlay({ isOpen, onClose }: ComparisonOverlay
             <BarChart3 size={18} style={{ color: '#3b82f6' }} />
             <h2 style={{ color: '#93c5fd', fontSize: 16, fontWeight: 700, margin: 0 }}>Valuation Comparison</h2>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8899b0' }}>
             <X size={20} />
           </button>
         </div>
@@ -109,7 +109,7 @@ export default function ComparisonOverlay({ isOpen, onClose }: ComparisonOverlay
         <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
           {/* Entity picker */}
           <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 8 }}>Select entities to compare (max 5):</div>
+            <div style={{ fontSize: 11, color: '#8899b0', marginBottom: 8 }}>Select entities to compare (max 5):</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {(entitiesWithTicker.length > 0 ? entitiesWithTicker : currentMap.entities).map((e) => (
                 <button key={e.id} onClick={() => toggleEntity(e.id)}
@@ -135,14 +135,14 @@ export default function ComparisonOverlay({ isOpen, onClose }: ComparisonOverlay
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid rgba(59,130,246,0.15)' }}>
-                    <th style={{ padding: '8px 12px', textAlign: 'left', color: '#475569', fontSize: 10,
+                    <th style={{ padding: '8px 12px', textAlign: 'left', color: '#94a3b8', fontSize: 10,
                       textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Metric</th>
                     {selected.map((e) => (
                       <th key={e.id} style={{ padding: '8px 12px', textAlign: 'center', minWidth: 110 }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
                           <span style={{ fontSize: 16 }}>{e.icon}</span>
                           <span style={{ color: e.color, fontWeight: 700, fontSize: 11 }}>{e.name}</span>
-                          {e.ticker && <span style={{ fontSize: 9, color: '#475569', fontFamily: 'monospace' }}>${e.ticker}</span>}
+                          {e.ticker && <span style={{ fontSize: 9, color: '#94a3b8', fontFamily: 'monospace' }}>${e.ticker}</span>}
                         </div>
                       </th>
                     ))}
@@ -157,7 +157,7 @@ export default function ComparisonOverlay({ isOpen, onClose }: ComparisonOverlay
                         {m.values.map((v, i) => (
                           <td key={i} style={{
                             padding: '6px 12px', textAlign: 'center', fontSize: 11,
-                            color: i === bestIdx ? '#22c55e' : v === '—' ? '#334155' : '#e2e8f0',
+                            color: i === bestIdx ? '#22c55e' : v === '—' ? '#8899b0' : '#e2e8f0',
                             fontWeight: i === bestIdx ? 700 : 400,
                           }}>
                             {String(v)}
@@ -170,11 +170,11 @@ export default function ComparisonOverlay({ isOpen, onClose }: ComparisonOverlay
               </table>
             </div>
           ) : selected.length === 1 ? (
-            <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', padding: '24px 0' }}>
+            <div style={{ color: '#94a3b8', fontSize: 12, textAlign: 'center', padding: '24px 0' }}>
               Select at least one more entity to compare.
             </div>
           ) : (
-            <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', padding: '24px 0' }}>
+            <div style={{ color: '#94a3b8', fontSize: 12, textAlign: 'center', padding: '24px 0' }}>
               Select 2–5 entities above to see a side-by-side comparison.
             </div>
           )}

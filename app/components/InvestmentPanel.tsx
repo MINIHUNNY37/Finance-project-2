@@ -75,16 +75,16 @@ export default function InvestmentPanel() {
             background: 'rgba(15,23,42,0.96)',
             border: '1px solid rgba(59,130,246,0.3)',
             cursor: 'pointer', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', color: '#64748b',
+            justifyContent: 'center', color: '#8899b0',
           }}
           onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = '#3b82f6')}
-          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = '#64748b')}
+          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = '#8899b0')}
         >
           <ChevronLeft size={14} />
         </button>
         <div style={{
           writingMode: 'vertical-rl', transform: 'rotate(180deg)',
-          fontSize: 10, color: '#475569', marginTop: 16,
+          fontSize: 10, color: '#94a3b8', marginTop: 16,
           textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600,
         }}>
           Investment Plan
@@ -111,10 +111,10 @@ export default function InvestmentPanel() {
           background: 'rgba(15,23,42,0.96)',
           border: '1px solid rgba(59,130,246,0.3)',
           cursor: 'pointer', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', color: '#64748b', zIndex: 1,
+          justifyContent: 'center', color: '#8899b0', zIndex: 1,
         }}
         onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = '#3b82f6')}
-        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = '#64748b')}
+        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = '#8899b0')}
       >
         <ChevronRight size={14} />
       </button>
@@ -132,7 +132,7 @@ export default function InvestmentPanel() {
 
         {/* ── Balance ── */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 10, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
             Total Balance
           </div>
           <div style={{
@@ -155,7 +155,7 @@ export default function InvestmentPanel() {
             />
           </div>
           {balance > 0 && (
-            <div style={{ fontSize: 11, color: '#64748b', marginTop: 4, paddingLeft: 2 }}>
+            <div style={{ fontSize: 11, color: '#8899b0', marginTop: 4, paddingLeft: 2 }}>
               {fmt(balance)} total portfolio
             </div>
           )}
@@ -163,7 +163,7 @@ export default function InvestmentPanel() {
 
         {/* ── Cash-to-Asset Ratio ── */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 10, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
             Portfolio Allocation
           </div>
           {/* Bar */}
@@ -207,7 +207,7 @@ export default function InvestmentPanel() {
         {/* ── Companies ── */}
         <div style={{ marginBottom: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               Companies ({allocations.length})
             </div>
             <button
@@ -232,7 +232,7 @@ export default function InvestmentPanel() {
               maxHeight: 180, overflowY: 'auto',
             }}>
               {availableEntities.length === 0 ? (
-                <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', padding: '8px 0' }}>
+                <div style={{ color: '#94a3b8', fontSize: 12, textAlign: 'center', padding: '8px 0' }}>
                   All entities added
                 </div>
               ) : availableEntities.map((entity) => (
@@ -255,7 +255,7 @@ export default function InvestmentPanel() {
           )}
 
           {allocations.length === 0 && !showPicker && (
-            <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', padding: '12px 0', lineHeight: 1.5 }}>
+            <div style={{ color: '#94a3b8', fontSize: 12, textAlign: 'center', padding: '12px 0', lineHeight: 1.5 }}>
               Click &quot;Add&quot; to include a company<br />in your investment plan
             </div>
           )}
@@ -291,9 +291,9 @@ export default function InvestmentPanel() {
                   </div>
                   <button onClick={() => removeAllocation(alloc.entityId)}
                     title="Remove"
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#334155', padding: '2px', display: 'flex', flexShrink: 0 }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8899b0', padding: '2px', display: 'flex', flexShrink: 0 }}
                     onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = '#ef4444')}
-                    onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = '#334155')}
+                    onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = '#8899b0')}
                   >
                     <Trash2 size={11} />
                   </button>
@@ -307,7 +307,7 @@ export default function InvestmentPanel() {
                     background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(59,130,246,0.2)',
                     borderRadius: 7, padding: '5px 7px',
                   }}>
-                    <span style={{ fontSize: 10, color: '#475569', flexShrink: 0 }}>$</span>
+                    <span style={{ fontSize: 10, color: '#94a3b8', flexShrink: 0 }}>$</span>
                     <input
                       type="number"
                       value={alloc.amount || ''}
@@ -354,7 +354,7 @@ export default function InvestmentPanel() {
 
       {/* ── Notes (pinned to bottom) ── */}
       <div style={{ flexShrink: 0, borderTop: '1px solid rgba(59,130,246,0.12)', padding: '10px 14px' }}>
-        <div style={{ fontSize: 10, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+        <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
           Investment Notes
         </div>
         <textarea
@@ -380,7 +380,7 @@ export default function InvestmentPanel() {
 function SummaryRow({ label, value, color }: { label: string; value: string; color: string }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, fontSize: 11 }}>
-      <span style={{ color: '#64748b' }}>{label}</span>
+      <span style={{ color: '#8899b0' }}>{label}</span>
       <span style={{ color, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{value}</span>
     </div>
   );

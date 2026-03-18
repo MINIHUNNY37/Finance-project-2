@@ -334,7 +334,7 @@ export default function RelationshipLayer({
               onClick={(e) => { e.stopPropagation(); onEditRelationship(rel); }}
               color="#3b82f6"
             />
-            <div style={{ color: rel.description ? '#06b6d4' : '#475569', display: 'flex', alignItems: 'center', padding: '3px 5px' }}>
+            <div style={{ color: rel.description ? '#06b6d4' : '#94a3b8', display: 'flex', alignItems: 'center', padding: '3px 5px' }}>
               <MessageSquare size={13} />
             </div>
             <RelActionBtn

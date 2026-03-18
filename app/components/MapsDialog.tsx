@@ -118,14 +118,14 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
               New Map
             </button>
             {!required && (
-              <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+              <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8899b0' }}>
                 <X size={20} />
               </button>
             )}
           </div>
         </div>
         {required && (
-          <p style={{ fontSize: 13, color: '#64748b', marginBottom: 16, lineHeight: 1.5 }}>
+          <p style={{ fontSize: 13, color: '#8899b0', marginBottom: 16, lineHeight: 1.5 }}>
             {loading ? 'Loading your maps…' : 'Choose a map to open, import one, or create a new one to get started.'}
           </p>
         )}
@@ -145,7 +145,7 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
             <div style={{ fontSize: 12, fontWeight: 600, color: '#06b6d4', marginBottom: 8 }}>
               Paste Map Code
             </div>
-            <div style={{ fontSize: 11, color: '#475569', marginBottom: 8, lineHeight: 1.5 }}>
+            <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 8, lineHeight: 1.5 }}>
               Paste a map code shared via the Share dialog to create an independent copy of that map.
             </div>
             <textarea
@@ -189,7 +189,7 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
                   <div style={{ fontSize: 14, fontWeight: 600, color: '#e2e8f0', marginBottom: 6 }}>
                     Sign in to create a map
                   </div>
-                  <div style={{ fontSize: 12, color: '#64748b', lineHeight: 1.5 }}>
+                  <div style={{ fontSize: 12, color: '#8899b0', lineHeight: 1.5 }}>
                     You need to sign in before creating a new map.
                   </div>
                 </div>
@@ -207,7 +207,7 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
                 </button>
                 <button
                   onClick={() => setShowAuthGate(false)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', fontSize: 12 }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 12 }}
                 >
                   ← Back
                 </button>
@@ -234,7 +234,7 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
 
                 {/* Map type selection */}
                 <div style={{ marginBottom: 12 }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#8899b0', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
                     Background Type
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
@@ -244,7 +244,7 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
                         flex: 1, padding: '8px 10px', borderRadius: 8,
                         border: `1px solid ${mapTypeChoice === 'world' ? 'rgba(6,182,212,0.6)' : 'rgba(59,130,246,0.2)'}`,
                         background: mapTypeChoice === 'world' ? 'rgba(6,182,212,0.1)' : 'transparent',
-                        color: mapTypeChoice === 'world' ? '#06b6d4' : '#64748b',
+                        color: mapTypeChoice === 'world' ? '#06b6d4' : '#8899b0',
                         cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                         fontSize: 12, fontWeight: mapTypeChoice === 'world' ? 600 : 400,
                         transition: 'all 0.15s',
@@ -258,7 +258,7 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
                         flex: 1, padding: '8px 10px', borderRadius: 8,
                         border: `1px solid ${mapTypeChoice === 'plain' ? 'rgba(59,130,246,0.6)' : 'rgba(59,130,246,0.2)'}`,
                         background: mapTypeChoice === 'plain' ? 'rgba(59,130,246,0.1)' : 'transparent',
-                        color: mapTypeChoice === 'plain' ? '#93c5fd' : '#64748b',
+                        color: mapTypeChoice === 'plain' ? '#93c5fd' : '#8899b0',
                         cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                         fontSize: 12, fontWeight: mapTypeChoice === 'plain' ? 600 : 400,
                         transition: 'all 0.15s',
@@ -267,7 +267,7 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
                       <Square size={13} /> Plain
                     </button>
                   </div>
-                  <div style={{ fontSize: 10, color: '#475569', marginTop: 6, lineHeight: 1.4 }}>
+                  <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 6, lineHeight: 1.4 }}>
                     {mapTypeChoice === 'world'
                       ? 'Interactive world map — great for tracking global operations.'
                       : 'Clean blank canvas — great for org charts and abstract diagrams.'}
@@ -286,7 +286,7 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
         {/* Maps list */}
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {loading ? (
-            <div style={{ textAlign: 'center', color: '#475569', padding: 32, fontSize: 14 }}>
+            <div style={{ textAlign: 'center', color: '#94a3b8', padding: 32, fontSize: 14 }}>
               Loading your maps…
             </div>
           ) : (
@@ -326,19 +326,19 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
                             Active
                           </span>
                         )}
-                        <span style={{ fontSize: 10, background: 'rgba(59,130,246,0.1)', color: '#475569', borderRadius: 4, padding: '1px 6px', flexShrink: 0 }}>
+                        <span style={{ fontSize: 10, background: 'rgba(59,130,246,0.1)', color: '#94a3b8', borderRadius: 4, padding: '1px 6px', flexShrink: 0 }}>
                           {map.mapType === 'plain' ? 'Plain' : 'World Map'}
                         </span>
                       </div>
                       {map.description && (
-                        <div style={{ fontSize: 11, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div style={{ fontSize: 11, color: '#8899b0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {map.description}
                         </div>
                       )}
                       <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
-                        <span style={{ fontSize: 10, color: '#475569' }}>{map.entities.length} entities</span>
-                        <span style={{ fontSize: 10, color: '#475569' }}>{map.relationships.length} connections</span>
-                        <span style={{ fontSize: 10, color: '#475569', display: 'flex', alignItems: 'center', gap: 3 }}>
+                        <span style={{ fontSize: 10, color: '#94a3b8' }}>{map.entities.length} entities</span>
+                        <span style={{ fontSize: 10, color: '#94a3b8' }}>{map.relationships.length} connections</span>
+                        <span style={{ fontSize: 10, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 3 }}>
                           <Clock size={9} />
                           {new Date(map.updatedAt).toLocaleDateString()}
                         </span>
@@ -347,9 +347,9 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
                     {!isCurrent && (
                       <button
                         onClick={(e) => { e.stopPropagation(); deleteMap(map.id); }}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: 4, flexShrink: 0 }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 4, flexShrink: 0 }}
                         onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = '#ef4444')}
-                        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = '#475569')}
+                        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = '#94a3b8')}
                       >
                         <Trash2 size={14} />
                       </button>
@@ -359,7 +359,7 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
               })}
 
               {allMaps.length === 0 && (
-                <div style={{ textAlign: 'center', color: '#475569', padding: 32, fontSize: 14 }}>
+                <div style={{ textAlign: 'center', color: '#94a3b8', padding: 32, fontSize: 14 }}>
                   No maps yet. Create your first map!
                 </div>
               )}

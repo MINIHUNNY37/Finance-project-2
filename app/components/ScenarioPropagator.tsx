@@ -14,13 +14,13 @@ const IMPACT_STYLES: Record<string, { color: string; bg: string; icon: React.Rea
   positive: { color: '#22c55e', bg: 'rgba(34,197,94,0.1)', icon: <TrendingUp size={12} />, label: 'Positive' },
   negative: { color: '#ef4444', bg: 'rgba(239,68,68,0.1)', icon: <TrendingDown size={12} />, label: 'Negative' },
   neutral: { color: '#94a3b8', bg: 'rgba(148,163,184,0.08)', icon: <Minus size={12} />, label: 'Neutral' },
-  unknown: { color: '#64748b', bg: 'rgba(100,116,139,0.08)', icon: <HelpCircle size={12} />, label: 'Uncertain' },
+  unknown: { color: '#8899b0', bg: 'rgba(100,116,139,0.08)', icon: <HelpCircle size={12} />, label: 'Uncertain' },
 };
 
 const MAGNITUDE_COLOR: Record<string, string> = {
   high: '#f59e0b',
   medium: '#94a3b8',
-  low: '#334155',
+  low: '#8899b0',
 };
 
 const PRESET_SHOCKS = [
@@ -135,14 +135,14 @@ export default function ScenarioPropagator({ isOpen, onClose }: ScenarioPropagat
             <Zap size={18} style={{ color: '#f59e0b' }} />
             <h2 style={{ color: '#93c5fd', fontSize: 16, fontWeight: 700, margin: 0 }}>AI Scenario Propagation</h2>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8899b0' }}>
             <X size={20} />
           </button>
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
           {entities.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 0', color: '#475569' }}>
+            <div style={{ textAlign: 'center', padding: '40px 0', color: '#94a3b8' }}>
               <Zap size={32} style={{ marginBottom: 12, opacity: 0.3 }} />
               <p style={{ fontSize: 13 }}>Add entities to your map first.</p>
             </div>
@@ -150,7 +150,7 @@ export default function ScenarioPropagator({ isOpen, onClose }: ScenarioPropagat
             <>
               {/* Setup section */}
               <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 6 }}>
+                <div style={{ fontSize: 11, color: '#8899b0', marginBottom: 6 }}>
                   1. Select the entity where the shock originates:
                 </div>
                 <select
@@ -173,12 +173,12 @@ export default function ScenarioPropagator({ isOpen, onClose }: ScenarioPropagat
 
               <div style={{ marginBottom: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <div style={{ fontSize: 11, color: '#64748b' }}>2. Describe the shock / scenario:</div>
+                  <div style={{ fontSize: 11, color: '#8899b0' }}>2. Describe the shock / scenario:</div>
                   <button
                     onClick={() => setShowPresets((v) => !v)}
                     style={{
                       background: 'none', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 6,
-                      cursor: 'pointer', color: '#64748b', fontSize: 10, padding: '2px 8px',
+                      cursor: 'pointer', color: '#8899b0', fontSize: 10, padding: '2px 8px',
                       display: 'flex', alignItems: 'center', gap: 4,
                     }}
                   >
@@ -234,7 +234,7 @@ export default function ScenarioPropagator({ isOpen, onClose }: ScenarioPropagat
                     ? 'rgba(59,130,246,0.15)'
                     : 'linear-gradient(135deg, #f59e0b, #ef4444)',
                   border: 'none', cursor: loading || !selectedEntityId || !shockText.trim() ? 'not-allowed' : 'pointer',
-                  color: loading || !selectedEntityId || !shockText.trim() ? '#475569' : 'white',
+                  color: loading || !selectedEntityId || !shockText.trim() ? '#94a3b8' : 'white',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                   transition: 'all 0.15s',
                   marginBottom: 20,
@@ -314,12 +314,12 @@ export default function ScenarioPropagator({ isOpen, onClose }: ScenarioPropagat
                               title={imp.magnitude}
                               style={{
                                 width: 8, height: 8, borderRadius: '50%',
-                                background: MAGNITUDE_COLOR[imp.magnitude] ?? '#334155',
+                                background: MAGNITUDE_COLOR[imp.magnitude] ?? '#8899b0',
                                 flexShrink: 0,
                               }}
                             />
 
-                            {isExpanded ? <ChevronUp size={12} style={{ color: '#475569' }} /> : <ChevronDown size={12} style={{ color: '#475569' }} />}
+                            {isExpanded ? <ChevronUp size={12} style={{ color: '#94a3b8' }} /> : <ChevronDown size={12} style={{ color: '#94a3b8' }} />}
                           </button>
 
                           {isExpanded && (
@@ -339,7 +339,7 @@ export default function ScenarioPropagator({ isOpen, onClose }: ScenarioPropagat
                                   {imp.keyRisk}
                                 </p>
                               )}
-                              <div style={{ marginTop: 8, fontSize: 9, color: '#334155' }}>
+                              <div style={{ marginTop: 8, fontSize: 9, color: '#8899b0' }}>
                                 Magnitude: <span style={{ color: MAGNITUDE_COLOR[imp.magnitude], fontWeight: 700 }}>{imp.magnitude.toUpperCase()}</span>
                               </div>
                             </div>

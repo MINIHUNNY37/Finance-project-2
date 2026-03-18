@@ -662,7 +662,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
             background: 'rgba(15,23,42,0.85)',
             border: '1px solid rgba(59,130,246,0.25)',
             borderRadius: 8, padding: '4px 10px',
-            fontSize: 12, color: '#64748b', pointerEvents: 'none',
+            fontSize: 12, color: '#8899b0', pointerEvents: 'none',
             display: 'flex', gap: 8, alignItems: 'center',
           }}>
             <span>{Math.round(zoom * 100)}%</span>

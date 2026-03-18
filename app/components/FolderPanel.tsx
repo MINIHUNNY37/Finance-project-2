@@ -56,7 +56,7 @@ export default function FolderPanel() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-        <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+        <span style={{ fontSize: 11, fontWeight: 600, color: '#8899b0', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
           Folders
         </span>
         <button
@@ -140,21 +140,21 @@ export default function FolderPanel() {
               <span style={{ flex: 1, fontSize: 12, color: '#e2e8f0', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {folder.name}
               </span>
-              <span style={{ fontSize: 10, color: '#64748b' }}>{folderEntities.length}</span>
+              <span style={{ fontSize: 10, color: '#8899b0' }}>{folderEntities.length}</span>
               <button
                 onClick={(e) => { e.stopPropagation(); deleteFolder(folder.id); }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: 0 }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 0 }}
               >
                 <Trash2 size={11} />
               </button>
-              {isExpanded ? <ChevronDown size={11} style={{ color: '#475569' }} /> : <ChevronRight size={11} style={{ color: '#475569' }} />}
+              {isExpanded ? <ChevronDown size={11} style={{ color: '#94a3b8' }} /> : <ChevronRight size={11} style={{ color: '#94a3b8' }} />}
             </div>
 
             {/* Folder entities */}
             {isExpanded && (
               <div style={{ marginLeft: 16, marginTop: 2 }}>
                 {folderEntities.length === 0 && (
-                  <div style={{ fontSize: 10, color: '#475569', padding: '4px 8px', fontStyle: 'italic' }}>
+                  <div style={{ fontSize: 10, color: '#94a3b8', padding: '4px 8px', fontStyle: 'italic' }}>
                     No entities yet
                   </div>
                 )}
@@ -180,7 +180,7 @@ export default function FolderPanel() {
                     </span>
                     <button
                       onClick={(e) => { e.stopPropagation(); removeEntityFromFolder(entity.id, folder.id); }}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: 0 }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 0 }}
                     >
                       <X size={10} />
                     </button>
@@ -195,7 +195,7 @@ export default function FolderPanel() {
       {/* Unorganized entities */}
       {unorganized.length > 0 && (
         <div style={{ marginTop: 8 }}>
-          <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4, paddingLeft: 4 }}>
+          <div style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4, paddingLeft: 4 }}>
             Unorganized
           </div>
           {unorganized.map((entity) => (
@@ -225,7 +225,7 @@ export default function FolderPanel() {
                     background: 'rgba(15,23,42,0.8)',
                     border: '1px solid rgba(59,130,246,0.2)',
                     borderRadius: 4,
-                    color: '#64748b',
+                    color: '#8899b0',
                     fontSize: 10,
                     padding: '1px 4px',
                     cursor: 'pointer',

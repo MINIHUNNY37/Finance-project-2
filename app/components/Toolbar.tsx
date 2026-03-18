@@ -93,7 +93,7 @@ export default function Toolbar({
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: '#e2e8f0', lineHeight: 1.2 }}>Plotifolio</span>
-            <span style={{ fontSize: 9, color: '#64748b', lineHeight: 1 }}>Scenario Planner</span>
+            <span style={{ fontSize: 9, color: '#8899b0', lineHeight: 1 }}>Scenario Planner</span>
           </div>
         </div>
 
@@ -111,15 +111,15 @@ export default function Toolbar({
           title="Click to manage maps"
         >
           {currentMap.name}
-          <ChevronDown size={11} style={{ marginLeft: 4, color: '#64748b', display: 'inline' }} />
+          <ChevronDown size={11} style={{ marginLeft: 4, color: '#8899b0', display: 'inline' }} />
         </div>
 
         {/* Stats */}
         <div style={{ display: 'flex', gap: 10, marginRight: 4, flexShrink: 0 }}>
-          <span style={{ fontSize: 11, color: '#475569' }}>
+          <span style={{ fontSize: 11, color: '#94a3b8' }}>
             <span style={{ color: '#3b82f6', fontWeight: 600 }}>{currentMap.entities.length}</span> entities
           </span>
-          <span style={{ fontSize: 11, color: '#475569' }}>
+          <span style={{ fontSize: 11, color: '#94a3b8' }}>
             <span style={{ color: '#06b6d4', fontWeight: 600 }}>{currentMap.relationships.length}</span> connections
           </span>
         </div>
@@ -161,7 +161,7 @@ export default function Toolbar({
             <IconBtn icon={<ZoomOut size={13} />} title="Zoom out (Ctrl –)" onClick={onZoomOut} />
             <button onClick={onZoomReset} title="Reset zoom (Ctrl 0)" style={{
               background: 'none', border: 'none', cursor: 'pointer',
-              color: zoom !== 1 ? '#3b82f6' : '#475569', fontSize: 11, fontWeight: 600,
+              color: zoom !== 1 ? '#3b82f6' : '#94a3b8', fontSize: 11, fontWeight: 600,
               padding: '3px 6px', borderRadius: 5, minWidth: 38, textAlign: 'center',
               transition: 'color 0.15s',
             }}>
@@ -179,7 +179,7 @@ export default function Toolbar({
               borderRadius: 8, fontSize: 12, cursor: 'pointer',
               border: `1px solid ${globalLocked ? '#f59e0b' : 'rgba(59,130,246,0.2)'}`,
               background: globalLocked ? 'rgba(245,158,11,0.12)' : 'transparent',
-              color: globalLocked ? '#f59e0b' : '#475569',
+              color: globalLocked ? '#f59e0b' : '#94a3b8',
               transition: 'all 0.15s ease',
             }}
           >
@@ -202,7 +202,7 @@ export default function Toolbar({
                 fontSize: 12, cursor: 'default', border: 'none',
                 borderRight: '1px solid rgba(59,130,246,0.2)',
                 background: showWorldMap ? 'rgba(6,182,212,0.15)' : 'transparent',
-                color: showWorldMap ? '#06b6d4' : '#334155',
+                color: showWorldMap ? '#06b6d4' : '#8899b0',
                 opacity: showWorldMap ? 1 : 0.35,
                 transition: 'all 0.15s',
               }}
@@ -218,7 +218,7 @@ export default function Toolbar({
                 fontSize: 12, border: 'none',
                 cursor: showWorldMap ? 'pointer' : 'default',
                 background: !showWorldMap ? 'rgba(59,130,246,0.15)' : 'transparent',
-                color: !showWorldMap ? '#93c5fd' : '#475569',
+                color: !showWorldMap ? '#93c5fd' : '#94a3b8',
                 transition: 'all 0.15s',
               }}
             >
@@ -236,7 +236,7 @@ export default function Toolbar({
               borderRadius: 8, fontSize: 12, cursor: 'pointer',
               border: `1px solid ${showClock ? '#3b82f6' : 'rgba(59,130,246,0.2)'}`,
               background: showClock ? 'rgba(59,130,246,0.12)' : 'transparent',
-              color: showClock ? '#3b82f6' : '#475569',
+              color: showClock ? '#3b82f6' : '#94a3b8',
               transition: 'all 0.15s',
             }}
           >
@@ -300,7 +300,7 @@ export default function Toolbar({
                 </div>
               )}
               <button onClick={onSignOut} title="Sign out"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex' }}>
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8899b0', display: 'flex' }}>
                 <LogOut size={14} />
               </button>
             </div>
@@ -345,7 +345,7 @@ export default function Toolbar({
               <div style={{ fontSize: 16, fontWeight: 700, color: '#e2e8f0', marginBottom: 8 }}>
                 Sign in to save to the cloud
               </div>
-              <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.5 }}>
+              <div style={{ fontSize: 13, color: '#8899b0', lineHeight: 1.5 }}>
                 Your map was saved locally. Sign in with Google to sync it to your account and access it from any device.
               </div>
             </div>
@@ -365,7 +365,7 @@ export default function Toolbar({
               onClick={() => setShowLoginPrompt(false)}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
-                color: '#475569', fontSize: 13,
+                color: '#94a3b8', fontSize: 13,
               }}
             >
               Continue without signing in
@@ -380,12 +380,12 @@ export default function Toolbar({
 function IconBtn({ icon, title, onClick }: { icon: React.ReactNode; title: string; onClick: () => void }) {
   return (
     <button onClick={onClick} title={title} style={{
-      background: 'none', border: 'none', cursor: 'pointer', color: '#64748b',
+      background: 'none', border: 'none', cursor: 'pointer', color: '#8899b0',
       padding: '3px 5px', borderRadius: 5, display: 'flex', alignItems: 'center',
       transition: 'color 0.12s',
     }}
       onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = '#3b82f6')}
-      onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = '#64748b')}
+      onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = '#8899b0')}
     >
       {icon}
     </button>

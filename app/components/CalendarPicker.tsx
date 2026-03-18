@@ -94,7 +94,7 @@ export default function CalendarPicker() {
           padding: '6px 10px', borderRadius: 8, fontSize: 12, cursor: 'pointer',
           border: `1px solid ${globalViewDate ? '#f59e0b' : 'rgba(59,130,246,0.2)'}`,
           background: globalViewDate ? 'rgba(245,158,11,0.1)' : 'transparent',
-          color: globalViewDate ? '#f59e0b' : '#475569',
+          color: globalViewDate ? '#f59e0b' : '#94a3b8',
           transition: 'all 0.15s',
         }}
       >
@@ -135,7 +135,7 @@ export default function CalendarPicker() {
                   <button key={y} onClick={() => handleSelectYear(y)} style={{
                     ...cellStyle,
                     background: y === selectedDate?.getFullYear() ? 'rgba(59,130,246,0.25)' : y === draftYear ? 'rgba(59,130,246,0.12)' : 'transparent',
-                    color: y === selectedDate?.getFullYear() ? '#93c5fd' : y > currentYear ? '#334155' : '#94a3b8',
+                    color: y === selectedDate?.getFullYear() ? '#93c5fd' : y > currentYear ? '#8899b0' : '#94a3b8',
                     border: y === currentYear ? '1px solid rgba(59,130,246,0.3)' : '1px solid transparent',
                   }}>
                     {y}
@@ -184,7 +184,7 @@ export default function CalendarPicker() {
               {/* Day-of-week headers */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, marginBottom: 4 }}>
                 {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((d) => (
-                  <div key={d} style={{ textAlign: 'center', fontSize: 9, color: '#475569', padding: '2px 0' }}>{d}</div>
+                  <div key={d} style={{ textAlign: 'center', fontSize: 9, color: '#94a3b8', padding: '2px 0' }}>{d}</div>
                 ))}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
@@ -218,7 +218,7 @@ export default function CalendarPicker() {
 
           {/* Footer */}
           <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(59,130,246,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 10, color: '#475569' }}>
+            <span style={{ fontSize: 10, color: '#94a3b8' }}>
               {globalViewDate ? `Viewing as of ${label}` : 'Showing all data (no filter)'}
             </span>
             {globalViewDate && (
@@ -234,7 +234,7 @@ export default function CalendarPicker() {
 }
 
 const navBtnStyle: React.CSSProperties = {
-  background: 'none', border: 'none', cursor: 'pointer', color: '#64748b',
+  background: 'none', border: 'none', cursor: 'pointer', color: '#8899b0',
   display: 'flex', alignItems: 'center', padding: '3px 5px', borderRadius: 5,
 };
 

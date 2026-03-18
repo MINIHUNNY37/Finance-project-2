@@ -172,10 +172,10 @@ export default function Sidebar({
           background: 'rgba(15,23,42,0.96)',
           border: '1px solid rgba(59,130,246,0.3)',
           cursor: 'pointer', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', color: '#64748b', zIndex: 1, transition: 'color 0.15s',
+          justifyContent: 'center', color: '#8899b0', zIndex: 1, transition: 'color 0.15s',
         }}
         onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = '#3b82f6')}
-        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = '#64748b')}
+        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = '#8899b0')}
       >
         {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
       </button>
@@ -191,7 +191,7 @@ export default function Sidebar({
                 width: 28, height: 28, borderRadius: 6,
                 background: activeTab === tab.id ? 'rgba(59,130,246,0.15)' : 'transparent',
                 border: 'none', cursor: 'pointer',
-                color: activeTab === tab.id ? '#3b82f6' : '#64748b',
+                color: activeTab === tab.id ? '#3b82f6' : '#8899b0',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >
@@ -219,14 +219,14 @@ export default function Sidebar({
                     <div style={{ fontSize: 11, color: '#a78bfa', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>
                       {pendingRelSettings ? 'Connect with Settings' : 'Connect To'}
                     </div>
-                    <div style={{ fontSize: 11, color: '#64748b' }}>
+                    <div style={{ fontSize: 11, color: '#8899b0' }}>
                       From:{' '}
                       <span style={{ color: connectingFromEntity?.color || '#e2e8f0', fontWeight: 600 }}>
                         {connectingFromEntity?.icon} {connectingFromEntity?.name}
                       </span>
                     </div>
                     {pendingRelSettings?.label && (
-                      <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>
+                      <div style={{ fontSize: 10, color: '#8899b0', marginTop: 2 }}>
                         Label: <span style={{ color: pendingRelSettings.color }}>{pendingRelSettings.label}</span>
                       </div>
                     )}
@@ -234,7 +234,7 @@ export default function Sidebar({
                   <button
                     onClick={onCancelConnect}
                     title="Cancel connect"
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: 4 }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 4 }}
                   >
                     <X size={15} />
                   </button>
@@ -243,7 +243,7 @@ export default function Sidebar({
 
               {/* Entity list */}
               <div style={{ flex: 1, overflowY: 'auto', padding: '8px 10px' }}>
-                <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8, paddingLeft: 2 }}>
+                <div style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8, paddingLeft: 2 }}>
                   Pick a target entity
                 </div>
                 {currentMap.entities
@@ -281,16 +281,16 @@ export default function Sidebar({
                           {entity.name}
                         </div>
                         {entity.subtitle && (
-                          <div style={{ fontSize: 10, color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <div style={{ fontSize: 10, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {entity.subtitle}
                           </div>
                         )}
                       </div>
-                      <ArrowRight size={12} style={{ color: '#475569', flexShrink: 0 }} />
+                      <ArrowRight size={12} style={{ color: '#94a3b8', flexShrink: 0 }} />
                     </button>
                   ))}
                 {currentMap.entities.filter((e) => e.id !== connectingFromId && !e.hidden).length === 0 && (
-                  <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', padding: '20px 8px' }}>
+                  <div style={{ color: '#94a3b8', fontSize: 12, textAlign: 'center', padding: '20px 8px' }}>
                     No other entities available
                   </div>
                 )}
@@ -302,7 +302,7 @@ export default function Sidebar({
                   style={{
                     width: '100%', padding: '7px 0', borderRadius: 8,
                     background: 'transparent', border: '1px solid rgba(59,130,246,0.2)',
-                    color: '#64748b', fontSize: 12, cursor: 'pointer',
+                    color: '#8899b0', fontSize: 12, cursor: 'pointer',
                   }}
                 >
                   Cancel
@@ -321,7 +321,7 @@ export default function Sidebar({
                   flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   gap: 3, padding: '6px 2px', background: 'none', border: 'none',
                   borderBottom: `2px solid ${activeTab === tab.id ? '#3b82f6' : 'transparent'}`,
-                  color: activeTab === tab.id ? '#3b82f6' : '#475569',
+                  color: activeTab === tab.id ? '#3b82f6' : '#94a3b8',
                   cursor: 'pointer', fontSize: 10, fontWeight: 500, transition: 'all 0.15s ease',
                   whiteSpace: 'nowrap',
                 }}
@@ -373,7 +373,7 @@ export default function Sidebar({
                       {entity.name}
                     </div>
                     {entity.country && (
-                      <div style={{ fontSize: 10, color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontSize: 10, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {entity.country}
                       </div>
                     )}
@@ -381,7 +381,7 @@ export default function Sidebar({
                   <button
                     title={entity.hidden ? 'Show' : 'Hide'}
                     onClick={(e) => { e.stopPropagation(); toggleEntityHidden(entity.id); }}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '2px 3px', display: 'flex', flexShrink: 0, opacity: entity.hidden ? 1 : 0.4, transition: 'opacity 0.1s' }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '2px 3px', display: 'flex', flexShrink: 0, opacity: entity.hidden ? 1 : 0.4, transition: 'opacity 0.1s' }}
                     onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = '1')}
                     onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = entity.hidden ? '1' : '0.4')}
                   >
@@ -391,7 +391,7 @@ export default function Sidebar({
                     <button
                       title="Remove from folder"
                       onClick={(e) => { e.stopPropagation(); removeEntityFromFolder(entity.id, inFolderId); }}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '2px 3px', display: 'flex', flexShrink: 0, opacity: 0.4, transition: 'opacity 0.1s' }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '2px 3px', display: 'flex', flexShrink: 0, opacity: 0.4, transition: 'opacity 0.1s' }}
                       onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = '1')}
                       onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = '0.4')}
                     >
@@ -417,7 +417,7 @@ export default function Sidebar({
                 <div>
                   {/* Header row: count + New Folder button */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingLeft: 2 }}>
-                    <span style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    <span style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                       Entities ({currentMap.entities.length})
                     </span>
                     <button
@@ -458,7 +458,7 @@ export default function Sidebar({
                   )}
 
                   {currentMap.entities.length === 0 && (
-                    <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', padding: '20px 8px', lineHeight: 1.5 }}>
+                    <div style={{ color: '#94a3b8', fontSize: 12, textAlign: 'center', padding: '20px 8px', lineHeight: 1.5 }}>
                       Click &quot;Add Entity&quot; to place a company on the map
                     </div>
                   )}
@@ -493,12 +493,12 @@ export default function Sidebar({
                           </span>
                           {isDragOver
                             ? <span style={{ fontSize: 9, color: folder.color, flexShrink: 0 }}>Drop here</span>
-                            : <span style={{ fontSize: 10, color: '#475569', flexShrink: 0 }}>{folderEntities.length}</span>}
-                          <ChevronDown size={11} style={{ color: '#475569', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }} />
+                            : <span style={{ fontSize: 10, color: '#94a3b8', flexShrink: 0 }}>{folderEntities.length}</span>}
+                          <ChevronDown size={11} style={{ color: '#94a3b8', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }} />
                           <button
                             onClick={(e) => { e.stopPropagation(); deleteFolder(folder.id); }}
                             title="Delete folder"
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '0 1px', display: 'flex', flexShrink: 0, opacity: 0.5 }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '0 1px', display: 'flex', flexShrink: 0, opacity: 0.5 }}
                             onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = '1')}
                             onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = '0.5')}
                           >
@@ -510,7 +510,7 @@ export default function Sidebar({
                         {isExpanded && (
                           <div className="fade-in" style={{ marginLeft: 8, paddingLeft: 8, paddingTop: 2, paddingBottom: 2, borderLeft: `2px solid ${folder.color}35` }}>
                             {folderEntities.length === 0 ? (
-                              <div style={{ fontSize: 10, color: '#334155', padding: '5px 4px', fontStyle: 'italic' }}>
+                              <div style={{ fontSize: 10, color: '#8899b0', padding: '5px 4px', fontStyle: 'italic' }}>
                                 Empty — drag entities here
                               </div>
                             ) : folderEntities.map((entity) => renderEntityRow(entity, folder.id))}
@@ -539,14 +539,14 @@ export default function Sidebar({
                           marginBottom: 2,
                         }}
                       >
-                        <Layers size={13} style={{ color: '#64748b', flexShrink: 0 }} />
+                        <Layers size={13} style={{ color: '#8899b0', flexShrink: 0 }} />
                         <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: isDragOverUnorg ? '#94a3b8' : '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {currentMap.folders.length > 0 ? 'Uncategorized' : 'All Entities'}
                         </span>
                         {isDragOverUnorg
                           ? <span style={{ fontSize: 9, color: '#94a3b8', flexShrink: 0 }}>Remove from folder</span>
-                          : <span style={{ fontSize: 10, color: '#475569', flexShrink: 0 }}>{unorganized.length}</span>}
-                        <ChevronDown size={11} style={{ color: '#475569', transform: isUnorgExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }} />
+                          : <span style={{ fontSize: 10, color: '#94a3b8', flexShrink: 0 }}>{unorganized.length}</span>}
+                        <ChevronDown size={11} style={{ color: '#94a3b8', transform: isUnorgExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }} />
                       </div>
 
                       {/* Uncategorized body */}
@@ -560,7 +560,7 @@ export default function Sidebar({
 
                   {/* When all entities are in folders, no uncategorized needed */}
                   {unorganized.length === 0 && currentMap.entities.length > 0 && currentMap.folders.length > 0 && (
-                    <div style={{ fontSize: 10, color: '#334155', textAlign: 'center', padding: '6px 0', fontStyle: 'italic' }}>
+                    <div style={{ fontSize: 10, color: '#8899b0', textAlign: 'center', padding: '6px 0', fontStyle: 'italic' }}>
                       All entities are organized in folders
                     </div>
                   )}
@@ -580,7 +580,7 @@ export default function Sidebar({
                         padding: '2px 8px', borderRadius: 12, fontSize: 9, cursor: 'pointer',
                         border: `1px solid ${connectionFolderFilter === null ? '#3b82f6' : 'rgba(59,130,246,0.2)'}`,
                         background: connectionFolderFilter === null ? 'rgba(59,130,246,0.15)' : 'transparent',
-                        color: connectionFolderFilter === null ? '#93c5fd' : '#64748b',
+                        color: connectionFolderFilter === null ? '#93c5fd' : '#8899b0',
                         fontWeight: connectionFolderFilter === null ? 600 : 400,
                       }}
                     >All</button>
@@ -592,7 +592,7 @@ export default function Sidebar({
                           padding: '2px 8px', borderRadius: 12, fontSize: 9, cursor: 'pointer',
                           border: `1px solid ${connectionFolderFilter === f.id ? f.color : 'rgba(59,130,246,0.2)'}`,
                           background: connectionFolderFilter === f.id ? `${f.color}20` : 'transparent',
-                          color: connectionFolderFilter === f.id ? f.color : '#64748b',
+                          color: connectionFolderFilter === f.id ? f.color : '#8899b0',
                           fontWeight: connectionFolderFilter === f.id ? 700 : 400,
                         }}
                       >
@@ -602,7 +602,7 @@ export default function Sidebar({
                   </div>
                 )}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingLeft: 4 }}>
-                  <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  <div style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                     {connectionFolderFilter
                       ? (() => {
                           const folder = currentMap.folders.find((f) => f.id === connectionFolderFilter);
@@ -620,7 +620,7 @@ export default function Sidebar({
                       padding: '3px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
                       background: isDrawMode ? 'rgba(168,85,247,0.2)' : 'rgba(15,23,42,0.5)',
                       border: `1px solid ${isDrawMode ? 'rgba(168,85,247,0.6)' : 'rgba(59,130,246,0.2)'}`,
-                      color: isDrawMode ? '#c084fc' : '#475569',
+                      color: isDrawMode ? '#c084fc' : '#94a3b8',
                       fontWeight: isDrawMode ? 600 : 400,
                       transition: 'all 0.15s',
                     }}
@@ -648,7 +648,7 @@ export default function Sidebar({
                     ? currentMap.relationships.filter((r) => folderEntityIds.has(r.fromEntityId) || folderEntityIds.has(r.toEntityId))
                     : currentMap.relationships;
                   return visRels.length === 0 ? (
-                    <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', padding: '20px 8px', lineHeight: 1.5 }}>
+                    <div style={{ color: '#94a3b8', fontSize: 12, textAlign: 'center', padding: '20px 8px', lineHeight: 1.5 }}>
                       {connectionFolderFilter ? 'No connections for this folder' : 'Select two entities and use Connect to create a connection'}
                     </div>
                   ) : (
@@ -692,7 +692,7 @@ export default function Sidebar({
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                             <div style={{ width: 10, height: 10, borderRadius: '50%', background: rel.color, flexShrink: 0 }} />
-                            <span style={{ fontSize: 10, color: '#64748b' }}>
+                            <span style={{ fontSize: 10, color: '#8899b0' }}>
                               {rel.label || <span style={{ opacity: 0.5 }}>no label</span>}
                             </span>
                             {rel.arrowStyle === 'animated' && (
@@ -715,7 +715,7 @@ export default function Sidebar({
                         </div>
                         {rel.description && (
                           <div style={{
-                            marginTop: 4, fontSize: 10, color: '#64748b', lineHeight: 1.3,
+                            marginTop: 4, fontSize: 10, color: '#8899b0', lineHeight: 1.3,
                             borderLeft: `2px solid ${rel.color}44`, paddingLeft: 6,
                           }}>
                             {rel.description}
@@ -813,7 +813,7 @@ export default function Sidebar({
                             Connection Settings
                           </span>
                           <button onClick={() => setShowRelPanel(false)}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: 2 }}>
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 2 }}>
                             <X size={13} />
                           </button>
                         </div>
@@ -838,7 +838,7 @@ export default function Sidebar({
                               flex: 1, padding: '4px 0', borderRadius: 7, cursor: 'pointer', fontSize: 10,
                               border: `1px solid ${relArrowStyle === style ? relColor : 'rgba(59,130,246,0.2)'}`,
                               background: relArrowStyle === style ? `${relColor}20` : 'transparent',
-                              color: relArrowStyle === style ? relColor : '#64748b',
+                              color: relArrowStyle === style ? relColor : '#8899b0',
                               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
                             }}>
                               {style === 'normal' ? <Minus size={10} /> : <Zap size={10} />}
@@ -858,7 +858,7 @@ export default function Sidebar({
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button onClick={() => setShowRelPanel(false)} style={{
                             flex: 1, padding: '5px 0', borderRadius: 7, cursor: 'pointer', fontSize: 11,
-                            background: 'transparent', border: '1px solid rgba(59,130,246,0.2)', color: '#64748b',
+                            background: 'transparent', border: '1px solid rgba(59,130,246,0.2)', color: '#8899b0',
                           }}>
                             Cancel
                           </button>
@@ -878,7 +878,7 @@ export default function Sidebar({
 
                     {selectedEntity.description && (
                       <div style={{ marginBottom: 12 }}>
-                        <div style={{ fontSize: 10, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Description</div>
+                        <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Description</div>
                         <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.5 }}>{selectedEntity.description}</div>
                       </div>
                     )}
@@ -887,7 +887,7 @@ export default function Sidebar({
                       const visStats = getLatestStatsByLabel(selectedEntity.statistics, globalViewDate);
                       return visStats.length > 0 ? (
                         <div style={{ marginBottom: 12 }}>
-                          <div style={{ fontSize: 10, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+                          <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
                             Statistics{globalViewDate ? ' (filtered)' : ''}
                           </div>
                           {visStats.map((stat) => (
@@ -896,7 +896,7 @@ export default function Sidebar({
                               <div style={{ textAlign: 'right' }}>
                                 <span style={{ color: selectedEntity.color, fontWeight: 600 }}>{stat.value || '—'}</span>
                                 {stat.asOf && (
-                                  <div style={{ fontSize: 9, color: '#475569', marginTop: 1 }}>
+                                  <div style={{ fontSize: 9, color: '#94a3b8', marginTop: 1 }}>
                                     as of {new Date(stat.asOf + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                                   </div>
                                 )}
@@ -912,17 +912,17 @@ export default function Sidebar({
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                           <div style={{ fontSize: 12, fontWeight: 600, color: '#93c5fd' }}>{sub.title}</div>
                           {sub.date && (
-                            <div style={{ fontSize: 9, color: '#475569', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: 4, padding: '1px 5px' }}>
+                            <div style={{ fontSize: 9, color: '#94a3b8', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: 4, padding: '1px 5px' }}>
                               {new Date(sub.date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                             </div>
                           )}
                         </div>
-                        <div style={{ fontSize: 11, color: '#64748b', lineHeight: 1.4 }}>{sub.description}</div>
+                        <div style={{ fontSize: 11, color: '#8899b0', lineHeight: 1.4 }}>{sub.description}</div>
                       </div>
                     ))}
 
                     <div style={{ marginTop: 12 }}>
-                      <div style={{ fontSize: 10, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Connections</div>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Connections</div>
                       {currentMap.relationships
                         .filter((r) => r.fromEntityId === selectedEntity.id || r.toEntityId === selectedEntity.id)
                         .map((rel) => {
@@ -950,7 +950,7 @@ export default function Sidebar({
                     </div>
                   </div>
                 ) : (
-                  <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', padding: '20px 8px', lineHeight: 1.5 }}>
+                  <div style={{ color: '#94a3b8', fontSize: 12, textAlign: 'center', padding: '20px 8px', lineHeight: 1.5 }}>
                     Select an entity on the map or click one in the Entities tab
                   </div>
                 )}
@@ -963,7 +963,7 @@ export default function Sidebar({
             borderTop: '1px solid rgba(59,130,246,0.12)',
             padding: '12px 14px', background: 'rgba(10,17,34,0.6)', flexShrink: 0,
           }}>
-            <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+            <div style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
               Display Size
             </div>
             <div style={{ marginBottom: 10 }}>
@@ -990,10 +990,10 @@ export default function Sidebar({
                 style={{
                   marginTop: 8, width: '100%', padding: '4px 0', borderRadius: 6,
                   background: 'transparent', border: '1px solid rgba(59,130,246,0.2)',
-                  color: '#475569', fontSize: 10, cursor: 'pointer', transition: 'color 0.15s',
+                  color: '#94a3b8', fontSize: 10, cursor: 'pointer', transition: 'color 0.15s',
                 }}
                 onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = '#3b82f6')}
-                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = '#475569')}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = '#94a3b8')}
               >
                 Reset sizes
               </button>
@@ -1008,7 +1008,7 @@ export default function Sidebar({
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-      <span style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>{label}</span>
+      <span style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>{label}</span>
       <span style={{ fontSize: 12, color: '#94a3b8', textAlign: 'right', maxWidth: '60%' }}>{value}</span>
     </div>
   );

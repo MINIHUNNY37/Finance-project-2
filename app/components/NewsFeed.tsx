@@ -96,7 +96,7 @@ export default function NewsFeed({ isOpen, onClose }: NewsFeedProps) {
             <Newspaper size={18} style={{ color: '#3b82f6' }} />
             <h2 style={{ color: '#93c5fd', fontSize: 16, fontWeight: 700, margin: 0 }}>Watchlist News</h2>
             {lastUpdated && (
-              <span style={{ fontSize: 10, color: '#475569', display: 'flex', alignItems: 'center', gap: 3 }}>
+              <span style={{ fontSize: 10, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 3 }}>
                 <Clock size={10} /> {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </span>
             )}
@@ -108,12 +108,12 @@ export default function NewsFeed({ isOpen, onClose }: NewsFeedProps) {
               title="Refresh"
               style={{
                 background: 'none', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 8,
-                cursor: 'pointer', color: '#64748b', padding: '4px 8px', display: 'flex', alignItems: 'center',
+                cursor: 'pointer', color: '#8899b0', padding: '4px 8px', display: 'flex', alignItems: 'center',
               }}
             >
               <RefreshCw size={13} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
             </button>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8899b0' }}>
               <X size={20} />
             </button>
           </div>
@@ -121,7 +121,7 @@ export default function NewsFeed({ isOpen, onClose }: NewsFeedProps) {
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
           {tickers.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 0', color: '#475569' }}>
+            <div style={{ textAlign: 'center', padding: '40px 0', color: '#94a3b8' }}>
               <Newspaper size={32} style={{ marginBottom: 12, opacity: 0.3 }} />
               <p style={{ fontSize: 13, margin: '0 0 6px' }}>No tickers on this map yet.</p>
               <p style={{ fontSize: 11 }}>Add a ticker to an entity in the Invest tab to see news here.</p>
@@ -136,7 +136,7 @@ export default function NewsFeed({ isOpen, onClose }: NewsFeedProps) {
                     padding: '3px 10px', borderRadius: 20, fontSize: 10, cursor: 'pointer',
                     border: `1px solid ${filterTicker === null ? '#3b82f6' : 'rgba(59,130,246,0.2)'}`,
                     background: filterTicker === null ? 'rgba(59,130,246,0.15)' : 'transparent',
-                    color: filterTicker === null ? '#93c5fd' : '#64748b',
+                    color: filterTicker === null ? '#93c5fd' : '#8899b0',
                     fontWeight: filterTicker === null ? 600 : 400,
                   }}
                 >
@@ -150,7 +150,7 @@ export default function NewsFeed({ isOpen, onClose }: NewsFeedProps) {
                       padding: '3px 10px', borderRadius: 20, fontSize: 10, cursor: 'pointer', fontFamily: 'monospace',
                       border: `1px solid ${filterTicker === t ? tickerColor(t) : 'rgba(59,130,246,0.2)'}`,
                       background: filterTicker === t ? `${tickerColor(t)}20` : 'transparent',
-                      color: filterTicker === t ? tickerColor(t) : '#64748b',
+                      color: filterTicker === t ? tickerColor(t) : '#8899b0',
                       fontWeight: filterTicker === t ? 700 : 400,
                     }}
                   >
@@ -161,7 +161,7 @@ export default function NewsFeed({ isOpen, onClose }: NewsFeedProps) {
 
               {/* News list */}
               {loading && news.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '24px 0', color: '#475569', fontSize: 12 }}>
+                <div style={{ textAlign: 'center', padding: '24px 0', color: '#94a3b8', fontSize: 12 }}>
                   Loading news...
                 </div>
               ) : error ? (
@@ -169,7 +169,7 @@ export default function NewsFeed({ isOpen, onClose }: NewsFeedProps) {
                   {error}
                 </div>
               ) : displayed.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '24px 0', color: '#475569', fontSize: 12 }}>
+                <div style={{ textAlign: 'center', padding: '24px 0', color: '#94a3b8', fontSize: 12 }}>
                   No news found for {filterTicker ? `$${filterTicker}` : 'your watchlist'}.
                 </div>
               ) : (
@@ -206,7 +206,7 @@ export default function NewsFeed({ isOpen, onClose }: NewsFeedProps) {
                           </div>
                           {item.summary && (
                             <div style={{
-                              fontSize: 10, color: '#64748b', lineHeight: 1.4,
+                              fontSize: 10, color: '#8899b0', lineHeight: 1.4,
                               overflow: 'hidden', display: '-webkit-box',
                               WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const,
                               marginBottom: 4,
@@ -226,12 +226,12 @@ export default function NewsFeed({ isOpen, onClose }: NewsFeedProps) {
                                 ${item.ticker}
                               </span>
                             )}
-                            <span style={{ fontSize: 10, color: '#475569' }}>{item.publisher}</span>
-                            <span style={{ fontSize: 10, color: '#334155' }}>·</span>
-                            <span style={{ fontSize: 10, color: '#475569' }}>{timeAgo(item.publishedAt)}</span>
+                            <span style={{ fontSize: 10, color: '#94a3b8' }}>{item.publisher}</span>
+                            <span style={{ fontSize: 10, color: '#8899b0' }}>·</span>
+                            <span style={{ fontSize: 10, color: '#94a3b8' }}>{timeAgo(item.publishedAt)}</span>
                           </div>
                         </div>
-                        <ExternalLink size={12} style={{ color: '#334155', flexShrink: 0, marginTop: 2 }} />
+                        <ExternalLink size={12} style={{ color: '#8899b0', flexShrink: 0, marginTop: 2 }} />
                       </div>
                     </a>
                   ))}

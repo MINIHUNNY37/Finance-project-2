@@ -331,7 +331,7 @@ export default function EntityCard({
                   Connection Settings
                 </span>
                 <button onClick={(e) => { e.stopPropagation(); setShowRelPanel(false); }}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: 2 }}>
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 2 }}>
                   <X size={13} />
                 </button>
               </div>
@@ -363,7 +363,7 @@ export default function EntityCard({
                     flex: 1, padding: '4px 0', borderRadius: 7, cursor: 'pointer', fontSize: 10,
                     border: `1px solid ${relArrowStyle === 'normal' ? relColor : 'rgba(59,130,246,0.2)'}`,
                     background: relArrowStyle === 'normal' ? `${relColor}20` : 'transparent',
-                    color: relArrowStyle === 'normal' ? relColor : '#64748b',
+                    color: relArrowStyle === 'normal' ? relColor : '#8899b0',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
                   }}
                 >
@@ -375,7 +375,7 @@ export default function EntityCard({
                     flex: 1, padding: '4px 0', borderRadius: 7, cursor: 'pointer', fontSize: 10,
                     border: `1px solid ${relArrowStyle === 'animated' ? relColor : 'rgba(59,130,246,0.2)'}`,
                     background: relArrowStyle === 'animated' ? `${relColor}20` : 'transparent',
-                    color: relArrowStyle === 'animated' ? relColor : '#64748b',
+                    color: relArrowStyle === 'animated' ? relColor : '#8899b0',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
                   }}
                 >
@@ -405,7 +405,7 @@ export default function EntityCard({
                   onClick={(e) => { e.stopPropagation(); setShowRelPanel(false); }}
                   style={{
                     flex: 1, padding: '5px 0', borderRadius: 7, cursor: 'pointer', fontSize: 11,
-                    background: 'transparent', border: '1px solid rgba(59,130,246,0.2)', color: '#64748b',
+                    background: 'transparent', border: '1px solid rgba(59,130,246,0.2)', color: '#8899b0',
                   }}
                 >
                   Cancel
@@ -471,13 +471,13 @@ export default function EntityCard({
               <div style={{ display: 'flex', gap: 2, marginTop: 4, justifyContent: 'center' }}>
                 {[1, 2, 3, 4, 5].map((n) => (
                   <Star key={n} size={10} fill={n <= entity.conviction! ? entity.color : 'none'}
-                    color={n <= entity.conviction! ? entity.color : '#334155'} />
+                    color={n <= entity.conviction! ? entity.color : '#8899b0'} />
                 ))}
               </div>
             )}
             {/* Sector badge */}
             {entity.sector && (
-              <div style={{ marginTop: 4, fontSize: 9, color: '#64748b', background: 'rgba(59,130,246,0.08)',
+              <div style={{ marginTop: 4, fontSize: 9, color: '#8899b0', background: 'rgba(59,130,246,0.08)',
                 border: '1px solid rgba(59,130,246,0.15)', borderRadius: 4, padding: '1px 6px', textAlign: 'center' }}>
                 {entity.sector}
               </div>
@@ -560,7 +560,7 @@ export default function EntityCard({
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <div style={{ color: '#93c5fd', fontWeight: 600, fontSize: 11 }}>{sub.title}</div>
                       {sub.date && (
-                        <div style={{ fontSize: 9, color: '#475569', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: 4, padding: '1px 5px' }}>
+                        <div style={{ fontSize: 9, color: '#94a3b8', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: 4, padding: '1px 5px' }}>
                           {new Date(sub.date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                         </div>
                       )}
@@ -572,7 +572,7 @@ export default function EntityCard({
                   const visibleStats = getLatestStatsByLabel(entity.statistics, globalViewDate);
                   return visibleStats.length > 0 ? (
                     <div style={{ marginTop: 4, borderTop: '1px solid rgba(59,130,246,0.15)', paddingTop: 6 }}>
-                      <div style={{ fontSize: 9, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
+                      <div style={{ fontSize: 9, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
                         Key Statistics{globalViewDate ? ' (filtered)' : ''}
                       </div>
                       {visibleStats.map((stat) => (
@@ -582,7 +582,7 @@ export default function EntityCard({
                             <span style={{ color: entity.color, fontWeight: 600 }}>{stat.value || '—'}</span>
                           </div>
                           {stat.asOf && (
-                            <div style={{ fontSize: 9, color: '#475569', textAlign: 'right', marginTop: 1 }}>
+                            <div style={{ fontSize: 9, color: '#94a3b8', textAlign: 'right', marginTop: 1 }}>
                               as of {new Date(stat.asOf + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                             </div>
                           )}
@@ -594,7 +594,7 @@ export default function EntityCard({
                 {/* Thesis */}
                 {entity.thesis && (
                   <div style={{ marginTop: 6, borderTop: '1px solid rgba(59,130,246,0.15)', paddingTop: 6 }}>
-                    <div style={{ fontSize: 9, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>Thesis</div>
+                    <div style={{ fontSize: 9, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>Thesis</div>
                     <div style={{ fontSize: 10, color: '#94a3b8', lineHeight: 1.4 }}>{entity.thesis}</div>
                   </div>
                 )}
@@ -607,7 +607,7 @@ export default function EntityCard({
                 {/* Catalysts */}
                 {entity.catalysts && entity.catalysts.length > 0 && (
                   <div style={{ marginTop: 6, borderTop: '1px solid rgba(59,130,246,0.15)', paddingTop: 6 }}>
-                    <div style={{ fontSize: 9, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Catalysts</div>
+                    <div style={{ fontSize: 9, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Catalysts</div>
                     {entity.catalysts.map((cat) => (
                       <div key={cat.id} style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
                         {cat.status === 'hit' ? <CheckCircle size={10} style={{ color: '#22c55e', flexShrink: 0 }} />
@@ -618,7 +618,7 @@ export default function EntityCard({
                           {cat.event}
                         </span>
                         {cat.expectedDate && (
-                          <span style={{ fontSize: 8, color: '#475569' }}>
+                          <span style={{ fontSize: 8, color: '#94a3b8' }}>
                             {new Date(cat.expectedDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                           </span>
                         )}
@@ -630,7 +630,7 @@ export default function EntityCard({
                 {entity.tags && entity.tags.length > 0 && (
                   <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                     {entity.tags.map((t) => (
-                      <span key={t} style={{ fontSize: 8, color: '#64748b', background: 'rgba(59,130,246,0.06)',
+                      <span key={t} style={{ fontSize: 8, color: '#8899b0', background: 'rgba(59,130,246,0.06)',
                         border: '1px solid rgba(59,130,246,0.12)', borderRadius: 3, padding: '1px 5px' }}>
                         {t}
                       </span>
