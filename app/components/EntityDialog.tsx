@@ -248,7 +248,7 @@ export default function EntityDialog({
             <h2 style={{ color: '#93c5fd', fontSize: 18, fontWeight: 700 }}>
               {initialData?.id ? 'Edit Entity' : 'Create Entity'}
             </h2>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8899b0' }}>
               <X size={20} />
             </button>
           </div>
@@ -258,7 +258,7 @@ export default function EntityDialog({
               <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
                 flex: 1, padding: '8px 4px', background: 'none', border: 'none',
                 borderBottom: `2px solid ${activeTab === tab.id ? '#3b82f6' : 'transparent'}`,
-                color: activeTab === tab.id ? '#3b82f6' : '#475569',
+                color: activeTab === tab.id ? '#3b82f6' : '#94a3b8',
                 fontSize: 13, fontWeight: 500, cursor: 'pointer', transition: 'all 0.15s',
               }}>
                 {tab.label}
@@ -320,7 +320,7 @@ export default function EntityDialog({
                           {ENTITY_ICONS.find((ic) => ic.value === icon)?.label ?? 'Custom'}
                         </span>
                       </>
-                    : <span style={{ fontSize: 12, color: '#475569', fontStyle: 'italic' }}>
+                    : <span style={{ fontSize: 12, color: '#94a3b8', fontStyle: 'italic' }}>
                         Select an icon above to set the entity type
                       </span>
                   }
@@ -381,7 +381,7 @@ export default function EntityDialog({
 
               {/* Quick add preset sub-sections */}
               <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 6 }}>Quick add:</div>
+                <div style={{ fontSize: 11, color: '#8899b0', marginBottom: 6 }}>Quick add:</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
                   {['Revenue Streams', 'Key Risks', 'Customers', 'Competitors', 'Operations', 'Products', 'Key People', 'Supply Chain'].map((preset) => (
                     <button key={preset}
@@ -413,7 +413,7 @@ export default function EntityDialog({
                         style={{
                           background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)',
                           borderLeft: 'none', borderRadius: '0 6px 6px 0', padding: '3px 5px',
-                          fontSize: 10, color: '#64748b', cursor: 'pointer',
+                          fontSize: 10, color: '#8899b0', cursor: 'pointer',
                         }}
                       >×</button>
                     </span>
@@ -452,7 +452,7 @@ export default function EntityDialog({
               </div>
 
               {subItems.length === 0 && (
-                <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', padding: '12px 0' }}>
+                <div style={{ color: '#94a3b8', fontSize: 12, textAlign: 'center', padding: '12px 0' }}>
                   No sub-sections yet. Use quick add above or click Add.
                 </div>
               )}
@@ -474,7 +474,7 @@ export default function EntityDialog({
                     onChange={(e) => updateSubItem(sub.id, 'description', e.target.value)}
                     placeholder="Description..." rows={2} style={{ resize: 'vertical', marginBottom: 6 }} />
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 10, color: '#475569', flexShrink: 0 }}>Date</span>
+                    <span style={{ fontSize: 10, color: '#94a3b8', flexShrink: 0 }}>Date</span>
                     <input
                       type="date"
                       value={sub.date || ''}
@@ -530,7 +530,7 @@ export default function EntityDialog({
                     border: `1px solid ${entity_color_or_default(color)}44`, borderRadius: 12 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                       <div>
-                        <div style={{ fontSize: 11, color: '#475569', marginBottom: 2 }}>Live Price</div>
+                        <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 2 }}>Live Price</div>
                         <div style={{ fontSize: 24, fontWeight: 700, color: '#e2e8f0' }}>${livePrice.toFixed(2)}</div>
                       </div>
                       {priceChangePct != null && (
@@ -550,12 +550,12 @@ export default function EntityDialog({
                         ['52W High', week52High != null ? `$${week52High.toFixed(2)}` : '—'],
                       ].map(([label, val]) => (
                         <div key={label}>
-                          <div style={{ fontSize: 10, color: '#475569' }}>{label}</div>
+                          <div style={{ fontSize: 10, color: '#94a3b8' }}>{label}</div>
                           <div style={{ fontSize: 12, color: '#94a3b8', fontWeight: 500 }}>{val}</div>
                         </div>
                       ))}
                     </div>
-                    {lastPriceFetch && <div style={{ fontSize: 10, color: '#334155', marginTop: 8 }}>Last updated: {new Date(lastPriceFetch).toLocaleString()}</div>}
+                    {lastPriceFetch && <div style={{ fontSize: 10, color: '#8899b0', marginTop: 8 }}>Last updated: {new Date(lastPriceFetch).toLocaleString()}</div>}
                   </div>
                 )}
 
@@ -571,11 +571,11 @@ export default function EntityDialog({
                           border: `1px solid ${n <= conviction ? color : 'rgba(59,130,246,0.2)'}`,
                           transition: 'all 0.12s' }}>
                         <Star size={16} fill={n <= conviction ? color : 'none'}
-                          color={n <= conviction ? color : '#334155'} />
+                          color={n <= conviction ? color : '#8899b0'} />
                       </button>
                     ))}
                     {conviction > 0 && (
-                      <span style={{ fontSize: 11, color: '#64748b', alignSelf: 'center', marginLeft: 4 }}>
+                      <span style={{ fontSize: 11, color: '#8899b0', alignSelf: 'center', marginLeft: 4 }}>
                         {['', 'Very Low', 'Low', 'Moderate', 'High', 'Very High'][conviction]}
                       </span>
                     )}
@@ -603,7 +603,7 @@ export default function EntityDialog({
                     <div style={{ display: 'flex', justifyContent: 'space-around', textAlign: 'center' }}>
                       {upsidePct != null && (
                         <div>
-                          <div style={{ fontSize: 10, color: '#64748b', marginBottom: 4 }}>
+                          <div style={{ fontSize: 10, color: '#8899b0', marginBottom: 4 }}>
                             Upside {livePrice != null ? '(from current)' : '(from entry)'}
                           </div>
                           <div style={{ fontSize: 22, fontWeight: 700, color: upsideColor }}>
@@ -613,7 +613,7 @@ export default function EntityDialog({
                       )}
                       {mosPct != null && (
                         <div>
-                          <div style={{ fontSize: 10, color: '#64748b', marginBottom: 4 }}>Margin of Safety</div>
+                          <div style={{ fontSize: 10, color: '#8899b0', marginBottom: 4 }}>Margin of Safety</div>
                           <div style={{ fontSize: 22, fontWeight: 700, color: mosPct >= 20 ? '#22c55e' : mosPct >= 0 ? '#f59e0b' : '#ef4444' }}>
                             {mosPct.toFixed(1)}%
                           </div>
@@ -640,14 +640,14 @@ export default function EntityDialog({
                       display: 'flex', alignItems: 'center', gap: 6,
                       background: 'none', border: '1px solid rgba(59,130,246,0.2)',
                       borderRadius: 7, padding: '5px 10px', fontSize: 11, cursor: 'pointer',
-                      color: showAdvancedInvest ? '#3b82f6' : '#475569',
+                      color: showAdvancedInvest ? '#3b82f6' : '#94a3b8',
                       width: '100%', justifyContent: 'space-between',
                       transition: 'all 0.15s',
                     }}
                   >
                     <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                       <Star size={11} /> Advanced Details
-                      <span style={{ fontSize: 10, color: '#334155' }}>— sector, tags, catalysts &amp; more</span>
+                      <span style={{ fontSize: 10, color: '#8899b0' }}>— sector, tags, catalysts &amp; more</span>
                     </span>
                     <ChevronDown size={11} style={{ transform: showAdvancedInvest ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
                   </button>
@@ -663,7 +663,7 @@ export default function EntityDialog({
                               style={{ padding: '3px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer',
                                 background: sector === s ? `${color}30` : 'rgba(59,130,246,0.06)',
                                 border: `1px solid ${sector === s ? color : 'rgba(59,130,246,0.2)'}`,
-                                color: sector === s ? color : '#64748b', fontWeight: sector === s ? 600 : 400 }}>
+                                color: sector === s ? color : '#8899b0', fontWeight: sector === s ? 600 : 400 }}>
                               {s}
                             </button>
                           ))}
@@ -697,7 +697,7 @@ export default function EntityDialog({
                                 padding: '2px 8px', fontSize: 10, color: `${color}cc` }}>
                                 {t}
                                 <button onClick={() => setTags(tags.filter((x) => x !== t))}
-                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 0 }}>
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8899b0', padding: 0 }}>
                                   <X size={9} />
                                 </button>
                               </span>
@@ -727,7 +727,7 @@ export default function EntityDialog({
                           </button>
                         </div>
                         {catalysts.length === 0 && (
-                          <div style={{ color: '#475569', fontSize: 11, textAlign: 'center', padding: '8px 0' }}>
+                          <div style={{ color: '#94a3b8', fontSize: 11, textAlign: 'center', padding: '8px 0' }}>
                             Track upcoming events: earnings, product launches, rate decisions...
                           </div>
                         )}
@@ -812,7 +812,7 @@ export default function EntityDialog({
                               {lnk.title} <ExternalLink size={9} style={{ display: 'inline', marginLeft: 3 }} />
                             </a>
                             <button onClick={() => setLinks(links.filter((l) => l.id !== lnk.id))}
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: 0 }}>
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 0 }}>
                               <X size={10} />
                             </button>
                           </div>
@@ -831,7 +831,7 @@ export default function EntityDialog({
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                 <div>
                   <label style={labelStyle}>Key Statistics</label>
-                  <div style={{ fontSize: 11, color: '#475569', marginTop: 3 }}>
+                  <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>
                     Stat names are templates — fill values any time.
                   </div>
                 </div>
@@ -845,11 +845,11 @@ export default function EntityDialog({
                 const keyStats = KEY_STATS_BY_ICON[icon] ?? KEY_STATS_BY_ICON['🏢'];
                 return (
                   <div style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 11, color: '#64748b', marginBottom: 7, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ fontSize: 11, color: '#8899b0', marginBottom: 7, display: 'flex', alignItems: 'center', gap: 6 }}>
                       {icon && <span style={{ fontSize: 14 }}>{icon}</span>}
                       <span>
                         {ENTITY_ICONS.find((ic) => ic.value === icon)?.label ?? 'Company'} key stats
-                        <span style={{ color: '#334155', marginLeft: 4 }}>— click to add</span>
+                        <span style={{ color: '#8899b0', marginLeft: 4 }}>— click to add</span>
                       </span>
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -881,8 +881,8 @@ export default function EntityDialog({
               })()}
 
               {statistics.length === 0 && (
-                <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', padding: '8px 0 12px' }}>
-                  <BarChart2 size={22} style={{ margin: '0 auto 6px', color: '#334155' }} />
+                <div style={{ color: '#94a3b8', fontSize: 12, textAlign: 'center', padding: '8px 0 12px' }}>
+                  <BarChart2 size={22} style={{ margin: '0 auto 6px', color: '#8899b0' }} />
                   Click a stat above to add it, or use Add for a custom one.
                 </div>
               )}
@@ -895,14 +895,14 @@ export default function EntityDialog({
                     display: 'flex', alignItems: 'center', gap: 6,
                     background: 'none', border: '1px solid rgba(59,130,246,0.2)',
                     borderRadius: 7, padding: '5px 10px', fontSize: 11, cursor: 'pointer',
-                    color: showAdvancedStats ? '#3b82f6' : '#475569',
+                    color: showAdvancedStats ? '#3b82f6' : '#94a3b8',
                     width: '100%', justifyContent: 'space-between',
                     transition: 'all 0.15s',
                   }}
                 >
                   <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                     <BarChart2 size={11} /> Advanced Stats
-                    <span style={{ fontSize: 10, color: '#334155' }}>— all categories + custom</span>
+                    <span style={{ fontSize: 10, color: '#8899b0' }}>— all categories + custom</span>
                   </span>
                   <ChevronDown size={11} style={{ transform: showAdvancedStats ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
                 </button>
@@ -910,10 +910,10 @@ export default function EntityDialog({
                 {showAdvancedStats && (
                   <div className="fade-in" style={{ marginTop: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <div style={{ fontSize: 11, color: '#64748b' }}>
+                      <div style={{ fontSize: 11, color: '#8899b0' }}>
                         Quick add:
                         {activeStatFilter === null
-                          ? <span style={{ color: '#334155', marginLeft: 4 }}>(right-click to filter)</span>
+                          ? <span style={{ color: '#8899b0', marginLeft: 4 }}>(right-click to filter)</span>
                           : <span style={{ color: '#f59e0b', marginLeft: 4, cursor: 'pointer' }} onClick={() => setActiveStatFilter(null)}>
                               {activeStatFilter} · <span style={{ textDecoration: 'underline' }}>clear</span>
                             </span>
@@ -962,7 +962,7 @@ export default function EntityDialog({
                               style={{
                                 background: `${color}1a`, border: `1px solid ${color}40`,
                                 borderLeft: 'none', borderRadius: '0 6px 6px 0', padding: '3px 5px',
-                                fontSize: 10, color: '#64748b', cursor: 'pointer',
+                                fontSize: 10, color: '#8899b0', cursor: 'pointer',
                               }}
                             >×</button>
                           </span>
@@ -1003,7 +1003,7 @@ export default function EntityDialog({
               </div>
 
               {activeStatFilter !== null && statistics.filter(s => s.name === activeStatFilter).length === 0 && (
-                <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', padding: '10px 0' }}>
+                <div style={{ color: '#94a3b8', fontSize: 12, textAlign: 'center', padding: '10px 0' }}>
                   No &quot;{activeStatFilter}&quot; stat added yet.
                 </div>
               )}
@@ -1015,7 +1015,7 @@ export default function EntityDialog({
                   borderRadius: 10, padding: '10px 12px',
                 }}>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
-                    <div style={{ fontSize: 12, color: '#475569', width: 20, textAlign: 'center', flexShrink: 0 }}>{i + 1}</div>
+                    <div style={{ fontSize: 12, color: '#94a3b8', width: 20, textAlign: 'center', flexShrink: 0 }}>{i + 1}</div>
                     <input
                       className="input-field"
                       value={stat.name}
@@ -1036,7 +1036,7 @@ export default function EntityDialog({
                     </button>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 28 }}>
-                    <span style={{ fontSize: 10, color: '#475569', flexShrink: 0 }}>As of</span>
+                    <span style={{ fontSize: 10, color: '#94a3b8', flexShrink: 0 }}>As of</span>
                     <input
                       type="date"
                       value={stat.asOf || ''}
