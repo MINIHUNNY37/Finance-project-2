@@ -86,6 +86,8 @@ export interface Relationship {
   createdBy: string;
   createdAt: string;
   drawnPath?: { x: number; y: number }[]; // freehand path from draw mode
+  hidden?: boolean;
+  folderId?: string;
 }
 
 export interface Folder {
@@ -97,6 +99,22 @@ export interface Folder {
   createdAt: string;
 }
 
+export interface ConnectionFolder {
+  id: string;
+  name: string;
+  color: string;
+  relationshipIds: string[];
+  createdAt: string;
+}
+
+export interface GeoEventFolder {
+  id: string;
+  name: string;
+  color: string;
+  geoEventIds: string[];
+  createdAt: string;
+}
+
 export interface ScenarioMap {
   id: string;
   name: string;
@@ -105,6 +123,8 @@ export interface ScenarioMap {
   relationships: Relationship[];
   folders: Folder[];
   geoEvents: GeoEvent[];
+  connectionFolders?: ConnectionFolder[];
+  geoEventFolders?: GeoEventFolder[];
   ownerId: string;
   sharedWith: string[];
   shareToken?: string;
@@ -189,6 +209,8 @@ export interface GeoEvent {
   details: string;
   position: { x: number; y: number };
   size?: number;   // 0.5 – 3.0, default 1
+  hidden?: boolean;
+  folderId?: string;
   createdAt: string;
 }
 

@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
-import type { Entity, Relationship, Folder, ScenarioMap, GeoEvent, GeoEventType } from '../types';
+import type { Entity, Relationship, Folder, ScenarioMap, GeoEvent, GeoEventType, ConnectionFolder, GeoEventFolder } from '../types';
 
 interface MapState {
   currentMap: ScenarioMap;
@@ -59,6 +59,18 @@ interface MapState {
   updateGeoEvent: (id: string, updates: Partial<GeoEvent>) => void;
   deleteGeoEvent: (id: string) => void;
   moveGeoEvent: (id: string, position: { x: number; y: number }) => void;
+  toggleGeoEventHidden: (id: string) => void;
+  addGeoEventFolder: (folder: Omit<GeoEventFolder, 'id' | 'createdAt'>) => string;
+  deleteGeoEventFolder: (id: string) => void;
+  addGeoEventToFolder: (geoEventId: string, folderId: string) => void;
+  removeGeoEventFromFolder: (geoEventId: string, folderId: string) => void;
+
+  // Relationship visibility + folder actions
+  toggleRelationshipHidden: (id: string) => void;
+  addConnectionFolder: (folder: Omit<ConnectionFolder, 'id' | 'createdAt'>) => string;
+  deleteConnectionFolder: (id: string) => void;
+  addConnectionToFolder: (relId: string, folderId: string) => void;
+  removeConnectionFromFolder: (relId: string, folderId: string) => void;
 
   // Map actions
   saveCurrentMap: () => void;
@@ -85,6 +97,8 @@ const createDefaultMap = (): ScenarioMap => ({
   relationships: [],
   folders: [],
   geoEvents: [],
+  connectionFolders: [],
+  geoEventFolders: [],
   ownerId: 'local',
   sharedWith: [],
   mapType: 'world',
@@ -348,6 +362,116 @@ export const useMapStore = create<MapState>()(
             ...state.currentMap,
             geoEvents: (state.currentMap.geoEvents ?? []).map((e) =>
               e.id === id ? { ...e, position } : e
+            ),
+          },
+        }));
+      },
+      toggleGeoEventHidden: (id) => {
+        set((state) => ({
+          currentMap: {
+            ...state.currentMap,
+            geoEvents: (state.currentMap.geoEvents ?? []).map((e) =>
+              e.id === id ? { ...e, hidden: !e.hidden } : e
+            ),
+          },
+        }));
+      },
+      addGeoEventFolder: (folderData) => {
+        const id = uuidv4();
+        const folder: GeoEventFolder = { ...folderData, id, createdAt: new Date().toISOString() };
+        set((state) => ({
+          currentMap: { ...state.currentMap, geoEventFolders: [...(state.currentMap.geoEventFolders ?? []), folder] },
+        }));
+        return id;
+      },
+      deleteGeoEventFolder: (id) => {
+        set((state) => ({
+          currentMap: {
+            ...state.currentMap,
+            geoEventFolders: (state.currentMap.geoEventFolders ?? []).filter((f) => f.id !== id),
+            geoEvents: (state.currentMap.geoEvents ?? []).map((e) =>
+              e.folderId === id ? { ...e, folderId: undefined } : e
+            ),
+          },
+        }));
+      },
+      addGeoEventToFolder: (geoEventId, folderId) => {
+        set((state) => ({
+          currentMap: {
+            ...state.currentMap,
+            geoEvents: (state.currentMap.geoEvents ?? []).map((e) =>
+              e.id === geoEventId ? { ...e, folderId } : e
+            ),
+            geoEventFolders: (state.currentMap.geoEventFolders ?? []).map((f) =>
+              f.id === folderId ? { ...f, geoEventIds: [...new Set([...f.geoEventIds, geoEventId])] } : f
+            ),
+          },
+        }));
+      },
+      removeGeoEventFromFolder: (geoEventId, folderId) => {
+        set((state) => ({
+          currentMap: {
+            ...state.currentMap,
+            geoEvents: (state.currentMap.geoEvents ?? []).map((e) =>
+              e.id === geoEventId ? { ...e, folderId: undefined } : e
+            ),
+            geoEventFolders: (state.currentMap.geoEventFolders ?? []).map((f) =>
+              f.id === folderId ? { ...f, geoEventIds: f.geoEventIds.filter((id) => id !== geoEventId) } : f
+            ),
+          },
+        }));
+      },
+      toggleRelationshipHidden: (id) => {
+        set((state) => ({
+          currentMap: {
+            ...state.currentMap,
+            relationships: state.currentMap.relationships.map((r) =>
+              r.id === id ? { ...r, hidden: !r.hidden } : r
+            ),
+          },
+        }));
+      },
+      addConnectionFolder: (folderData) => {
+        const id = uuidv4();
+        const folder: ConnectionFolder = { ...folderData, id, createdAt: new Date().toISOString() };
+        set((state) => ({
+          currentMap: { ...state.currentMap, connectionFolders: [...(state.currentMap.connectionFolders ?? []), folder] },
+        }));
+        return id;
+      },
+      deleteConnectionFolder: (id) => {
+        set((state) => ({
+          currentMap: {
+            ...state.currentMap,
+            connectionFolders: (state.currentMap.connectionFolders ?? []).filter((f) => f.id !== id),
+            relationships: state.currentMap.relationships.map((r) =>
+              r.folderId === id ? { ...r, folderId: undefined } : r
+            ),
+          },
+        }));
+      },
+      addConnectionToFolder: (relId, folderId) => {
+        set((state) => ({
+          currentMap: {
+            ...state.currentMap,
+            relationships: state.currentMap.relationships.map((r) =>
+              r.id === relId ? { ...r, folderId } : r
+            ),
+            connectionFolders: (state.currentMap.connectionFolders ?? []).map((f) =>
+              f.id === folderId ? { ...f, relationshipIds: [...new Set([...f.relationshipIds, relId])] } : f
+            ),
+          },
+        }));
+      },
+      removeConnectionFromFolder: (relId, folderId) => {
+        set((state) => ({
+          currentMap: {
+            ...state.currentMap,
+            relationships: state.currentMap.relationships.map((r) =>
+              r.id === relId ? { ...r, folderId: undefined } : r
+            ),
+            connectionFolders: (state.currentMap.connectionFolders ?? []).map((f) =>
+              f.id === folderId ? { ...f, relationshipIds: f.relationshipIds.filter((id) => id !== relId) } : f
             ),
           },
         }));

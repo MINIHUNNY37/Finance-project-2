@@ -4,13 +4,14 @@ import React, { useState } from 'react';
 import {
   Layers, FolderOpen, Folder, Info, ChevronLeft, ChevronRight, Trash2,
   GitMerge, Link2, Zap, Minus, X, Eye, EyeOff, ArrowRight, Plus, ChevronDown,
+  Globe,
 } from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
 import { isVisibleAtDate, getLatestStatsByLabel } from '../utils/dateFilter';
 import type { ArrowStyle } from '../types';
-import { RELATIONSHIP_COLORS, ENTITY_COLORS } from '../types';
+import { RELATIONSHIP_COLORS, ENTITY_COLORS, GEO_EVENT_TYPES } from '../types';
 
-type Tab = 'entities' | 'connections' | 'info';
+type Tab = 'entities' | 'connections' | 'geo' | 'info';
 
 interface RelSettings {
   label: string;
@@ -55,21 +56,37 @@ export default function Sidebar({
     deleteEntity, deleteRelationship, setSelectedRelationship, selectedRelationshipId,
     toggleEntityHidden, globalViewDate,
     addFolder, deleteFolder, removeEntityFromFolder,
+    toggleGeoEventHidden, deleteGeoEvent,
+    addGeoEventFolder, deleteGeoEventFolder, addGeoEventToFolder, removeGeoEventFromFolder,
+    toggleRelationshipHidden,
+    addConnectionFolder, deleteConnectionFolder, addConnectionToFolder, removeConnectionFromFolder,
   } = useMapStore();
 
-  // Folder inline state
+  // Entity folder state
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [newFolderColor, setNewFolderColor] = useState(ENTITY_COLORS[0]);
-  // '__unorg__' key keeps the Uncategorized section open by default
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['__unorg__']));
+
+  // Geo event folder state
+  const [creatingGeoFolder, setCreatingGeoFolder] = useState(false);
+  const [newGeoFolderName, setNewGeoFolderName] = useState('');
+  const [newGeoFolderColor, setNewGeoFolderColor] = useState(ENTITY_COLORS[2]);
+  const [expandedGeoFolders, setExpandedGeoFolders] = useState<Set<string>>(new Set(['__geounorg__']));
+  const [dragGeoEventId, setDragGeoEventId] = useState<string | null>(null);
+  const [dropGeoFolderId, setDropGeoFolderId] = useState<string | null>(null);
+
+  // Connection folder state
+  const [creatingConnFolder, setCreatingConnFolder] = useState(false);
+  const [newConnFolderName, setNewConnFolderName] = useState('');
+  const [newConnFolderColor, setNewConnFolderColor] = useState(ENTITY_COLORS[5]);
+  const [expandedConnFolders, setExpandedConnFolders] = useState<Set<string>>(new Set(['__connunorg__']));
+  const [dragRelId, setDragRelId] = useState<string | null>(null);
+  const [dropConnFolderId, setDropConnFolderId] = useState<string | null>(null);
 
   // Drag-and-drop: entity → folder
   const [dragEntityId, setDragEntityId] = useState<string | null>(null);
   const [dropFolderId, setDropFolderId] = useState<string | null>(null);
-
-  // Connection folder filter
-  const [connectionFolderFilter, setConnectionFolderFilter] = useState<string | null>(null);
 
   const toggleFolderExpand = (id: string) => {
     setExpandedFolders((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -103,6 +120,48 @@ export default function Sidebar({
     setNewFolderName(''); setCreatingFolder(false);
   };
 
+  // ── Geo event folder helpers ──
+  const handleGeoEventDrop = (targetFolderId: string | null) => {
+    if (!dragGeoEventId) return;
+    const ev = (currentMap.geoEvents ?? []).find((e) => e.id === dragGeoEventId);
+    if (!ev) return;
+    if (targetFolderId === null) {
+      if (ev.folderId) removeGeoEventFromFolder(dragGeoEventId, ev.folderId);
+    } else {
+      if (ev.folderId && ev.folderId !== targetFolderId) removeGeoEventFromFolder(dragGeoEventId, ev.folderId);
+      addGeoEventToFolder(dragGeoEventId, targetFolderId);
+      setExpandedGeoFolders((prev) => new Set([...prev, targetFolderId]));
+    }
+    setDragGeoEventId(null); setDropGeoFolderId(null);
+  };
+  const handleCreateGeoFolder = () => {
+    if (!newGeoFolderName.trim()) return;
+    const id = addGeoEventFolder({ name: newGeoFolderName.trim(), color: newGeoFolderColor, geoEventIds: [] });
+    setExpandedGeoFolders((prev) => new Set([...prev, id]));
+    setNewGeoFolderName(''); setCreatingGeoFolder(false);
+  };
+
+  // ── Connection folder helpers ──
+  const handleConnDrop = (targetFolderId: string | null) => {
+    if (!dragRelId) return;
+    const rel = currentMap.relationships.find((r) => r.id === dragRelId);
+    if (!rel) return;
+    if (targetFolderId === null) {
+      if (rel.folderId) removeConnectionFromFolder(dragRelId, rel.folderId);
+    } else {
+      if (rel.folderId && rel.folderId !== targetFolderId) removeConnectionFromFolder(dragRelId, rel.folderId);
+      addConnectionToFolder(dragRelId, targetFolderId);
+      setExpandedConnFolders((prev) => new Set([...prev, targetFolderId]));
+    }
+    setDragRelId(null); setDropConnFolderId(null);
+  };
+  const handleCreateConnFolder = () => {
+    if (!newConnFolderName.trim()) return;
+    const id = addConnectionFolder({ name: newConnFolderName.trim(), color: newConnFolderColor, relationshipIds: [] });
+    setExpandedConnFolders((prev) => new Set([...prev, id]));
+    setNewConnFolderName(''); setCreatingConnFolder(false);
+  };
+
   const [collapsed, setCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('entities');
 
@@ -122,9 +181,10 @@ export default function Sidebar({
     : null;
 
   const tabs: { id: Tab; icon: React.ReactNode; label: string }[] = [
-    { id: 'entities', icon: <Layers size={13} />, label: 'Entities' },
-    { id: 'connections', icon: <ArrowRight size={13} />, label: 'Connections' },
-    { id: 'info', icon: <Info size={13} />, label: 'Selected' },
+    { id: 'entities', icon: <Layers size={12} />, label: 'Entities' },
+    { id: 'connections', icon: <ArrowRight size={12} />, label: 'Connections' },
+    { id: 'geo', icon: <Globe size={12} />, label: 'Events' },
+    { id: 'info', icon: <Info size={12} />, label: 'Selected' },
   ];
 
   const handleOpenRelPanel = () => {
@@ -569,165 +629,341 @@ export default function Sidebar({
             })()}
 
             {/* ── CONNECTIONS TAB ── */}
-            {activeTab === 'connections' && (
-              <div>
-                {/* Folder filter chips */}
-                {currentMap.folders.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10, paddingLeft: 2 }}>
-                    <button
-                      onClick={() => setConnectionFolderFilter(null)}
-                      style={{
-                        padding: '2px 8px', borderRadius: 12, fontSize: 9, cursor: 'pointer',
-                        border: `1px solid ${connectionFolderFilter === null ? '#3b82f6' : 'rgba(59,130,246,0.2)'}`,
-                        background: connectionFolderFilter === null ? 'rgba(59,130,246,0.15)' : 'transparent',
-                        color: connectionFolderFilter === null ? '#93c5fd' : '#8899b0',
-                        fontWeight: connectionFolderFilter === null ? 600 : 400,
-                      }}
-                    >All</button>
-                    {currentMap.folders.map((f) => (
-                      <button
-                        key={f.id}
-                        onClick={() => setConnectionFolderFilter(connectionFolderFilter === f.id ? null : f.id)}
-                        style={{
-                          padding: '2px 8px', borderRadius: 12, fontSize: 9, cursor: 'pointer',
-                          border: `1px solid ${connectionFolderFilter === f.id ? f.color : 'rgba(59,130,246,0.2)'}`,
-                          background: connectionFolderFilter === f.id ? `${f.color}20` : 'transparent',
-                          color: connectionFolderFilter === f.id ? f.color : '#8899b0',
-                          fontWeight: connectionFolderFilter === f.id ? 700 : 400,
-                        }}
-                      >
-                        {f.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingLeft: 4 }}>
-                  <div style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                    {connectionFolderFilter
-                      ? (() => {
-                          const folder = currentMap.folders.find((f) => f.id === connectionFolderFilter);
-                          const folderEntityIds = new Set(folder?.entityIds ?? []);
-                          const count = currentMap.relationships.filter((r) => folderEntityIds.has(r.fromEntityId) || folderEntityIds.has(r.toEntityId)).length;
-                          return `${folder?.name ?? ''} (${count})`;
-                        })()
-                      : `All Connections (${currentMap.relationships.length})`}
-                  </div>
-                  <button
-                    onClick={onToggleDrawMode}
-                    title={isDrawMode ? 'Exit draw mode' : 'Draw connections by right-click dragging between entities'}
+            {activeTab === 'connections' && (() => {
+              const connFolders = currentMap.connectionFolders ?? [];
+              const relMap = new Map(currentMap.relationships.map((r) => [r.id, r]));
+              const unorgRels = currentMap.relationships.filter((r) => !r.folderId);
+              const isUnorgConnExpanded = expandedConnFolders.has('__connunorg__');
+              const isDragOverUnorgConn = dropConnFolderId === '__connunorganized__';
+
+              const renderRelRow = (rel: typeof currentMap.relationships[0], inFolderId?: string) => {
+                const from = currentMap.entities.find((e) => e.id === rel.fromEntityId);
+                const to = currentMap.entities.find((e) => e.id === rel.toEntityId);
+                if (!from || !to) return null;
+                const isSelected = selectedRelationshipId === rel.id;
+                return (
+                  <div
+                    key={rel.id}
+                    draggable
+                    onDragStart={() => setDragRelId(rel.id)}
+                    onDragEnd={() => { setDragRelId(null); setDropConnFolderId(null); }}
+                    onClick={() => setSelectedRelationship(rel.id)}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: 4,
-                      padding: '3px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
-                      background: isDrawMode ? 'rgba(168,85,247,0.2)' : 'rgba(15,23,42,0.5)',
-                      border: `1px solid ${isDrawMode ? 'rgba(168,85,247,0.6)' : 'rgba(59,130,246,0.2)'}`,
-                      color: isDrawMode ? '#c084fc' : '#94a3b8',
-                      fontWeight: isDrawMode ? 600 : 400,
-                      transition: 'all 0.15s',
+                      padding: '7px 8px', borderRadius: 8, marginBottom: 3, cursor: 'grab',
+                      background: isSelected ? `${rel.color}12` : 'rgba(15,23,42,0.5)',
+                      border: `1px solid ${isSelected ? rel.color + '55' : 'rgba(59,130,246,0.1)'}`,
+                      opacity: rel.hidden ? 0.4 : 1,
+                      transition: 'all 0.1s ease',
                     }}
+                    onMouseEnter={(e) => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.06)'; }}
+                    onMouseLeave={(e) => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = isSelected ? `${rel.color}12` : 'rgba(15,23,42,0.5)'; }}
                   >
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-                    </svg>
-                    Draw
-                  </button>
-                </div>
-                {isDrawMode && (
-                  <div style={{
-                    marginBottom: 8, padding: '6px 10px', borderRadius: 7,
-                    background: 'rgba(168,85,247,0.08)', border: '1px solid rgba(168,85,247,0.25)',
-                    fontSize: 11, color: '#a78bfa', lineHeight: 1.5,
-                  }}>
-                    Right-click and drag from one entity to another to draw a connection
-                  </div>
-                )}
-                {(() => {
-                  const folderEntityIds = connectionFolderFilter
-                    ? new Set(currentMap.folders.find((f) => f.id === connectionFolderFilter)?.entityIds ?? [])
-                    : null;
-                  const visRels = folderEntityIds
-                    ? currentMap.relationships.filter((r) => folderEntityIds.has(r.fromEntityId) || folderEntityIds.has(r.toEntityId))
-                    : currentMap.relationships;
-                  return visRels.length === 0 ? (
-                    <div style={{ color: '#94a3b8', fontSize: 12, textAlign: 'center', padding: '20px 8px', lineHeight: 1.5 }}>
-                      {connectionFolderFilter ? 'No connections for this folder' : 'Select two entities and use Connect to create a connection'}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ fontSize: 13, flexShrink: 0 }}>{from.icon}</span>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: from.color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>{from.name}</span>
+                      <span style={{ flexShrink: 0, color: rel.color, fontSize: 12 }}>→</span>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: to.color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0, textAlign: 'right' }}>{to.name}</span>
+                      <span style={{ fontSize: 13, flexShrink: 0 }}>{to.icon}</span>
                     </div>
-                  ) : (
-                  visRels.map((rel) => {
-                    const from = currentMap.entities.find((e) => e.id === rel.fromEntityId);
-                    const to = currentMap.entities.find((e) => e.id === rel.toEntityId);
-                    if (!from || !to) return null;
-                    const isSelected = selectedRelationshipId === rel.id;
-                    return (
-                      <div
-                        key={rel.id}
-                        onClick={() => setSelectedRelationship(rel.id)}
-                        style={{
-                          padding: '8px 10px', borderRadius: 8, marginBottom: 4, cursor: 'pointer',
-                          background: isSelected ? `${rel.color}12` : 'rgba(15,23,42,0.5)',
-                          border: `1px solid ${isSelected ? rel.color + '55' : 'rgba(59,130,246,0.1)'}`,
-                          transition: 'all 0.1s ease',
-                        }}
-                        onMouseEnter={(e) => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.06)'; }}
-                        onMouseLeave={(e) => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'rgba(15,23,42,0.5)'; }}
-                      >
-                        {/* From → To row */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                          <span style={{ fontSize: 14, flexShrink: 0 }}>{from.icon}</span>
-                          <span style={{
-                            fontSize: 11, fontWeight: 600, color: from.color,
-                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0,
-                          }}>
-                            {from.name}
-                          </span>
-                          <span style={{ flexShrink: 0, color: rel.color, fontSize: 13 }}>→</span>
-                          <span style={{
-                            fontSize: 11, fontWeight: 600, color: to.color,
-                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0, textAlign: 'right',
-                          }}>
-                            {to.name}
-                          </span>
-                          <span style={{ fontSize: 14, flexShrink: 0 }}>{to.icon}</span>
-                        </div>
-                        {/* Meta row */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                            <div style={{ width: 10, height: 10, borderRadius: '50%', background: rel.color, flexShrink: 0 }} />
-                            <span style={{ fontSize: 10, color: '#8899b0' }}>
-                              {rel.label || <span style={{ opacity: 0.5 }}>no label</span>}
-                            </span>
-                            {rel.arrowStyle === 'animated' && (
-                              <Zap size={10} style={{ color: rel.color, opacity: 0.7, flexShrink: 0 }} />
-                            )}
-                          </div>
-                          <button
-                            title="Delete connection"
-                            onClick={(e) => { e.stopPropagation(); deleteRelationship(rel.id); }}
-                            style={{
-                              background: 'none', border: 'none', cursor: 'pointer',
-                              color: '#ef4444', padding: '1px 3px', borderRadius: 4,
-                              display: 'flex', alignItems: 'center', opacity: 0.6, transition: 'opacity 0.1s',
-                            }}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 3 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: rel.color }} />
+                        <span style={{ fontSize: 9.5, color: '#8899b0' }}>{rel.label || <span style={{ opacity: 0.4 }}>no label</span>}</span>
+                        {rel.arrowStyle === 'animated' && <Zap size={9} style={{ color: rel.color, opacity: 0.7 }} />}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                        <button title={rel.hidden ? 'Show' : 'Hide'} onClick={(e) => { e.stopPropagation(); toggleRelationshipHidden(rel.id); }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '1px 2px', display: 'flex', opacity: rel.hidden ? 1 : 0.4, transition: 'opacity 0.1s' }}
+                          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = '1')}
+                          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = rel.hidden ? '1' : '0.4')}>
+                          {rel.hidden ? <EyeOff size={11} /> : <Eye size={11} />}
+                        </button>
+                        {inFolderId ? (
+                          <button title="Remove from folder" onClick={(e) => { e.stopPropagation(); removeConnectionFromFolder(rel.id, inFolderId); }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '1px 2px', display: 'flex', opacity: 0.4, transition: 'opacity 0.1s' }}
                             onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = '1')}
-                            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = '0.6')}
-                          >
-                            <Trash2 size={12} />
+                            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = '0.4')}>
+                            <X size={10} />
+                          </button>
+                        ) : (
+                          <button title="Delete" onClick={(e) => { e.stopPropagation(); deleteRelationship(rel.id); }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '1px 2px', display: 'flex', opacity: 0.55, transition: 'opacity 0.1s' }}
+                            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = '1')}
+                            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = '0.55')}>
+                            <Trash2 size={11} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              };
+
+              return (
+                <div>
+                  {/* Header */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <span style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                      Connections ({currentMap.relationships.length})
+                    </span>
+                    <div style={{ display: 'flex', gap: 5 }}>
+                      <button onClick={onToggleDrawMode}
+                        style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 6, fontSize: 10, cursor: 'pointer',
+                          background: isDrawMode ? 'rgba(168,85,247,0.2)' : 'rgba(15,23,42,0.5)',
+                          border: `1px solid ${isDrawMode ? 'rgba(168,85,247,0.6)' : 'rgba(59,130,246,0.2)'}`,
+                          color: isDrawMode ? '#c084fc' : '#94a3b8' }}>
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                        Draw
+                      </button>
+                      <button onClick={() => setCreatingConnFolder(true)}
+                        style={{ display: 'flex', alignItems: 'center', gap: 3, background: 'none', border: '1px solid rgba(59,130,246,0.25)', borderRadius: 6, cursor: 'pointer', color: '#3b82f6', padding: '2px 7px', fontSize: 10 }}>
+                        <Plus size={9} /> Folder
+                      </button>
+                    </div>
+                  </div>
+
+                  {isDrawMode && (
+                    <div style={{ marginBottom: 8, padding: '5px 9px', borderRadius: 7, background: 'rgba(168,85,247,0.08)', border: '1px solid rgba(168,85,247,0.25)', fontSize: 10, color: '#a78bfa', lineHeight: 1.5 }}>
+                      Right-click drag from entity to entity
+                    </div>
+                  )}
+
+                  {creatingConnFolder && (
+                    <div className="fade-in" style={{ background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 8, padding: 10, marginBottom: 8 }}>
+                      <input className="input-field" value={newConnFolderName} onChange={(e) => setNewConnFolderName(e.target.value)}
+                        placeholder="Folder name..." autoFocus onKeyDown={(e) => { if (e.key === 'Enter') handleCreateConnFolder(); if (e.key === 'Escape') setCreatingConnFolder(false); }}
+                        style={{ marginBottom: 8, fontSize: 12 }} />
+                      <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+                        {ENTITY_COLORS.slice(0, 5).map((c) => (
+                          <button key={c} onClick={() => setNewConnFolderColor(c)} style={{ width: 18, height: 18, borderRadius: '50%', background: c, border: newConnFolderColor === c ? '2px solid white' : 'none', cursor: 'pointer' }} />
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button className="btn-primary" style={{ flex: 1, padding: '4px 6px', fontSize: 11 }} onClick={handleCreateConnFolder}>Create</button>
+                        <button className="btn-ghost" style={{ padding: '4px 6px', fontSize: 11 }} onClick={() => setCreatingConnFolder(false)}>Cancel</button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Connection folder accordion */}
+                  {connFolders.map((folder) => {
+                    const folderRels = folder.relationshipIds.map((id) => relMap.get(id)).filter(Boolean) as typeof currentMap.relationships;
+                    const isExpanded = expandedConnFolders.has(folder.id);
+                    const isDragOver = dropConnFolderId === folder.id;
+                    return (
+                      <div key={folder.id} style={{ marginBottom: 2 }}>
+                        <div onClick={() => setExpandedConnFolders((prev) => { const n = new Set(prev); n.has(folder.id) ? n.delete(folder.id) : n.add(folder.id); return n; })}
+                          onDragOver={(e) => { e.preventDefault(); setDropConnFolderId(folder.id); }}
+                          onDragLeave={() => setDropConnFolderId(null)}
+                          onDrop={() => handleConnDrop(folder.id)}
+                          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', borderRadius: 7, cursor: 'pointer',
+                            background: isDragOver ? `${folder.color}20` : isExpanded ? `${folder.color}10` : 'rgba(15,23,42,0.4)',
+                            border: `1px solid ${isDragOver ? folder.color : isExpanded ? `${folder.color}40` : 'rgba(59,130,246,0.1)'}`,
+                            outline: isDragOver ? `2px dashed ${folder.color}` : 'none', outlineOffset: -2, transition: 'all 0.12s' }}>
+                          {isExpanded ? <FolderOpen size={12} style={{ color: folder.color, flexShrink: 0 }} /> : <Folder size={12} style={{ color: folder.color, flexShrink: 0 }} />}
+                          <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{folder.name}</span>
+                          <span style={{ fontSize: 10, color: '#94a3b8', flexShrink: 0 }}>{folderRels.length}</span>
+                          <ChevronDown size={10} style={{ color: '#94a3b8', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }} />
+                          <button onClick={(e) => { e.stopPropagation(); deleteConnectionFolder(folder.id); }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '0 1px', display: 'flex', flexShrink: 0, opacity: 0.5 }}
+                            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = '1')}
+                            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = '0.5')}>
+                            <Trash2 size={10} />
                           </button>
                         </div>
-                        {rel.description && (
-                          <div style={{
-                            marginTop: 4, fontSize: 10, color: '#8899b0', lineHeight: 1.3,
-                            borderLeft: `2px solid ${rel.color}44`, paddingLeft: 6,
-                          }}>
-                            {rel.description}
+                        {isExpanded && (
+                          <div className="fade-in" style={{ marginLeft: 8, paddingLeft: 8, paddingTop: 2, paddingBottom: 2, borderLeft: `2px solid ${folder.color}35` }}>
+                            {folderRels.length === 0 ? <div style={{ fontSize: 10, color: '#8899b0', padding: '5px 4px', fontStyle: 'italic' }}>Empty — drag connections here</div>
+                              : folderRels.map((r) => renderRelRow(r, folder.id))}
                           </div>
                         )}
                       </div>
                     );
-                  })
-                  );
-                })()}
-              </div>
-            )}
+                  })}
+
+                  {/* Uncategorized connections */}
+                  {unorgRels.length > 0 && (
+                    <div style={{ marginTop: connFolders.length > 0 ? 6 : 0 }}>
+                      <div onClick={() => setExpandedConnFolders((prev) => { const n = new Set(prev); n.has('__connunorg__') ? n.delete('__connunorg__') : n.add('__connunorg__'); return n; })}
+                        onDragOver={(e) => { e.preventDefault(); setDropConnFolderId('__connunorganized__'); }}
+                        onDragLeave={() => setDropConnFolderId(null)}
+                        onDrop={() => handleConnDrop(null)}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', borderRadius: 7, cursor: 'pointer', marginBottom: 2,
+                          background: isDragOverUnorgConn ? 'rgba(100,116,139,0.15)' : isUnorgConnExpanded ? 'rgba(59,130,246,0.06)' : 'rgba(15,23,42,0.4)',
+                          border: `1px solid ${isDragOverUnorgConn ? 'rgba(100,116,139,0.5)' : 'rgba(59,130,246,0.1)'}`,
+                          outline: isDragOverUnorgConn ? '2px dashed rgba(100,116,139,0.5)' : 'none', outlineOffset: -2, transition: 'all 0.12s' }}>
+                        <ArrowRight size={12} style={{ color: '#8899b0', flexShrink: 0 }} />
+                        <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: '#94a3b8' }}>{connFolders.length > 0 ? 'Uncategorized' : 'All Connections'}</span>
+                        <span style={{ fontSize: 10, color: '#94a3b8', flexShrink: 0 }}>{unorgRels.length}</span>
+                        <ChevronDown size={10} style={{ color: '#94a3b8', transform: isUnorgConnExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }} />
+                      </div>
+                      {isUnorgConnExpanded && (
+                        <div className="fade-in" style={{ marginLeft: 8, paddingLeft: 8, paddingTop: 2, paddingBottom: 2, borderLeft: '2px solid rgba(59,130,246,0.15)' }}>
+                          {unorgRels.map((r) => renderRelRow(r))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {currentMap.relationships.length === 0 && (
+                    <div style={{ color: '#94a3b8', fontSize: 12, textAlign: 'center', padding: '20px 8px', lineHeight: 1.5 }}>
+                      Select two entities and use Connect to create a connection
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── GEO EVENTS TAB ── */}
+            {activeTab === 'geo' && (() => {
+              const geoFolders = currentMap.geoEventFolders ?? [];
+              const geoEvents = currentMap.geoEvents ?? [];
+              const geoMap = new Map(geoEvents.map((e) => [e.id, e]));
+              const unorgGeo = geoEvents.filter((e) => !e.folderId);
+              const isUnorgGeoExpanded = expandedGeoFolders.has('__geounorg__');
+              const isDragOverUnorgGeo = dropGeoFolderId === '__geounorganized__';
+
+              const renderGeoRow = (ev: typeof geoEvents[0], inFolderId?: string) => {
+                const meta = GEO_EVENT_TYPES.find((t) => t.value === ev.type) ?? GEO_EVENT_TYPES[0];
+                return (
+                  <div key={ev.id}
+                    draggable
+                    onDragStart={() => setDragGeoEventId(ev.id)}
+                    onDragEnd={() => { setDragGeoEventId(null); setDropGeoFolderId(null); }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 8px', borderRadius: 7, cursor: 'grab', marginBottom: 1,
+                      background: 'transparent', border: '1px solid transparent',
+                      opacity: ev.hidden ? 0.4 : 1, transition: 'all 0.1s' }}
+                    onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.06)')}
+                    onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = 'transparent')}>
+                    <div style={{ width: 26, height: 26, borderRadius: 6, flexShrink: 0, background: meta.color + '22', border: `1px solid ${meta.color}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>
+                      {meta.emoji}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.name}</div>
+                      <div style={{ fontSize: 10, color: meta.color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta.label}</div>
+                    </div>
+                    <button title={ev.hidden ? 'Show' : 'Hide'} onClick={(e) => { e.stopPropagation(); toggleGeoEventHidden(ev.id); }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '2px 3px', display: 'flex', flexShrink: 0, opacity: ev.hidden ? 1 : 0.4, transition: 'opacity 0.1s' }}
+                      onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = '1')}
+                      onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = ev.hidden ? '1' : '0.4')}>
+                      {ev.hidden ? <EyeOff size={12} /> : <Eye size={12} />}
+                    </button>
+                    {inFolderId ? (
+                      <button title="Remove from folder" onClick={(e) => { e.stopPropagation(); removeGeoEventFromFolder(ev.id, inFolderId); }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '2px 3px', display: 'flex', flexShrink: 0, opacity: 0.4, transition: 'opacity 0.1s' }}
+                        onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = '1')}
+                        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = '0.4')}>
+                        <X size={11} />
+                      </button>
+                    ) : (
+                      <button title="Delete" onClick={(e) => { e.stopPropagation(); deleteGeoEvent(ev.id); }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '2px 3px', display: 'flex', flexShrink: 0, opacity: 0.55, transition: 'opacity 0.1s' }}
+                        onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = '1')}
+                        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = '0.55')}>
+                        <Trash2 size={12} />
+                      </button>
+                    )}
+                  </div>
+                );
+              };
+
+              return (
+                <div>
+                  {/* Header */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <span style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                      Geo Events ({geoEvents.length})
+                    </span>
+                    <button onClick={() => setCreatingGeoFolder(true)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: '1px solid rgba(59,130,246,0.25)', borderRadius: 6, cursor: 'pointer', color: '#3b82f6', padding: '2px 7px', fontSize: 10 }}>
+                      <Plus size={9} /> Folder
+                    </button>
+                  </div>
+
+                  {creatingGeoFolder && (
+                    <div className="fade-in" style={{ background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 8, padding: 10, marginBottom: 8 }}>
+                      <input className="input-field" value={newGeoFolderName} onChange={(e) => setNewGeoFolderName(e.target.value)}
+                        placeholder="Folder name..." autoFocus onKeyDown={(e) => { if (e.key === 'Enter') handleCreateGeoFolder(); if (e.key === 'Escape') setCreatingGeoFolder(false); }}
+                        style={{ marginBottom: 8, fontSize: 12 }} />
+                      <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+                        {ENTITY_COLORS.slice(0, 5).map((c) => (
+                          <button key={c} onClick={() => setNewGeoFolderColor(c)} style={{ width: 18, height: 18, borderRadius: '50%', background: c, border: newGeoFolderColor === c ? '2px solid white' : 'none', cursor: 'pointer' }} />
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button className="btn-primary" style={{ flex: 1, padding: '4px 6px', fontSize: 11 }} onClick={handleCreateGeoFolder}>Create</button>
+                        <button className="btn-ghost" style={{ padding: '4px 6px', fontSize: 11 }} onClick={() => setCreatingGeoFolder(false)}>Cancel</button>
+                      </div>
+                    </div>
+                  )}
+
+                  {geoFolders.map((folder) => {
+                    const folderEvs = folder.geoEventIds.map((id) => geoMap.get(id)).filter(Boolean) as typeof geoEvents;
+                    const isExpanded = expandedGeoFolders.has(folder.id);
+                    const isDragOver = dropGeoFolderId === folder.id;
+                    return (
+                      <div key={folder.id} style={{ marginBottom: 2 }}>
+                        <div onClick={() => setExpandedGeoFolders((prev) => { const n = new Set(prev); n.has(folder.id) ? n.delete(folder.id) : n.add(folder.id); return n; })}
+                          onDragOver={(e) => { e.preventDefault(); setDropGeoFolderId(folder.id); }}
+                          onDragLeave={() => setDropGeoFolderId(null)}
+                          onDrop={() => handleGeoEventDrop(folder.id)}
+                          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', borderRadius: 7, cursor: 'pointer',
+                            background: isDragOver ? `${folder.color}20` : isExpanded ? `${folder.color}10` : 'rgba(15,23,42,0.4)',
+                            border: `1px solid ${isDragOver ? folder.color : isExpanded ? `${folder.color}40` : 'rgba(59,130,246,0.1)'}`,
+                            outline: isDragOver ? `2px dashed ${folder.color}` : 'none', outlineOffset: -2, transition: 'all 0.12s' }}>
+                          {isExpanded ? <FolderOpen size={12} style={{ color: folder.color, flexShrink: 0 }} /> : <Folder size={12} style={{ color: folder.color, flexShrink: 0 }} />}
+                          <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{folder.name}</span>
+                          <span style={{ fontSize: 10, color: '#94a3b8', flexShrink: 0 }}>{folderEvs.length}</span>
+                          <ChevronDown size={10} style={{ color: '#94a3b8', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }} />
+                          <button onClick={(e) => { e.stopPropagation(); deleteGeoEventFolder(folder.id); }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '0 1px', display: 'flex', flexShrink: 0, opacity: 0.5 }}
+                            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = '1')}
+                            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = '0.5')}>
+                            <Trash2 size={10} />
+                          </button>
+                        </div>
+                        {isExpanded && (
+                          <div className="fade-in" style={{ marginLeft: 8, paddingLeft: 8, paddingTop: 2, paddingBottom: 2, borderLeft: `2px solid ${folder.color}35` }}>
+                            {folderEvs.length === 0 ? <div style={{ fontSize: 10, color: '#8899b0', padding: '5px 4px', fontStyle: 'italic' }}>Empty — drag events here</div>
+                              : folderEvs.map((ev) => renderGeoRow(ev, folder.id))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {/* Uncategorized geo events */}
+                  {unorgGeo.length > 0 && (
+                    <div style={{ marginTop: geoFolders.length > 0 ? 6 : 0 }}>
+                      <div onClick={() => setExpandedGeoFolders((prev) => { const n = new Set(prev); n.has('__geounorg__') ? n.delete('__geounorg__') : n.add('__geounorg__'); return n; })}
+                        onDragOver={(e) => { e.preventDefault(); setDropGeoFolderId('__geounorganized__'); }}
+                        onDragLeave={() => setDropGeoFolderId(null)}
+                        onDrop={() => handleGeoEventDrop(null)}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', borderRadius: 7, cursor: 'pointer', marginBottom: 2,
+                          background: isDragOverUnorgGeo ? 'rgba(100,116,139,0.15)' : isUnorgGeoExpanded ? 'rgba(59,130,246,0.06)' : 'rgba(15,23,42,0.4)',
+                          border: `1px solid ${isDragOverUnorgGeo ? 'rgba(100,116,139,0.5)' : 'rgba(59,130,246,0.1)'}`,
+                          outline: isDragOverUnorgGeo ? '2px dashed rgba(100,116,139,0.5)' : 'none', outlineOffset: -2, transition: 'all 0.12s' }}>
+                        <Globe size={12} style={{ color: '#8899b0', flexShrink: 0 }} />
+                        <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: '#94a3b8' }}>{geoFolders.length > 0 ? 'Uncategorized' : 'All Events'}</span>
+                        <span style={{ fontSize: 10, color: '#94a3b8', flexShrink: 0 }}>{unorgGeo.length}</span>
+                        <ChevronDown size={10} style={{ color: '#94a3b8', transform: isUnorgGeoExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }} />
+                      </div>
+                      {isUnorgGeoExpanded && (
+                        <div className="fade-in" style={{ marginLeft: 8, paddingLeft: 8, paddingTop: 2, paddingBottom: 2, borderLeft: '2px solid rgba(59,130,246,0.15)' }}>
+                          {unorgGeo.map((ev) => renderGeoRow(ev))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {geoEvents.length === 0 && (
+                    <div style={{ color: '#94a3b8', fontSize: 12, textAlign: 'center', padding: '20px 8px', lineHeight: 1.5 }}>
+                      Click &quot;Add Geo Event&quot; in the toolbar to place an event on the map
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* ── SELECTED TAB ── */}
             {activeTab === 'info' && (

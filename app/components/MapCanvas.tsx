@@ -91,10 +91,11 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   const [relDialogOpen, setRelDialogOpen] = useState(false);
   const [editingRel, setEditingRel] = useState<Relationship | undefined>();
 
-  // Geo event dialog
+  // Geo event dialog + selection
   const [geoDialogOpen, setGeoDialogOpen] = useState(false);
   const [editingGeoEvent, setEditingGeoEvent] = useState<GeoEvent | undefined>();
   const [pendingGeoPosition, setPendingGeoPosition] = useState<{ x: number; y: number } | undefined>();
+  const [selectedGeoEventId, setSelectedGeoEventId] = useState<string | null>(null);
 
   // Draw-connection drag state
   const [drawingFromId, setDrawingFromId] = useState<string | null>(null);
@@ -310,6 +311,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   const handleCanvasClick = useCallback(() => {
     if (wasPanning.current) return;
     setSelectedEntity(null);
+    setSelectedGeoEventId(null);
     if (connectingFromId) {
       setConnectingFrom(null);
       pendingRelSettingsRef.current = null;
@@ -521,6 +523,12 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
           mapWidth={dims.width}
           mapHeight={dims.height}
           zoom={zoom}
+          selected={selectedGeoEventId === ev.id}
+          onSelect={(id) => {
+            setSelectedGeoEventId(id);
+            // Deselect entity/relationship when geo event selected
+            if (id) { useMapStore.getState().setSelectedEntity(null); useMapStore.getState().setSelectedRelationship(null); }
+          }}
         />
       ))}
     </>
@@ -544,6 +552,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   );
 
   const visibleRelationships = currentMap.relationships.filter((r) => {
+    if (r.hidden) return false;
     const from = currentMap.entities.find((e) => e.id === r.fromEntityId);
     const to = currentMap.entities.find((e) => e.id === r.toEntityId);
     return !from?.hidden && !to?.hidden;
