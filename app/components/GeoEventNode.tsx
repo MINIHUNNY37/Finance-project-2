@@ -49,7 +49,7 @@ export default function GeoEventNode({
   const meta = GEO_EVENT_TYPES.find((t) => t.value === event.type) ?? GEO_EVENT_TYPES[0];
   const color = meta.color;
   const userSize = event.size ?? 1;
-  const isFixed = event.fixedSize !== false; // default true = fixed screen size
+  const isFixed = event.fixedSize === true; // default false = relative (scales with zoom)
   // Fixed: undo canvas zoom so node stays constant screen size
   // Relative: scale WITH canvas zoom (grows/shrinks as you zoom)
   const totalScale = isFixed ? (1 / zoom) * userSize : userSize;
@@ -92,16 +92,6 @@ export default function GeoEventNode({
       document.addEventListener('mouseup', onUp);
     },
     [event, mapWidth, mapHeight, zoom, moveGeoEvent, onSelect, selected]
-  );
-
-  // Double-click always opens edit (no need to select first)
-  const handleDoubleClick = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      onEdit(event);
-    },
-    [event, onEdit]
   );
 
   // ── Resize handle drag ────────────────────────────────────────────────────
@@ -166,7 +156,7 @@ export default function GeoEventNode({
         {/* Inner: hit area, centered, scaled */}
         <div
           onMouseDown={handleMouseDown}
-          onDoubleClick={handleDoubleClick}
+
           style={{
             position: 'absolute',
             left: -BASE,
@@ -299,7 +289,7 @@ export default function GeoEventNode({
                 <div
                   onMouseDown={(e) => e.stopPropagation()}
                   onClick={(e) => { e.stopPropagation(); onEdit(event); }}
-                  title="Edit event (or double-click anywhere)"
+                  title="Edit event"
                   style={{
                     width: 34, height: 34, borderRadius: 9,
                     background: 'rgba(15,23,42,0.95)',
