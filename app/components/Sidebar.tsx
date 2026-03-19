@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Layers, FolderOpen, Folder, Info, ChevronLeft, ChevronRight, Trash2,
   GitMerge, Link2, Zap, Minus, X, Eye, EyeOff, ArrowRight, Plus, ChevronDown,
-  Globe,
+  Globe, BookOpen, Search, PlusCircle, ChevronUp,
 } from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
 import { isVisibleAtDate, getLatestStatsByLabel } from '../utils/dateFilter';
@@ -87,6 +87,122 @@ export default function Sidebar({
   // Drag-and-drop: entity → folder
   const [dragEntityId, setDragEntityId] = useState<string | null>(null);
   const [dropFolderId, setDropFolderId] = useState<string | null>(null);
+
+  // ── Stock Library ──────────────────────────────────────────────────────────
+  interface LibraryStock {
+    ticker: string; name: string; sector: string | null; exchange: string;
+    isNasdaq100: boolean; isSP500: boolean;
+    stats: { price: number | null; marketCap: string | null; peRatio: string | null; eps: string | null; dividendYield: string | null; week52High: number | null; week52Low: number | null } | null;
+  }
+  const [libraryOpen, setLibraryOpen]       = useState(false);
+  const [libSearch,   setLibSearch]         = useState('');
+  const [libIndex,    setLibIndex]          = useState<'all' | 'nasdaq100' | 'sp500'>('all');
+  const [libStocks,   setLibStocks]         = useState<LibraryStock[]>([]);
+  const [libTotal,    setLibTotal]          = useState(0);
+  const [libOffset,   setLibOffset]         = useState(0);
+  const [libLoading,  setLibLoading]        = useState(false);
+  const [libAdded,    setLibAdded]          = useState<Set<string>>(new Set());
+  const libSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const LIB_LIMIT = 30;
+
+  const fetchLibraryStocks = useCallback(async (search: string, index: string, offset: number) => {
+    setLibLoading(true);
+    try {
+      const params = new URLSearchParams({ search, index, limit: String(LIB_LIMIT), offset: String(offset) });
+      const res = await fetch(`/api/markets/stocks?${params}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setLibStocks(offset === 0 ? data.stocks : (prev: LibraryStock[]) => [...prev, ...data.stocks]);
+      setLibTotal(data.total);
+    } catch { /* ignore */ } finally { setLibLoading(false); }
+  }, []);
+
+  useEffect(() => {
+    if (!libraryOpen) return;
+    if (libSearchTimer.current) clearTimeout(libSearchTimer.current);
+    libSearchTimer.current = setTimeout(() => {
+      setLibOffset(0);
+      fetchLibraryStocks(libSearch, libIndex, 0);
+    }, 250);
+    return () => { if (libSearchTimer.current) clearTimeout(libSearchTimer.current); };
+  }, [libraryOpen, libSearch, libIndex, fetchLibraryStocks]);
+
+  // Re-fetch when offset changes (load more)
+  useEffect(() => {
+    if (!libraryOpen || libOffset === 0) return;
+    fetchLibraryStocks(libSearch, libIndex, libOffset);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [libOffset]);
+
+  const handleAddFromLibrary = (stock: LibraryStock) => {
+    const { addEntity, addFolder: addFolderStore, addEntityToFolder, currentMap: map } = useMapStore.getState();
+    const now = new Date().toISOString();
+
+    // Find or create the index folder
+    const folderName = stock.isNasdaq100 ? 'NASDAQ-100' : 'S&P 500';
+    let folder = map.folders.find(f => f.name === folderName);
+    let folderId: string | undefined;
+    if (!folder) {
+      folderId = addFolderStore({ name: folderName, color: stock.isNasdaq100 ? '#3B82F6' : '#10B981', entityIds: [], createdBy: 'system' });
+    } else {
+      folderId = folder.id;
+    }
+
+    // Spread entity across canvas — avoid stacking exactly
+    const count = map.entities.length;
+    const col = count % 8;
+    const row = Math.floor(count / 8);
+
+    const sectorIconMap: Record<string, string> = {
+      'Technology': '💻', 'Communication Services': '📺', 'Consumer Discretionary': '🛒',
+      'Consumer Staples': '🛒', 'Healthcare': '🏥', 'Financials': '💰',
+      'Industrials': '🏭', 'Energy': '⚡', 'Materials': '⛏️', 'Real Estate': '🏗️', 'Utilities': '🔋',
+    };
+    const sectorColorMap: Record<string, string> = {
+      'Technology': '#3B82F6', 'Communication Services': '#06B6D4', 'Consumer Discretionary': '#F59E0B',
+      'Consumer Staples': '#10B981', 'Healthcare': '#EC4899', 'Financials': '#F97316',
+      'Industrials': '#8B5CF6', 'Energy': '#EF4444', 'Materials': '#6366F1', 'Real Estate': '#14B8A6', 'Utilities': '#84CC16',
+    };
+
+    const s = stock.stats;
+    const statistics = [
+      { id: crypto.randomUUID(), name: 'Price',          value: s?.price        ? `$${s.price.toFixed(2)}`  : 'N/A' },
+      { id: crypto.randomUUID(), name: 'Market Cap',     value: s?.marketCap    ?? 'N/A' },
+      { id: crypto.randomUUID(), name: 'P/E Ratio',      value: s?.peRatio      ?? 'N/A' },
+      { id: crypto.randomUUID(), name: 'EPS (TTM)',      value: s?.eps           ?? 'N/A' },
+      { id: crypto.randomUUID(), name: 'Dividend Yield', value: s?.dividendYield ?? 'N/A' },
+    ];
+
+    const entityId = addEntity({
+      name:        stock.name,
+      icon:        sectorIconMap[stock.sector ?? ''] ?? '🏢',
+      subtitle:    `${stock.ticker} · ${stock.exchange}`,
+      description: stock.sector ?? '',
+      subItems:    [],
+      statistics,
+      color:       sectorColorMap[stock.sector ?? ''] ?? '#6B7280',
+      country:     'US',
+      position:    { x: 120 + col * 200, y: 100 + row * 180 },
+      locked:      false, fixedSize: true, hidden: false,
+      folderId,
+      createdBy:   'user',
+      ticker:      stock.ticker,
+      livePrice:   s?.price      ?? undefined,
+      marketCap:   s?.marketCap  ?? undefined,
+      peRatio:     s?.peRatio    ?? undefined,
+      week52Low:   s?.week52Low  ?? undefined,
+      week52High:  s?.week52High ?? undefined,
+      sector:      stock.sector  ?? undefined,
+      catalysts:   [],
+      tags:        [],
+      links:       [],
+    });
+
+    if (folderId) addEntityToFolder(entityId, folderId);
+    setLibAdded(prev => new Set([...prev, stock.ticker]));
+    setTimeout(() => setLibAdded(prev => { const n = new Set(prev); n.delete(stock.ticker); return n; }), 2000);
+  };
+  // ── End Stock Library ──────────────────────────────────────────────────────
 
   const toggleFolderExpand = (id: string) => {
     setExpandedFolders((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -555,6 +671,130 @@ export default function Sidebar({
                       Click &quot;Add Entity&quot; to place a company on the map
                     </div>
                   )}
+
+                  {/* ── Stock Library ─────────────────────────────────── */}
+                  <div style={{ marginTop: 10, marginBottom: 4 }}>
+                    {/* Toggle button */}
+                    <button
+                      onClick={() => setLibraryOpen(v => !v)}
+                      style={{
+                        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '7px 10px', borderRadius: 8, border: '1px solid rgba(6,182,212,0.25)',
+                        background: libraryOpen ? 'rgba(6,182,212,0.08)' : 'rgba(15,23,42,0.5)',
+                        cursor: 'pointer', color: libraryOpen ? '#06b6d4' : '#8899b0',
+                        fontSize: 12, fontWeight: 600, transition: 'all 0.15s',
+                      }}
+                    >
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <BookOpen size={13} /> Stock Library
+                        <span style={{ fontSize: 10, fontWeight: 400, color: '#64748b' }}>
+                          NASDAQ-100 &amp; S&amp;P 500
+                        </span>
+                      </span>
+                      {libraryOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                    </button>
+
+                    {libraryOpen && (
+                      <div className="fade-in" style={{ marginTop: 6, background: 'rgba(10,18,35,0.7)', border: '1px solid rgba(6,182,212,0.15)', borderRadius: 10, padding: 10 }}>
+                        {/* Search + index filter */}
+                        <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                          <div style={{ flex: 1, position: 'relative' }}>
+                            <Search size={11} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: '#64748b', pointerEvents: 'none' }} />
+                            <input
+                              className="input-field"
+                              value={libSearch}
+                              onChange={e => setLibSearch(e.target.value)}
+                              placeholder="Search ticker or name…"
+                              style={{ paddingLeft: 26, fontSize: 11, padding: '5px 8px 5px 26px' }}
+                            />
+                          </div>
+                          <select
+                            value={libIndex}
+                            onChange={e => setLibIndex(e.target.value as 'all' | 'nasdaq100' | 'sp500')}
+                            style={{ fontSize: 11, padding: '4px 6px', background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 6, color: '#94a3b8', cursor: 'pointer' }}
+                          >
+                            <option value="all">All</option>
+                            <option value="nasdaq100">NASDAQ-100</option>
+                            <option value="sp500">S&amp;P 500</option>
+                          </select>
+                        </div>
+
+                        {/* Stock list */}
+                        <div style={{ maxHeight: 260, overflowY: 'auto' }}>
+                          {libLoading && libStocks.length === 0 ? (
+                            <div style={{ color: '#64748b', fontSize: 11, textAlign: 'center', padding: 16 }}>Loading…</div>
+                          ) : libStocks.length === 0 ? (
+                            <div style={{ color: '#64748b', fontSize: 11, textAlign: 'center', padding: 16 }}>
+                              {libSearch ? 'No results' : 'No stocks in library yet — run the market seeder first.'}
+                            </div>
+                          ) : (
+                            <>
+                              {libStocks.map((stock) => {
+                                const alreadyOnMap = currentMap.entities.some(e => e.ticker === stock.ticker);
+                                const justAdded    = libAdded.has(stock.ticker);
+                                return (
+                                  <div
+                                    key={stock.ticker}
+                                    style={{
+                                      display: 'flex', alignItems: 'center', gap: 8,
+                                      padding: '5px 6px', borderRadius: 6, marginBottom: 2,
+                                      background: alreadyOnMap ? 'rgba(16,185,129,0.06)' : 'transparent',
+                                      transition: 'background 0.1s',
+                                    }}
+                                    onMouseEnter={e => { if (!alreadyOnMap) (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.07)'; }}
+                                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = alreadyOnMap ? 'rgba(16,185,129,0.06)' : 'transparent'; }}
+                                  >
+                                    <div style={{ minWidth: 42 }}>
+                                      <span style={{ fontSize: 11, fontWeight: 700, color: '#93c5fd' }}>{stock.ticker}</span>
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                      <div style={{ fontSize: 10, color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stock.name}</div>
+                                      <div style={{ fontSize: 9, color: '#64748b' }}>{stock.sector ?? ''}</div>
+                                    </div>
+                                    <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                      {stock.isNasdaq100 && (
+                                        <span style={{ fontSize: 8, background: 'rgba(59,130,246,0.15)', color: '#60a5fa', borderRadius: 3, padding: '1px 4px' }}>NDQ</span>
+                                      )}
+                                      {stock.isSP500 && (
+                                        <span style={{ fontSize: 8, background: 'rgba(16,185,129,0.15)', color: '#34d399', borderRadius: 3, padding: '1px 4px' }}>S&P</span>
+                                      )}
+                                      {alreadyOnMap ? (
+                                        <span style={{ fontSize: 9, color: '#10b981' }}>✓ on map</span>
+                                      ) : (
+                                        <button
+                                          onClick={() => handleAddFromLibrary(stock)}
+                                          title={`Add ${stock.ticker} to map`}
+                                          style={{
+                                            background: justAdded ? 'rgba(16,185,129,0.2)' : 'rgba(59,130,246,0.15)',
+                                            border: 'none', borderRadius: 5, cursor: 'pointer',
+                                            color: justAdded ? '#10b981' : '#60a5fa',
+                                            padding: '3px 5px', display: 'flex', alignItems: 'center',
+                                          }}
+                                        >
+                                          <PlusCircle size={13} />
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                              {/* Load more */}
+                              {libStocks.length < libTotal && (
+                                <button
+                                  onClick={() => setLibOffset(o => o + LIB_LIMIT)}
+                                  disabled={libLoading}
+                                  style={{ width: '100%', marginTop: 6, padding: '5px', background: 'none', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 6, color: '#60a5fa', fontSize: 11, cursor: 'pointer' }}
+                                >
+                                  {libLoading ? 'Loading…' : `Load more (${libTotal - libStocks.length} remaining)`}
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {/* ── End Stock Library ─────────────────────────────── */}
 
                   {/* ── Folder accordion sections ── */}
                   {currentMap.folders.map((folder) => {
