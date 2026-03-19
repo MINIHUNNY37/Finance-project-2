@@ -104,6 +104,26 @@ async function fetchOHLC(ticker: string) {
   return { candles, dividends, splits };
 }
 
+interface QuarterData {
+  periodEnd:         Date;
+  reportType:        string;
+  revenue:           number | null;
+  netIncome:         number | null;
+  eps:               number | null;
+  epsEstimate:       number | null;
+  epsSurprisePct:    number | null;
+  operatingMargin:   number | null;
+  bookValue:         number | null;
+  debtToEquity:      number | null;
+  currentRatio:      number | null;
+  freeCashFlow:      number | null;
+  operatingCashFlow: number | null;
+  marketCap:         number | null;
+  peRatio:           number | null;
+  priceToBook:       number | null;
+  dividendYield:     number | null;
+}
+
 /**
  * Fetches quarterly income statement, balance sheet, cash flow, earnings history,
  * and key stats for a single ticker from Yahoo Finance quoteSummary.
@@ -201,7 +221,7 @@ async function fetchFinancials(ticker: string) {
   const priceToBook:   number = kStats.priceToBook?.raw     ?? 0;
 
   // Combine income statement quarters with their related data
-  const quarters = incomeQtrs.map((inc) => {
+  const quarters: QuarterData[] = incomeQtrs.map((inc): QuarterData | null => {
     const ts: number = inc.endDate?.raw ?? 0;
     const endDate    = ts ? new Date(ts * 1000) : null;
     if (!endDate) return null;
@@ -239,7 +259,7 @@ async function fetchFinancials(ticker: string) {
       priceToBook:      priceToBook  || null,
       dividendYield:    dividendYield || null,
     };
-  }).filter(Boolean) as NonNullable<ReturnType<typeof incomeQtrs['map']>[0]>[];
+  }).filter((q): q is QuarterData => q !== null);
 
   return { quarters };
 }
