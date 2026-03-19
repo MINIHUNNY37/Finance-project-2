@@ -164,7 +164,7 @@ export default function Sidebar({
 
   const [collapsed, setCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('entities');
-  const [sidebarWidth, setSidebarWidth] = useState(280);
+  const [sidebarWidth, setSidebarWidth] = useState(380);
 
   const handleResizeSidebar = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -199,7 +199,7 @@ export default function Sidebar({
 
   const tabs: { id: Tab; icon: React.ReactNode; label: string }[] = [
     { id: 'entities', icon: <Layers size={14} />, label: 'Entities' },
-    { id: 'connections', icon: <ArrowRight size={14} />, label: 'Connections' },
+    { id: 'connections', icon: <ArrowRight size={14} />, label: 'Connect' },
     { id: 'geo', icon: <Globe size={14} />, label: 'Events' },
     { id: 'info', icon: <Info size={14} />, label: 'Selected' },
   ];
@@ -228,7 +228,7 @@ export default function Sidebar({
       style={{
         position: 'fixed',
         left: 0,
-        top: 56,
+        top: 68,
         bottom: 0,
         width: collapsed ? 44 : sidebarWidth,
         background: 'rgba(15,23,42,0.96)',

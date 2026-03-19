@@ -208,7 +208,8 @@ export interface GeoEvent {
   endDate?: string;
   details: string;
   position: { x: number; y: number };
-  size?: number;   // 0.5 – 3.0, default 1
+  size?: number;      // 0.3 – 4.0 multiplier, default 1
+  fixedSize?: boolean; // true (default) = constant screen size regardless of zoom
   hidden?: boolean;
   folderId?: string;
   createdAt: string;

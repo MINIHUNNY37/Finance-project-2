@@ -613,7 +613,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
       <div
         ref={containerRef}
         style={{
-          position: 'fixed', top: 56, left: 0, right: 0, bottom: 0,
+          position: 'fixed', top: 68, left: 0, right: 0, bottom: 0,
           overflow: 'hidden',
           cursor: isConnecting ? 'crosshair' : isDrawMode ? 'crosshair' : 'grab',
         }}

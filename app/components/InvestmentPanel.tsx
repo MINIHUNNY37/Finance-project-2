@@ -61,7 +61,7 @@ export default function InvestmentPanel() {
   if (collapsed) {
     return (
       <div style={{
-        position: 'fixed', right: 0, top: 56, bottom: 0, width: 44,
+        position: 'fixed', right: 0, top: 68, bottom: 0, width: 44,
         background: 'rgba(15,23,42,0.96)',
         borderLeft: '1px solid rgba(59,130,246,0.15)',
         backdropFilter: 'blur(12px)',
@@ -95,7 +95,7 @@ export default function InvestmentPanel() {
 
   return (
     <div style={{
-      position: 'fixed', right: 0, top: 56, bottom: 0, width: 300,
+      position: 'fixed', right: 0, top: 68, bottom: 0, width: 300,
       background: 'rgba(15,23,42,0.97)',
       borderLeft: '1px solid rgba(59,130,246,0.15)',
       backdropFilter: 'blur(12px)',
