@@ -29,3 +29,69 @@ model User {
   updatedAt DateTime @updatedAt
   lastLogin DateTime?
 }
+
+// ── Market Universe ──────────────────────────────────────────────────────────
+
+model StockUniverse {
+  id          String   @id @default(cuid())
+  ticker      String   @unique
+  name        String
+  exchange    String   // "NASDAQ" | "NYSE" | "NYSE ARCA"
+  sector      String?
+  industry    String?
+  country     String   @default("US")
+  isNasdaq100 Boolean  @default(false)
+  isSP500     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  ohlc  StockDailyOHLC[]
+  stats StockKeyStats?
+}
+
+// Daily OHLC data per ticker
+model StockDailyOHLC {
+  id     String   @id @default(cuid())
+  ticker String
+  date   DateTime @db.Date
+  open   Float
+  high   Float
+  low    Float
+  close  Float
+  volume BigInt   @default(0)
+
+  stock StockUniverse @relation(fields: [ticker], references: [ticker], onDelete: Cascade)
+
+  @@unique([ticker, date])
+  @@index([ticker, date(sort: Desc)])
+}
+
+// 5 key statistics snapshot per ticker
+model StockKeyStats {
+  id            String   @id @default(cuid())
+  ticker        String   @unique
+  price         Float?
+  priceChange   Float?
+  priceChangePct Float?
+  marketCap     String?
+  peRatio       String?
+  eps           String?
+  dividendYield String?
+  week52High    Float?
+  week52Low     Float?
+  fetchedAt     DateTime @default(now())
+
+  stock StockUniverse @relation(fields: [ticker], references: [ticker], onDelete: Cascade)
+}
+
+// Pre-built template maps available to all users
+model TemplateMap {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  category    String   // "markets" | "geopolitics" etc.
+  data        String   // JSON blob: ScenarioMap
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

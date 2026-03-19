@@ -1,8 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X, Plus, Trash2, Map, Clock, Globe, Square, LogIn, Upload, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { X, Plus, Trash2, Map, Clock, Globe, Square, LogIn, Upload, AlertCircle, LayoutTemplate, Download, CheckCircle } from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
+
+interface TemplateMetadata {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  updatedAt: string;
+}
 
 interface MapsDialogProps {
   isOpen: boolean;
@@ -14,7 +22,7 @@ interface MapsDialogProps {
 }
 
 export default function MapsDialog({ isOpen, onClose, required = false, loading = false, session, onSignIn }: MapsDialogProps) {
-  const { savedMaps, currentMap, loadMap, createNewMap, deleteMap, saveCurrentMap, importMapFromCode } = useMapStore();
+  const { savedMaps, currentMap, loadMap, createNewMap, deleteMap, saveCurrentMap, importMapFromCode, mergeCloudMaps } = useMapStore();
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
@@ -25,6 +33,60 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
   const [showImport, setShowImport] = useState(false);
   const [importCode, setImportCode] = useState('');
   const [importError, setImportError] = useState('');
+
+  // Templates
+  const [activeTab, setActiveTab] = useState<'my-maps' | 'templates'>('my-maps');
+  const [templates, setTemplates] = useState<TemplateMetadata[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [cloningId, setCloningId] = useState<string | null>(null);
+  const [clonedId, setClonedId] = useState<string | null>(null);
+
+  const fetchTemplates = useCallback(async () => {
+    if (!session?.user) return;
+    setTemplatesLoading(true);
+    try {
+      const res = await fetch('/api/markets/template');
+      if (res.ok) {
+        const data = await res.json();
+        setTemplates(data.templates ?? []);
+      }
+    } catch { /* ignore */ }
+    finally { setTemplatesLoading(false); }
+  }, [session?.user]);
+
+  useEffect(() => {
+    if (isOpen && activeTab === 'templates') {
+      fetchTemplates();
+    }
+  }, [isOpen, activeTab, fetchTemplates]);
+
+  const handleCloneTemplate = async (templateId: string) => {
+    if (!session?.user) { onSignIn?.(); return; }
+    setCloningId(templateId);
+    try {
+      const res = await fetch('/api/markets/template/clone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ templateId }),
+      });
+      if (res.ok) {
+        const { mapId } = await res.json();
+        setClonedId(templateId);
+        // Pull from cloud so the new map appears in savedMaps
+        const mapsRes = await fetch('/api/maps');
+        if (mapsRes.ok) {
+          const { maps } = await mapsRes.json();
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          mergeCloudMaps(maps.map((m: any) => JSON.parse(m.data)));
+        }
+        setTimeout(() => {
+          loadMap(mapId);
+          onClose();
+        }, 800);
+      }
+    } catch { /* ignore */ }
+    finally { setCloningId(null); }
+  };
 
   if (!isOpen) return null;
 
@@ -91,7 +153,8 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
         className="glass-panel fade-in"
         style={{ width: '100%', maxWidth: 520, borderRadius: 16, padding: 24, maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: required ? 8 : 20 }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Map size={18} style={{ color: '#06b6d4' }} />
             <h2 style={{ color: '#93c5fd', fontSize: 18, fontWeight: 700 }}>
@@ -99,24 +162,27 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
             </h2>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {/* Import from code button */}
-            <button
-              className="btn-ghost"
-              onClick={() => { setShowImport((v) => !v); setCreating(false); }}
-              style={{ padding: '6px 10px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}
-              title="Import a map from a shared code"
-            >
-              <Upload size={13} />
-              Import
-            </button>
-            <button
-              className="btn-primary"
-              onClick={() => { setCreating(true); setShowImport(false); setShowAuthGate(false); }}
-              style={{ padding: '6px 12px', fontSize: 12 }}
-            >
-              <Plus size={13} style={{ display: 'inline', marginRight: 4 }} />
-              New Map
-            </button>
+            {activeTab === 'my-maps' && (
+              <>
+                <button
+                  className="btn-ghost"
+                  onClick={() => { setShowImport((v) => !v); setCreating(false); }}
+                  style={{ padding: '6px 10px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}
+                  title="Import a map from a shared code"
+                >
+                  <Upload size={13} />
+                  Import
+                </button>
+                <button
+                  className="btn-primary"
+                  onClick={() => { setCreating(true); setShowImport(false); setShowAuthGate(false); }}
+                  style={{ padding: '6px 12px', fontSize: 12 }}
+                >
+                  <Plus size={13} style={{ display: 'inline', marginRight: 4 }} />
+                  New Map
+                </button>
+              </>
+            )}
             {!required && (
               <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8899b0' }}>
                 <X size={20} />
@@ -124,11 +190,113 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
             )}
           </div>
         </div>
-        {required && (
+
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '1px solid rgba(59,130,246,0.15)', paddingBottom: 0 }}>
+          {(['my-maps', 'templates'] as const).map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                padding: '6px 14px', fontSize: 12, fontWeight: 600,
+                color: activeTab === tab ? '#06b6d4' : '#8899b0',
+                borderBottom: activeTab === tab ? '2px solid #06b6d4' : '2px solid transparent',
+                transition: 'all 0.15s',
+                display: 'flex', alignItems: 'center', gap: 5,
+              }}
+            >
+              {tab === 'my-maps' ? <><Map size={12} /> My Maps</> : <><LayoutTemplate size={12} /> Market Templates</>}
+            </button>
+          ))}
+        </div>
+
+        {required && activeTab === 'my-maps' && (
           <p style={{ fontSize: 13, color: '#8899b0', marginBottom: 16, lineHeight: 1.5 }}>
             {loading ? 'Loading your maps…' : 'Choose a map to open, import one, or create a new one to get started.'}
           </p>
         )}
+
+        {/* ── Templates tab ─────────────────────────────────────────────── */}
+        {activeTab === 'templates' && (
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            {templatesLoading ? (
+              <div style={{ textAlign: 'center', color: '#94a3b8', padding: 32, fontSize: 14 }}>
+                Loading templates…
+              </div>
+            ) : templates.length === 0 ? (
+              <div style={{ textAlign: 'center', color: '#94a3b8', padding: 32, fontSize: 13, lineHeight: 1.6 }}>
+                <LayoutTemplate size={28} style={{ marginBottom: 10, opacity: 0.4 }} />
+                <div>No market templates available yet.</div>
+                {session?.user && (
+                  <div style={{ fontSize: 11, marginTop: 6 }}>
+                    An admin needs to run the market seeder at<br />
+                    <code style={{ color: '#06b6d4' }}>POST /api/admin/seed-markets</code>
+                  </div>
+                )}
+              </div>
+            ) : (
+              templates.map(t => (
+                <div
+                  key={t.id}
+                  style={{
+                    padding: '14px 16px', borderRadius: 12, marginBottom: 10,
+                    background: 'rgba(15,23,42,0.6)',
+                    border: '1px solid rgba(6,182,212,0.2)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <LayoutTemplate size={14} style={{ color: '#06b6d4', flexShrink: 0 }} />
+                        <span style={{ fontWeight: 700, color: '#e2e8f0', fontSize: 13 }}>{t.name}</span>
+                        <span style={{
+                          fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em',
+                          background: 'rgba(6,182,212,0.15)', color: '#06b6d4',
+                          borderRadius: 4, padding: '2px 6px', flexShrink: 0,
+                        }}>
+                          {t.category}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 11, color: '#8899b0', lineHeight: 1.5, marginBottom: 6 }}>
+                        {t.description}
+                      </div>
+                      <div style={{ fontSize: 10, color: '#64748b' }}>
+                        Updated {new Date(t.updatedAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleCloneTemplate(t.id)}
+                      disabled={cloningId === t.id || clonedId === t.id}
+                      style={{
+                        flexShrink: 0,
+                        padding: '7px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                        background: clonedId === t.id
+                          ? 'rgba(16,185,129,0.2)'
+                          : 'linear-gradient(135deg, #06b6d4, #3b82f6)',
+                        color: clonedId === t.id ? '#10b981' : 'white',
+                        fontSize: 11, fontWeight: 600,
+                        display: 'flex', alignItems: 'center', gap: 5,
+                        opacity: cloningId === t.id ? 0.6 : 1,
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {clonedId === t.id
+                        ? <><CheckCircle size={12} /> Added!</>
+                        : cloningId === t.id
+                        ? 'Adding…'
+                        : <><Download size={12} /> Use Template</>
+                      }
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* ── My Maps tab ───────────────────────────────────────────────── */}
+        {activeTab === 'my-maps' && <>
 
         {/* Import from code panel */}
         {showImport && (
@@ -360,12 +528,20 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
 
               {allMaps.length === 0 && (
                 <div style={{ textAlign: 'center', color: '#94a3b8', padding: 32, fontSize: 14 }}>
-                  No maps yet. Create your first map!
+                  No maps yet. Create your first map, or check the{' '}
+                  <button
+                    onClick={() => setActiveTab('templates')}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#06b6d4', fontSize: 14, padding: 0 }}
+                  >
+                    Market Templates
+                  </button>{' '}tab to get started instantly.
                 </div>
               )}
             </>
           )}
         </div>
+
+        </> /* end my-maps tab */}
       </div>
     </div>
   );
