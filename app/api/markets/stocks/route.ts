@@ -21,6 +21,15 @@ function formatMarketCap(v: number): string {
   return `$${v.toLocaleString()}`;
 }
 
+function formatFinancialVal(v: number): string {
+  const abs = Math.abs(v);
+  const sign = v < 0 ? '-' : '';
+  if (abs >= 1e12) return `${sign}$${(abs / 1e12).toFixed(2)}T`;
+  if (abs >= 1e9)  return `${sign}$${(abs / 1e9).toFixed(2)}B`;
+  if (abs >= 1e6)  return `${sign}$${(abs / 1e6).toFixed(2)}M`;
+  return `${sign}$${abs.toFixed(2)}`;
+}
+
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.email) {
@@ -69,16 +78,42 @@ export async function GET(req: NextRequest) {
     return {
       ...s,
       stats: q ? {
-        price:          q.price,
-        priceChange:    q.priceChange,
-        priceChangePct: q.priceChangePct,
-        marketCap:      q.marketCapFmt ?? (q.marketCap ? formatMarketCap(q.marketCap) : null),
-        peRatio:        q.peRatio      ? q.peRatio.toFixed(2) : null,
-        eps:            q.eps          ? q.eps.toFixed(2)     : null,
-        dividendYield:  q.dividendYield ? `${(q.dividendYield * 100).toFixed(2)}%` : null,
-        week52High:     q.week52High,
-        week52Low:      q.week52Low,
-        fetchedAt:      q.fetchedAt,
+        // Price snapshot
+        price:            q.price,
+        priceChange:      q.priceChange,
+        priceChangePct:   q.priceChangePct,
+        week52High:       q.week52High,
+        week52Low:        q.week52Low,
+        // Valuation
+        marketCap:        q.marketCapFmt ?? (q.marketCap ? formatMarketCap(q.marketCap) : null),
+        peRatio:          q.peRatio      ? q.peRatio.toFixed(2)      : null,
+        priceToBook:      q.priceToBook  ? q.priceToBook.toFixed(2)  : null,
+        // Income statement
+        revenue:          q.revenue      ? formatFinancialVal(q.revenue)      : null,
+        netIncome:        q.netIncome    ? formatFinancialVal(q.netIncome)    : null,
+        eps:              q.eps          ? `$${q.eps.toFixed(2)}`             : null,
+        epsEstimate:      q.epsEstimate  ? `$${q.epsEstimate.toFixed(2)}`     : null,
+        epsSurprisePct:   q.epsSurprisePct != null
+          ? `${q.epsSurprisePct >= 0 ? '+' : ''}${q.epsSurprisePct.toFixed(1)}%`
+          : null,
+        // Balance sheet
+        bookValue:        q.bookValue    ? `$${q.bookValue.toFixed(2)}`       : null,
+        debtToEquity:     q.debtToEquity ? q.debtToEquity.toFixed(2)          : null,
+        currentRatio:     q.currentRatio ? q.currentRatio.toFixed(2)          : null,
+        // Cash flow
+        freeCashFlow:     q.freeCashFlow      ? formatFinancialVal(q.freeCashFlow)      : null,
+        operatingCashFlow: q.operatingCashFlow ? formatFinancialVal(q.operatingCashFlow) : null,
+        // Returns / yield
+        operatingMargin:  q.operatingMargin
+          ? `${(q.operatingMargin * 100).toFixed(1)}%`
+          : null,
+        dividendYield:    q.dividendYield
+          ? `${(q.dividendYield * 100).toFixed(2)}%`
+          : null,
+        // Period metadata
+        periodEnd:        q.periodEnd,
+        reportType:       q.reportType,
+        fetchedAt:        q.fetchedAt,
       } : null,
     };
   });

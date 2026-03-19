@@ -137,6 +137,7 @@ export default function EntityDialog({
   const [activeTab, setActiveTab] = useState<Tab>('basic');
   const [showAdvancedStats, setShowAdvancedStats] = useState(false);
   const [showAdvancedInvest, setShowAdvancedInvest] = useState(false);
+  const [showAllStats, setShowAllStats] = useState(false);
   const [hoveredKeyStat, setHoveredKeyStat] = useState<string | null>(null);
   const [newStatPreset, setNewStatPreset] = useState('');
   const [newDetailPreset, setNewDetailPreset] = useState('');
@@ -222,6 +223,7 @@ export default function EntityDialog({
     }
     setTickerError('');
     setActiveTab('basic');
+    setShowAllStats(false);
   }, [initialData, defaultCountry, isOpen]);
 
   if (!isOpen) return null;
@@ -1111,49 +1113,87 @@ export default function EntityDialog({
                 </div>
               )}
 
-              {(activeStatFilter === null ? statistics : statistics.filter(s => s.name === activeStatFilter)).map((stat, i) => (
-                <div key={stat.id} style={{
-                  marginBottom: 8,
-                  background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(59,130,246,0.15)',
-                  borderRadius: 10, padding: '10px 12px',
-                }}>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
-                    <div style={{ fontSize: 12, color: '#94a3b8', width: 20, textAlign: 'center', flexShrink: 0 }}>{i + 1}</div>
-                    <input
-                      className="input-field"
-                      value={stat.name}
-                      onChange={(e) => updateStat(stat.id, 'name', e.target.value)}
-                      placeholder="Stat name (e.g. Revenue)"
-                      style={{ flex: 1 }}
-                    />
-                    <input
-                      className="input-field"
-                      value={stat.value}
-                      onChange={(e) => updateStat(stat.id, 'value', e.target.value)}
-                      placeholder="Value (e.g. $394B)"
-                      style={{ flex: 1 }}
-                    />
-                    <button onClick={() => removeStat(stat.id)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', flexShrink: 0 }}>
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 28 }}>
-                    <span style={{ fontSize: 10, color: '#94a3b8', flexShrink: 0 }}>As of</span>
-                    <input
-                      type="date"
-                      value={stat.asOf || ''}
-                      onChange={(e) => updateStat(stat.id, 'asOf', e.target.value)}
-                      style={{
-                        flex: 1, fontSize: 11, padding: '3px 7px',
-                        background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(59,130,246,0.2)',
-                        borderRadius: 6, color: '#94a3b8', outline: 'none',
-                        colorScheme: 'dark',
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
+              {(() => {
+                const filteredStats = activeStatFilter === null
+                  ? statistics
+                  : statistics.filter(s => s.name === activeStatFilter);
+                const PREVIEW_COUNT = 5;
+                const canCollapse = activeStatFilter === null && filteredStats.length > PREVIEW_COUNT;
+                const visibleStats = canCollapse && !showAllStats
+                  ? filteredStats.slice(0, PREVIEW_COUNT)
+                  : filteredStats;
+                const hiddenCount = filteredStats.length - visibleStats.length;
+
+                return (
+                  <>
+                    {visibleStats.map((stat, i) => (
+                      <div key={stat.id} style={{
+                        marginBottom: 8,
+                        background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(59,130,246,0.15)',
+                        borderRadius: 10, padding: '10px 12px',
+                      }}>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                          <div style={{ fontSize: 12, color: '#94a3b8', width: 20, textAlign: 'center', flexShrink: 0 }}>{i + 1}</div>
+                          <input
+                            className="input-field"
+                            value={stat.name}
+                            onChange={(e) => updateStat(stat.id, 'name', e.target.value)}
+                            placeholder="Stat name (e.g. Revenue)"
+                            style={{ flex: 1 }}
+                          />
+                          <input
+                            className="input-field"
+                            value={stat.value}
+                            onChange={(e) => updateStat(stat.id, 'value', e.target.value)}
+                            placeholder="Value (e.g. $394B)"
+                            style={{ flex: 1 }}
+                          />
+                          <button onClick={() => removeStat(stat.id)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', flexShrink: 0 }}>
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 28 }}>
+                          <span style={{ fontSize: 10, color: '#94a3b8', flexShrink: 0 }}>As of</span>
+                          <input
+                            type="date"
+                            value={stat.asOf || ''}
+                            onChange={(e) => updateStat(stat.id, 'asOf', e.target.value)}
+                            style={{
+                              flex: 1, fontSize: 11, padding: '3px 7px',
+                              background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(59,130,246,0.2)',
+                              borderRadius: 6, color: '#94a3b8', outline: 'none',
+                              colorScheme: 'dark',
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Show more / Show less toggle */}
+                    {canCollapse && (
+                      <button
+                        onClick={() => setShowAllStats((v) => !v)}
+                        style={{
+                          width: '100%', padding: '9px 12px', marginTop: 4, borderRadius: 9,
+                          background: showAllStats ? 'rgba(59,130,246,0.1)' : 'rgba(59,130,246,0.06)',
+                          border: '1px dashed rgba(59,130,246,0.35)',
+                          color: '#93c5fd', fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                          transition: 'all 0.15s',
+                        }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.14)'; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = showAllStats ? 'rgba(59,130,246,0.1)' : 'rgba(59,130,246,0.06)'; }}
+                      >
+                        <ChevronDown size={13} style={{ transform: showAllStats ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+                        {showAllStats
+                          ? 'Show less'
+                          : `Show ${hiddenCount} more stat${hiddenCount !== 1 ? 's' : ''}`}
+                      </button>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           )}
         </div>

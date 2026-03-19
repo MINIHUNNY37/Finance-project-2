@@ -92,7 +92,24 @@ export default function Sidebar({
   interface LibraryStock {
     ticker: string; name: string; sector: string | null; exchange: string;
     isNasdaq100: boolean; isSP500: boolean;
-    stats: { price: number | null; marketCap: string | null; peRatio: string | null; eps: string | null; dividendYield: string | null; week52High: number | null; week52Low: number | null } | null;
+    stats: {
+      // Price snapshot
+      price: number | null; priceChange: number | null; priceChangePct: number | null;
+      week52High: number | null; week52Low: number | null;
+      // Valuation
+      marketCap: string | null; peRatio: string | null; priceToBook: string | null;
+      // Income statement
+      revenue: string | null; netIncome: string | null;
+      eps: string | null; epsEstimate: string | null; epsSurprisePct: string | null;
+      // Balance sheet
+      bookValue: string | null; debtToEquity: string | null; currentRatio: string | null;
+      // Cash flow
+      freeCashFlow: string | null; operatingCashFlow: string | null;
+      // Returns / yield
+      operatingMargin: string | null; dividendYield: string | null;
+      // Period metadata
+      periodEnd: string | null; reportType: string | null; fetchedAt: string;
+    } | null;
   }
   const [libraryOpen, setLibraryOpen]       = useState(false);
   const [libSearch,   setLibSearch]         = useState('');
@@ -165,13 +182,35 @@ export default function Sidebar({
     };
 
     const s = stock.stats;
-    const statistics = [
-      { id: crypto.randomUUID(), name: 'Price',          value: s?.price        ? `$${s.price.toFixed(2)}`  : 'N/A' },
-      { id: crypto.randomUUID(), name: 'Market Cap',     value: s?.marketCap    ?? 'N/A' },
-      { id: crypto.randomUUID(), name: 'P/E Ratio',      value: s?.peRatio      ?? 'N/A' },
-      { id: crypto.randomUUID(), name: 'EPS (TTM)',      value: s?.eps           ?? 'N/A' },
-      { id: crypto.randomUUID(), name: 'Dividend Yield', value: s?.dividendYield ?? 'N/A' },
+    // asOf date derived from the quarterly period (YYYY-MM-DD)
+    const periodDate = s?.periodEnd ? s.periodEnd.toString().split('T')[0] : undefined;
+
+    // Build all stats in priority order; filter out nulls so the entity stays clean
+    const allStatCandidates: Array<{ name: string; value: string | null | undefined }> = [
+      { name: 'Price',            value: s?.price != null ? `$${s.price.toFixed(2)}` : null },
+      { name: 'Market Cap',       value: s?.marketCap },
+      { name: 'P/E Ratio',        value: s?.peRatio },
+      { name: 'EPS (TTM)',        value: s?.eps },
+      { name: 'Revenue',          value: s?.revenue },
+      { name: 'Net Income',       value: s?.netIncome },
+      { name: 'Operating Margin', value: s?.operatingMargin },
+      { name: 'Free Cash Flow',   value: s?.freeCashFlow },
+      { name: 'Dividend Yield',   value: s?.dividendYield },
+      { name: 'Debt/Equity',      value: s?.debtToEquity },
+      { name: 'Current Ratio',    value: s?.currentRatio },
+      { name: 'Book Value',       value: s?.bookValue },
+      { name: 'P/B Ratio',        value: s?.priceToBook },
+      { name: '52W High',         value: s?.week52High != null ? `$${s.week52High.toFixed(2)}` : null },
+      { name: '52W Low',          value: s?.week52Low  != null ? `$${s.week52Low.toFixed(2)}`  : null },
+      { name: 'EPS Estimate',     value: s?.epsEstimate },
+      { name: 'EPS Surprise',     value: s?.epsSurprisePct },
+      { name: 'Op. Cash Flow',    value: s?.operatingCashFlow },
     ];
+    const statistics = allStatCandidates
+      .filter(({ value }) => value != null && value !== '')
+      .map(({ name, value }) => ({
+        id: crypto.randomUUID(), name, value: value as string, asOf: periodDate,
+      }));
 
     const entityId = addEntity({
       name:        stock.name,
