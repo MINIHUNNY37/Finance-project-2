@@ -156,7 +156,7 @@ export default function GeoEventNode({
         {/* Inner: hit area, centered, scaled */}
         <div
           onMouseDown={handleMouseDown}
-
+          onClick={(e) => e.stopPropagation()}
           style={{
             position: 'absolute',
             left: -BASE,

@@ -97,6 +97,14 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   const [pendingGeoPosition, setPendingGeoPosition] = useState<{ x: number; y: number } | undefined>();
   const [selectedGeoEventId, setSelectedGeoEventId] = useState<string | null>(null);
 
+  const handleGeoEventSelect = useCallback((id: string | null) => {
+    setSelectedGeoEventId(id);
+    if (id) {
+      useMapStore.getState().setSelectedEntity(null);
+      useMapStore.getState().setSelectedRelationship(null);
+    }
+  }, []);
+
   // Draw-connection drag state
   const [drawingFromId, setDrawingFromId] = useState<string | null>(null);
   const drawingHandledRef = useRef(false);
@@ -524,11 +532,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
           mapHeight={dims.height}
           zoom={zoom}
           selected={selectedGeoEventId === ev.id}
-          onSelect={(id) => {
-            setSelectedGeoEventId(id);
-            // Deselect entity/relationship when geo event selected
-            if (id) { useMapStore.getState().setSelectedEntity(null); useMapStore.getState().setSelectedRelationship(null); }
-          }}
+          onSelect={handleGeoEventSelect}
         />
       ))}
     </>
