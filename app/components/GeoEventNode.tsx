@@ -45,6 +45,8 @@ export default function GeoEventNode({
   const isDragging = useRef(false);
   const dragStart = useRef<{ mouseX: number; mouseY: number; evX: number; evY: number } | null>(null);
   const [grabbing, setGrabbing] = useState(false);
+  // Screen-pixel threshold for distinguishing click vs drag (zoom-independent)
+  const DRAG_PX = 6;
 
   const meta = GEO_EVENT_TYPES.find((t) => t.value === event.type) ?? GEO_EVENT_TYPES[0];
   const color = meta.color;
@@ -68,10 +70,13 @@ export default function GeoEventNode({
 
       const onMove = (ev: MouseEvent) => {
         if (!dragStart.current) return;
-        const dx = (ev.clientX - dragStart.current.mouseX) / zoom;
-        const dy = (ev.clientY - dragStart.current.mouseY) / zoom;
-        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) isDragging.current = true;
+        // Use screen pixels for threshold — zoom-independent, so a tiny touch doesn't trigger drag
+        const screenDx = ev.clientX - dragStart.current.mouseX;
+        const screenDy = ev.clientY - dragStart.current.mouseY;
+        if (Math.abs(screenDx) > DRAG_PX || Math.abs(screenDy) > DRAG_PX) isDragging.current = true;
         if (isDragging.current) {
+          const dx = screenDx / zoom;
+          const dy = screenDy / zoom;
           moveGeoEvent(event.id, {
             x: Math.max(40, Math.min(mapWidth - 40, dragStart.current.evX + dx)),
             y: Math.max(40, Math.min(mapHeight - 40, dragStart.current.evY + dy)),
@@ -145,7 +150,7 @@ export default function GeoEventNode({
     { key: 'br', left: BASE - 4,  top: BASE - 4  },
   ];
 
-  const nodeOpacity = event.hidden ? 0.3 : 1;
+  const nodeOpacity = event.hidden ? 0 : 1;
 
   return (
     <>
@@ -157,9 +162,9 @@ export default function GeoEventNode({
         left: event.position.x,
         top: event.position.y,
         width: 0, height: 0,
-        pointerEvents: 'none',
+        pointerEvents: event.hidden ? 'none' : undefined,
         opacity: nodeOpacity,
-        transition: 'opacity 0.2s',
+        transition: 'opacity 0.15s',
       }}>
         {/* Inner: actual hit area, centered, scaled */}
         <div
@@ -266,50 +271,50 @@ export default function GeoEventNode({
           {/* ── Selected UI ── */}
           {selected && (
             <>
-              {/* Pencil / Edit button — top center */}
+              {/* Pencil / Edit button — top center, larger hit area */}
               <div
                 onMouseDown={(e) => { e.stopPropagation(); }}
                 onClick={(e) => { e.stopPropagation(); onEdit(event); }}
                 title="Edit event"
                 style={{
                   position: 'absolute',
-                  top: 'calc(50% - 52px)',
+                  top: 'calc(50% - 58px)',
                   left: '50%',
                   transform: 'translateX(-50%)',
-                  width: 26, height: 26,
-                  borderRadius: 7,
-                  background: 'rgba(15,23,42,0.92)',
-                  border: `1px solid ${color}88`,
+                  width: 34, height: 34,
+                  borderRadius: 9,
+                  background: 'rgba(15,23,42,0.95)',
+                  border: `2px solid ${color}`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   cursor: 'pointer',
                   color,
                   pointerEvents: 'all',
                   zIndex: 2,
-                  boxShadow: `0 0 8px ${color}44`,
+                  boxShadow: `0 0 12px ${color}66`,
                 }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = `${color}22`; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(15,23,42,0.92)'; }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = `${color}30`; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(15,23,42,0.95)'; }}
               >
-                <Pencil size={13} />
+                <Pencil size={16} />
               </div>
 
-              {/* Corner resize handles */}
+              {/* Corner resize handles — large for easy grabbing */}
               {handles.map(({ key, left, top }) => (
                 <div
                   key={key}
                   onMouseDown={(e) => handleResizeMouseDown(e, key)}
                   style={{
                     position: 'absolute',
-                    left: BASE + left - 5,  // offset relative to inner div's top-left (which is at -BASE,-BASE)
-                    top: BASE + top - 5,
-                    width: 10, height: 10,
-                    borderRadius: 2,
+                    left: BASE + left - 8,
+                    top: BASE + top - 8,
+                    width: 16, height: 16,
+                    borderRadius: 3,
                     background: 'rgba(15,23,42,0.9)',
                     border: `2px solid ${color}`,
                     cursor: key === 'tl' || key === 'br' ? 'nwse-resize' : 'nesw-resize',
                     pointerEvents: 'all',
                     zIndex: 3,
-                    boxShadow: `0 0 4px ${color}`,
+                    boxShadow: `0 0 6px ${color}`,
                   }}
                 />
               ))}
