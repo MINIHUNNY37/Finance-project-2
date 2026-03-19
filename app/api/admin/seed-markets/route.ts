@@ -168,34 +168,41 @@ async function stepFetchData(offset: number, limit: number) {
   });
 
   let fetched = 0, failed = 0;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
   for (const stock of stocks) {
     try {
       const data = await fetchYahoo(stock.ticker);
       if (!data) { failed++; continue; }
 
-      // Upsert key stats
-      await prisma.stockKeyStats.upsert({
-        where: { ticker: stock.ticker },
+      // Upsert latest snapshot into StockQuarterlyStats (reportType="snapshot")
+      const peRatioNum = data.peRatio !== 'N/A' ? parseFloat(data.peRatio) : null;
+      await prisma.stockQuarterlyStats.upsert({
+        where: { ticker_periodEnd_reportType: { ticker: stock.ticker, periodEnd: today, reportType: 'snapshot' } },
         update: {
-          price:         data.price,
-          priceChange:   data.change,
+          price:          data.price,
+          priceChange:    data.change,
           priceChangePct: data.changePct,
-          marketCap:     data.marketCap,
-          peRatio:       data.peRatio,
-          week52High:    data.week52High,
-          week52Low:     data.week52Low,
-          fetchedAt:     new Date(),
+          marketCap:      data.marketCapRaw || null,
+          marketCapFmt:   data.marketCap !== 'N/A' ? data.marketCap : null,
+          peRatio:        peRatioNum,
+          week52High:     data.week52High || null,
+          week52Low:      data.week52Low  || null,
+          fetchedAt:      new Date(),
         },
         create: {
-          ticker:        stock.ticker,
-          price:         data.price,
-          priceChange:   data.change,
+          ticker:         stock.ticker,
+          periodEnd:      today,
+          reportType:     'snapshot',
+          price:          data.price,
+          priceChange:    data.change,
           priceChangePct: data.changePct,
-          marketCap:     data.marketCap,
-          peRatio:       data.peRatio,
-          week52High:    data.week52High,
-          week52Low:     data.week52Low,
+          marketCap:      data.marketCapRaw || null,
+          marketCapFmt:   data.marketCap !== 'N/A' ? data.marketCap : null,
+          peRatio:        peRatioNum,
+          week52High:     data.week52High || null,
+          week52Low:      data.week52Low  || null,
         },
       });
 
@@ -224,7 +231,12 @@ async function stepFetchData(offset: number, limit: number) {
 
 async function stepBuildTemplate() {
   const stocks = await prisma.stockUniverse.findMany({
-    include: { stats: true },
+    include: {
+      quarterlyStats: {
+        orderBy: { periodEnd: 'desc' },
+        take: 1,
+      },
+    },
     orderBy: { ticker: 'asc' },
   });
 
@@ -235,13 +247,13 @@ async function stepBuildTemplate() {
 
   // ── Build entities ──
   const entities: Entity[] = stocks.map((s, i) => {
-    const stats = s.stats;
+    const stats = s.quarterlyStats[0] ?? null;
     const statistics = [
-      { id: uuidv4(), name: 'Price',         value: stats?.price        ? `$${stats.price.toFixed(2)}`  : 'N/A' },
-      { id: uuidv4(), name: 'Market Cap',    value: stats?.marketCap    ?? 'N/A' },
-      { id: uuidv4(), name: 'P/E Ratio',     value: stats?.peRatio      ?? 'N/A' },
-      { id: uuidv4(), name: 'EPS (TTM)',     value: stats?.eps           ?? 'N/A' },
-      { id: uuidv4(), name: 'Dividend Yield',value: stats?.dividendYield ?? 'N/A' },
+      { id: uuidv4(), name: 'Price',          value: stats?.price          ? `$${stats.price.toFixed(2)}`              : 'N/A' },
+      { id: uuidv4(), name: 'Market Cap',     value: stats?.marketCapFmt   ?? (stats?.marketCap ? formatMarketCap(stats.marketCap) : 'N/A') },
+      { id: uuidv4(), name: 'P/E Ratio',      value: stats?.peRatio        ? stats.peRatio.toFixed(2)                  : 'N/A' },
+      { id: uuidv4(), name: 'EPS (TTM)',      value: stats?.eps             ? `$${stats.eps.toFixed(2)}`               : 'N/A' },
+      { id: uuidv4(), name: 'Dividend Yield', value: stats?.dividendYield  ? `${(stats.dividendYield * 100).toFixed(2)}%` : 'N/A' },
     ];
 
     const col = i % COLS;
@@ -264,15 +276,15 @@ async function stepBuildTemplate() {
       createdBy:    'system',
       createdAt:    now,
       updatedAt:    now,
-      ticker:       s.ticker,
-      livePrice:    stats?.price         ?? undefined,
-      priceChange:  stats?.priceChange   ?? undefined,
-      priceChangePct: stats?.priceChangePct ?? undefined,
-      marketCap:    stats?.marketCap     ?? undefined,
-      peRatio:      stats?.peRatio       ?? undefined,
-      week52Low:    stats?.week52Low     ?? undefined,
-      week52High:   stats?.week52High    ?? undefined,
-      sector:       s.sector             ?? undefined,
+      ticker:         s.ticker,
+      livePrice:      stats?.price           ?? undefined,
+      priceChange:    stats?.priceChange     ?? undefined,
+      priceChangePct: stats?.priceChangePct  ?? undefined,
+      marketCap:      stats?.marketCapFmt    ?? (stats?.marketCap ? formatMarketCap(stats.marketCap) : undefined),
+      peRatio:        stats?.peRatio         ? stats.peRatio.toFixed(2) : undefined,
+      week52Low:      stats?.week52Low       ?? undefined,
+      week52High:     stats?.week52High      ?? undefined,
+      sector:         s.sector               ?? undefined,
     };
   });
 
@@ -426,7 +438,7 @@ export async function GET() {
 
   const [universeCount, statsCount, ohlcCount, templateCount] = await Promise.all([
     prisma.stockUniverse.count(),
-    prisma.stockKeyStats.count(),
+    prisma.stockQuarterlyStats.count(),
     prisma.stockDailyOHLC.count(),
     prisma.templateMap.count({ where: { category: 'markets' } }),
   ]);

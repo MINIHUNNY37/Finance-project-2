@@ -45,43 +45,125 @@ model StockUniverse {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  ohlc  StockDailyOHLC[]
-  stats StockKeyStats?
+  ohlc          StockDailyOHLC[]
+  quarterlyStats StockQuarterlyStats[]
+  dividends     StockDividend[]
+  splits        StockSplit[]
 }
 
-// Daily OHLC data per ticker
+// ── Daily OHLC (2024-2026, expandable) ──────────────────────────────────────
+// Composite PK on (ticker, date) — no wasted id column.
+// adjClose accounts for splits and dividends (use for backtesting).
+
 model StockDailyOHLC {
-  id     String   @id @default(cuid())
-  ticker String
-  date   DateTime @db.Date
-  open   Float
-  high   Float
-  low    Float
-  close  Float
-  volume BigInt   @default(0)
+  ticker   String
+  date     DateTime @db.Date
+  open     Float
+  high     Float
+  low      Float
+  close    Float
+  adjClose Float?
+  volume   BigInt   @default(0)
 
   stock StockUniverse @relation(fields: [ticker], references: [ticker], onDelete: Cascade)
 
-  @@unique([ticker, date])
+  @@id([ticker, date])
   @@index([ticker, date(sort: Desc)])
 }
 
-// 5 key statistics snapshot per ticker
-model StockKeyStats {
-  id            String   @id @default(cuid())
-  ticker        String   @unique
-  price         Float?
-  priceChange   Float?
+// ── Quarterly & snapshot statistics ─────────────────────────────────────────
+// reportType: "Q1" | "Q2" | "Q3" | "Q4" | "Annual" | "snapshot"
+// "snapshot" is written by the seed-markets live-quote step.
+// Quarterly rows are written by seed-history step.
+
+model StockQuarterlyStats {
+  id             String   @id @default(cuid())
+  ticker         String
+  periodEnd      DateTime @db.Date   // quarter-end date (or today for snapshots)
+  reportType     String              // "Q1"|"Q2"|"Q3"|"Q4"|"Annual"|"snapshot"
+
+  // ── Price snapshot ──────────────────────────────────────────────────────
+  price          Float?
+  priceChange    Float?
   priceChangePct Float?
-  marketCap     String?
-  peRatio       String?
-  eps           String?
-  dividendYield String?
-  week52High    Float?
-  week52Low     Float?
-  fetchedAt     DateTime @default(now())
+  week52High     Float?
+  week52Low      Float?
+
+  // ── Valuation ───────────────────────────────────────────────────────────
+  marketCap      Float?              // raw value in USD
+  marketCapFmt   String?             // formatted, e.g. "$2.50T"
+  peRatio        Float?
+  priceToBook    Float?
+
+  // ── Income statement ────────────────────────────────────────────────────
+  revenue        Float?
+  netIncome      Float?
+  eps            Float?              // actual EPS
+  epsEstimate    Float?
+  epsSurprisePct Float?
+
+  // ── Balance sheet ───────────────────────────────────────────────────────
+  bookValue      Float?
+  debtToEquity   Float?
+  currentRatio   Float?
+
+  // ── Cash flow ───────────────────────────────────────────────────────────
+  freeCashFlow       Float?
+  operatingCashFlow  Float?
+
+  // ── Returns / yield ─────────────────────────────────────────────────────
+  operatingMargin Float?
+  dividendYield   Float?             // decimal, e.g. 0.0052 for 0.52%
+
+  reportedAt  DateTime?              // when earnings were officially published
+  fetchedAt   DateTime @default(now())
 
   stock StockUniverse @relation(fields: [ticker], references: [ticker], onDelete: Cascade)
+
+  @@unique([ticker, periodEnd, reportType])
+  @@index([ticker, periodEnd(sort: Desc)])
+}
+
+// ── Dividend history ─────────────────────────────────────────────────────────
+
+model StockDividend {
+  ticker    String
+  exDate    DateTime  @db.Date
+  payDate   DateTime? @db.Date
+  amount    Float                 // dividend per share in USD
+  frequency String?              // "quarterly" | "monthly" | "annual" | "special"
+
+  stock StockUniverse @relation(fields: [ticker], references: [ticker], onDelete: Cascade)
+
+  @@id([ticker, exDate])
+  @@index([ticker, exDate(sort: Desc)])
+}
+
+// ── Stock split history ───────────────────────────────────────────────────────
+
+model StockSplit {
+  ticker String
+  date   DateTime @db.Date
+  ratio  Float                   // e.g. 4.0 for a 4-for-1 split
+
+  stock StockUniverse @relation(fields: [ticker], references: [ticker], onDelete: Cascade)
+
+  @@id([ticker, date])
+}
+
+// ── Ingestion progress tracker ────────────────────────────────────────────────
+// Enables resumable batch seeding across all tickers.
+// dataType: "ohlc" | "quarterly"
+
+model StockFetchProgress {
+  ticker        String
+  dataType      String    // "ohlc" | "quarterly"
+  status        String    @default("pending") // "pending" | "done" | "failed"
+  lastFetchedAt DateTime?
+  errorMessage  String?
+
+  @@id([ticker, dataType])
+  @@index([dataType, status])
 }
 
 // Pre-built template maps available to all users
