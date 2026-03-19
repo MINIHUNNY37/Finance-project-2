@@ -269,20 +269,19 @@ async function fetchFinancials(ticker: string) {
 /** Step init: create StockFetchProgress rows for all tickers in the universe. */
 async function stepInit() {
   const tickers = await prisma.stockUniverse.findMany({ select: { ticker: true } });
-  let created = 0;
 
-  for (const { ticker } of tickers) {
-    for (const dataType of ['ohlc', 'quarterly'] as const) {
-      await prisma.stockFetchProgress.upsert({
-        where:  { ticker_dataType: { ticker, dataType } },
-        update: {},  // keep existing status
-        create: { ticker, dataType, status: 'pending' },
-      });
-      created++;
-    }
-  }
+  const rows = tickers.flatMap(({ ticker }) => [
+    { ticker, dataType: 'ohlc',      status: 'pending' },
+    { ticker, dataType: 'quarterly', status: 'pending' },
+  ]);
 
-  return { initialized: tickers.length, progressRows: created };
+  // skipDuplicates keeps existing status (done/failed) untouched
+  const { count } = await prisma.stockFetchProgress.createMany({
+    data: rows,
+    skipDuplicates: true,
+  });
+
+  return { initialized: tickers.length, progressRows: count };
 }
 
 /** Step ohlc: fetch OHLC + dividends + splits for the next `size` pending tickers. */
