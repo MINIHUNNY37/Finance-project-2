@@ -284,7 +284,8 @@ async function stepInit() {
   return { initialized: tickers.length, progressRows: count };
 }
 
-/** Step ohlc: fetch OHLC + dividends + splits for the next `size` pending tickers. */
+/** Step ohlc: fetch OHLC + dividends + splits for the next `size` pending tickers.
+ *  Max 3 tickers per call — each ticker = 1 Yahoo fetch + 1 bulk DB insert (~500 rows). */
 async function stepOHLC(size: number) {
   const pending = await prisma.stockFetchProgress.findMany({
     where:   { dataType: 'ohlc', status: 'pending' },
@@ -300,50 +301,47 @@ async function stepOHLC(size: number) {
 
       if (!data) {
         await prisma.stockFetchProgress.update({
-          where:  { ticker_dataType: { ticker: row.ticker, dataType: 'ohlc' } },
-          data:   { status: 'failed', errorMessage: 'No data returned', lastFetchedAt: new Date() },
+          where: { ticker_dataType: { ticker: row.ticker, dataType: 'ohlc' } },
+          data:  { status: 'failed', errorMessage: 'No data returned', lastFetchedAt: new Date() },
         });
         failed++;
         await sleep(150);
         continue;
       }
 
-      // Upsert OHLC candles
-      for (const c of data.candles) {
-        await prisma.stockDailyOHLC.upsert({
-          where:  { ticker_date: { ticker: row.ticker, date: c.date } },
-          update: { open: c.open, high: c.high, low: c.low, close: c.close, adjClose: c.adjClose, volume: c.volume },
-          create: { ticker: row.ticker, date: c.date, open: c.open, high: c.high, low: c.low, close: c.close, adjClose: c.adjClose, volume: c.volume },
+      // Bulk insert — single round-trip per table instead of one per row
+      if (data.candles.length > 0) {
+        await prisma.stockDailyOHLC.createMany({
+          data: data.candles.map(c => ({
+            ticker: row.ticker, date: c.date,
+            open: c.open, high: c.high, low: c.low, close: c.close,
+            adjClose: c.adjClose, volume: c.volume,
+          })),
+          skipDuplicates: true,
         });
       }
-
-      // Upsert dividends
-      for (const d of data.dividends) {
-        await prisma.stockDividend.upsert({
-          where:  { ticker_exDate: { ticker: row.ticker, exDate: d.exDate } },
-          update: { amount: d.amount },
-          create: { ticker: row.ticker, exDate: d.exDate, amount: d.amount },
+      if (data.dividends.length > 0) {
+        await prisma.stockDividend.createMany({
+          data: data.dividends.map(d => ({ ticker: row.ticker, exDate: d.exDate, amount: d.amount })),
+          skipDuplicates: true,
         });
       }
-
-      // Upsert splits
-      for (const sp of data.splits) {
-        await prisma.stockSplit.upsert({
-          where:  { ticker_date: { ticker: row.ticker, date: sp.date } },
-          update: { ratio: sp.ratio },
-          create: { ticker: row.ticker, date: sp.date, ratio: sp.ratio },
+      if (data.splits.length > 0) {
+        await prisma.stockSplit.createMany({
+          data: data.splits.map(s => ({ ticker: row.ticker, date: s.date, ratio: s.ratio })),
+          skipDuplicates: true,
         });
       }
 
       await prisma.stockFetchProgress.update({
-        where:  { ticker_dataType: { ticker: row.ticker, dataType: 'ohlc' } },
-        data:   { status: 'done', lastFetchedAt: new Date(), errorMessage: null },
+        where: { ticker_dataType: { ticker: row.ticker, dataType: 'ohlc' } },
+        data:  { status: 'done', lastFetchedAt: new Date(), errorMessage: null },
       });
       done++;
     } catch (err) {
       await prisma.stockFetchProgress.update({
-        where:  { ticker_dataType: { ticker: row.ticker, dataType: 'ohlc' } },
-        data:   { status: 'failed', errorMessage: String(err), lastFetchedAt: new Date() },
+        where: { ticker_dataType: { ticker: row.ticker, dataType: 'ohlc' } },
+        data:  { status: 'failed', errorMessage: String(err), lastFetchedAt: new Date() },
       });
       failed++;
     }
@@ -379,55 +377,30 @@ async function stepFinancials(size: number) {
         continue;
       }
 
-      for (const q of data.quarters) {
-        await prisma.stockQuarterlyStats.upsert({
-          where: {
-            ticker_periodEnd_reportType: {
-              ticker:     row.ticker,
-              periodEnd:  q.periodEnd,
-              reportType: q.reportType,
-            },
-          },
-          update: {
-            revenue:          q.revenue,
-            netIncome:        q.netIncome,
-            eps:              q.eps,
-            epsEstimate:      q.epsEstimate,
-            epsSurprisePct:   q.epsSurprisePct,
-            operatingMargin:  q.operatingMargin,
-            bookValue:        q.bookValue,
-            debtToEquity:     q.debtToEquity,
-            currentRatio:     q.currentRatio,
-            freeCashFlow:     q.freeCashFlow,
-            operatingCashFlow:q.operatingCashFlow,
-            marketCap:        q.marketCap,
-            peRatio:          q.peRatio,
-            priceToBook:      q.priceToBook,
-            dividendYield:    q.dividendYield,
-            fetchedAt:        new Date(),
-          },
-          create: {
-            ticker:           row.ticker,
-            periodEnd:        q.periodEnd,
-            reportType:       q.reportType,
-            revenue:          q.revenue,
-            netIncome:        q.netIncome,
-            eps:              q.eps,
-            epsEstimate:      q.epsEstimate,
-            epsSurprisePct:   q.epsSurprisePct,
-            operatingMargin:  q.operatingMargin,
-            bookValue:        q.bookValue,
-            debtToEquity:     q.debtToEquity,
-            currentRatio:     q.currentRatio,
-            freeCashFlow:     q.freeCashFlow,
-            operatingCashFlow:q.operatingCashFlow,
-            marketCap:        q.marketCap,
-            peRatio:          q.peRatio,
-            priceToBook:      q.priceToBook,
-            dividendYield:    q.dividendYield,
-          },
-        });
-      }
+      // Bulk insert all quarters for this ticker — single round-trip
+      await prisma.stockQuarterlyStats.createMany({
+        data: data.quarters.map(q => ({
+          ticker:           row.ticker,
+          periodEnd:        q.periodEnd,
+          reportType:       q.reportType,
+          revenue:          q.revenue,
+          netIncome:        q.netIncome,
+          eps:              q.eps,
+          epsEstimate:      q.epsEstimate,
+          epsSurprisePct:   q.epsSurprisePct,
+          operatingMargin:  q.operatingMargin,
+          bookValue:        q.bookValue,
+          debtToEquity:     q.debtToEquity,
+          currentRatio:     q.currentRatio,
+          freeCashFlow:     q.freeCashFlow,
+          operatingCashFlow:q.operatingCashFlow,
+          marketCap:        q.marketCap,
+          peRatio:          q.peRatio,
+          priceToBook:      q.priceToBook,
+          dividendYield:    q.dividendYield,
+        })),
+        skipDuplicates: true,
+      });
 
       await prisma.stockFetchProgress.update({
         where:  { ticker_dataType: { ticker: row.ticker, dataType: 'quarterly' } },
@@ -466,12 +439,14 @@ export async function POST(req: NextRequest) {
     }
 
     if (step === 'ohlc') {
-      const r = await stepOHLC(Math.min(size, 25));
+      // Max 3 tickers: 1 Yahoo fetch + 1 bulk insert per ticker, ~2-3s each
+      const r = await stepOHLC(Math.min(size, 3));
       return NextResponse.json({ step: 'ohlc', ...r });
     }
 
     if (step === 'financials') {
-      const r = await stepFinancials(size);
+      // Max 5 tickers: 1 Yahoo fetch + 1 bulk insert per ticker, ~1-2s each
+      const r = await stepFinancials(Math.min(size, 5));
       return NextResponse.json({ step: 'financials', ...r });
     }
 
