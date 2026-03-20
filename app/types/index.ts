@@ -35,6 +35,7 @@ export interface Entity {
   icon: string;
   subtitle: string;
   description: string;
+  entityKind?: 'custom' | 'stock'; // 'stock' = pre-built from library, opens flashcard
   subItems: EntitySubItem[];
   statistics: EntityStatistic[];
   color: string;

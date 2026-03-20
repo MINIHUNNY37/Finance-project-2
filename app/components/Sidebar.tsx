@@ -232,6 +232,7 @@ export default function Sidebar({
       week52Low:   s?.week52Low  ?? undefined,
       week52High:  s?.week52High ?? undefined,
       sector:      stock.sector  ?? undefined,
+      entityKind:  'stock' as const,
       catalysts:   [],
       tags:        [],
       links:       [],
