@@ -292,21 +292,25 @@ export default function EntityCard({
                 boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
               }}
             >
-              <ActionBtn icon={<Edit2 size={13} />} title="Edit" onClick={(e) => { e.stopPropagation(); onEdit(entity); }} color="#3b82f6" />
-              <ActionBtn icon={<Link2 size={13} />} title="Connect" onClick={(e) => { e.stopPropagation(); setConnectingFrom(entity.id); }} color="#06b6d4" />
+              <ActionBtn icon={<Edit2 size={12} />} title="Edit" label="Edit" onClick={(e) => { e.stopPropagation(); onEdit(entity); }} color="#3b82f6" />
+              <ActionBtn icon={<Link2 size={12} />} title="Connect" label="Link" onClick={(e) => { e.stopPropagation(); setConnectingFrom(entity.id); }} color="#06b6d4" />
               <ActionBtn
-                icon={<GitMerge size={13} />}
+                icon={<GitMerge size={12} />}
                 title="Connect with settings"
+                label="Rel"
                 onClick={handleOpenRelPanel}
                 color="#a78bfa"
               />
               <ActionBtn
-                icon={entity.locked ? <Unlock size={13} /> : <Lock size={13} />}
+                icon={entity.locked ? <Unlock size={12} /> : <Lock size={12} />}
                 title={entity.locked ? 'Unlock position' : 'Lock position'}
+                label={entity.locked ? 'Unlock' : 'Lock'}
                 onClick={(e) => { e.stopPropagation(); toggleEntityLock(entity.id); }}
                 color="#94a3b8"
               />
-              <ActionBtn icon={<Trash2 size={13} />} title="Delete" onClick={(e) => { e.stopPropagation(); onDelete(entity.id); }} color="#ef4444" />
+              {/* divider */}
+              <div style={{ width: 1, height: 28, background: 'rgba(59,130,246,0.2)', margin: '0 2px' }} />
+              <ActionBtn icon={<Trash2 size={12} />} title="Delete" label="Del" onClick={(e) => { e.stopPropagation(); onDelete(entity.id); }} color="#ef4444" />
             </div>
           ) : (
             /* ── Inline relationship settings panel ── */
@@ -477,22 +481,36 @@ export default function EntityCard({
             )}
             {/* Sector badge */}
             {entity.sector && (
-              <div style={{ marginTop: 4, fontSize: 9, color: '#8899b0', background: 'rgba(59,130,246,0.08)',
-                border: '1px solid rgba(59,130,246,0.15)', borderRadius: 4, padding: '1px 6px', textAlign: 'center' }}>
+              <div style={{ marginTop: 4, fontSize: 9, color: entity.color, background: `${entity.color}15`,
+                border: `1px solid ${entity.color}30`, borderRadius: 4, padding: '1px 6px', textAlign: 'center' }}>
                 {entity.sector}
               </div>
             )}
             {/* Live price row */}
             {entity.livePrice != null && (
-              <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#e2e8f0' }}>
+              <div style={{
+                marginTop: 7,
+                background: 'rgba(0,0,0,0.25)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                borderRadius: 8,
+                padding: '5px 10px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                justifyContent: 'center',
+                width: '100%',
+                boxSizing: 'border-box',
+              }}>
+                <span style={{ fontSize: 15, fontWeight: 800, color: '#f1f5f9', letterSpacing: '-0.02em' }}>
                   ${entity.livePrice.toFixed(2)}
                 </span>
                 {entity.priceChangePct != null && (
                   <span style={{
-                    fontSize: 10, fontWeight: 600,
+                    fontSize: 11, fontWeight: 700,
                     color: entity.priceChangePct >= 0 ? '#22c55e' : '#ef4444',
                     display: 'flex', alignItems: 'center', gap: 2,
+                    background: entity.priceChangePct >= 0 ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)',
+                    borderRadius: 5, padding: '1px 5px',
                   }}>
                     {entity.priceChangePct >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
                     {entity.priceChangePct >= 0 ? '+' : ''}{entity.priceChangePct.toFixed(2)}%
@@ -507,13 +525,20 @@ export default function EntityCard({
               if (base == null || tp == null) return null;
               const upside = ((tp - base) / base) * 100;
               const col = upside >= 20 ? '#22c55e' : upside >= 5 ? '#84cc16' : upside >= -5 ? '#f59e0b' : '#ef4444';
+              const barPct = Math.min(100, Math.max(0, upside + 50)); // 0–100 visual range
               return (
-                <div style={{
-                  marginTop: 5, fontSize: 10, fontWeight: 700, color: col,
-                  background: `${col}20`, border: `1px solid ${col}44`,
-                  borderRadius: 6, padding: '2px 8px', textAlign: 'center',
-                }}>
-                  Target {upside >= 0 ? '+' : ''}{upside.toFixed(1)}%
+                <div style={{ marginTop: 6, width: '100%' }}>
+                  <div style={{
+                    fontSize: 10, fontWeight: 700, color: col,
+                    display: 'flex', justifyContent: 'space-between', marginBottom: 3,
+                  }}>
+                    <span style={{ color: '#94a3b8', fontWeight: 400 }}>Target</span>
+                    <span>{upside >= 0 ? '+' : ''}{upside.toFixed(1)}%</span>
+                  </div>
+                  {/* Progress bar */}
+                  <div style={{ height: 4, background: 'rgba(255,255,255,0.07)', borderRadius: 2, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${barPct}%`, background: col, borderRadius: 2, transition: 'width 0.4s ease' }} />
+                  </div>
                 </div>
               );
             })()}
@@ -650,7 +675,8 @@ export default function EntityCard({
             position: 'absolute',
             left: 0,
             top: 0,
-            transform: 'translate(-50%, -100%)',
+            transform: cardHovered ? 'translate(-50%, -100%) translateY(-4px)' : 'translate(-50%, -100%)',
+            transition: 'transform 0.18s ease',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -658,46 +684,95 @@ export default function EntityCard({
             userSelect: 'none',
           }}
         >
+          {/* Stock entity hint — appears above the badge on hover */}
+          {cardHovered && entity.entityKind === 'stock' && (
+            <div
+              className="fade-in"
+              style={{
+                fontSize: 9,
+                color: '#06b6d4',
+                background: 'rgba(6,182,212,0.1)',
+                border: '1px solid rgba(6,182,212,0.3)',
+                borderRadius: 5,
+                padding: '2px 7px',
+                marginBottom: 4,
+                whiteSpace: 'nowrap',
+                letterSpacing: '0.04em',
+              }}
+            >
+              double-click for analysis
+            </div>
+          )}
+
           {/* Label badge */}
           <div
             style={{
-              background: 'linear-gradient(135deg, rgba(15,23,42,0.94), rgba(20,30,55,0.88))',
+              background: 'linear-gradient(135deg, rgba(15,23,42,0.97), rgba(20,30,55,0.92))',
               border: `2px solid ${entity.color}`,
               borderRadius: 10,
               padding: '5px 10px',
               display: 'flex',
               alignItems: 'center',
               gap: 7,
-              boxShadow: `0 3px 14px rgba(0,0,0,0.55), 0 0 0 1px ${entity.color}33`,
+              boxShadow: cardHovered
+                ? `0 6px 20px rgba(0,0,0,0.65), 0 0 0 1px ${entity.color}55, 0 0 14px ${entity.color}33`
+                : `0 3px 14px rgba(0,0,0,0.55), 0 0 0 1px ${entity.color}33`,
               backdropFilter: 'blur(10px)',
               maxWidth: 170,
+              transition: 'box-shadow 0.18s ease',
             }}
           >
             <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>{entity.icon}</span>
             <div style={{ display: 'flex', flexDirection: 'column', maxWidth: 120 }}>
-              <span
-                style={{
-                  color: entity.color,
-                  fontWeight: 700,
-                  fontSize: 12,
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {entity.name}
-              </span>
-              {entity.livePrice != null && (
-                <span style={{ fontSize: 10, color: 'rgba(148,163,184,0.8)', marginTop: 1 }}>
-                  ${entity.livePrice.toFixed(2)}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span
+                  style={{
+                    color: entity.color,
+                    fontWeight: 700,
+                    fontSize: 12,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {entity.name}
+                </span>
+                {/* Conviction dots on pin */}
+                {entity.conviction != null && entity.conviction > 0 && (
+                  <div style={{ display: 'flex', gap: 1, flexShrink: 0 }}>
+                    {[1,2,3,4,5].map(n => (
+                      <div key={n} style={{
+                        width: 4, height: 4, borderRadius: '50%',
+                        background: n <= entity.conviction! ? entity.color : 'rgba(148,163,184,0.25)',
+                      }} />
+                    ))}
+                  </div>
+                )}
+              </div>
+              {entity.livePrice != null ? (
+                <span style={{ fontSize: 10, color: 'rgba(148,163,184,0.85)', marginTop: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ fontWeight: 600, color: '#e2e8f0' }}>${entity.livePrice.toFixed(2)}</span>
                   {entity.priceChangePct != null && (
-                    <span style={{ marginLeft: 3, color: entity.priceChangePct >= 0 ? '#22c55e' : '#ef4444' }}>
-                      {entity.priceChangePct >= 0 ? '+' : ''}{entity.priceChangePct.toFixed(1)}%
+                    <span style={{ color: entity.priceChangePct >= 0 ? '#22c55e' : '#ef4444', fontWeight: 600 }}>
+                      {entity.priceChangePct >= 0 ? '▲' : '▼'}{Math.abs(entity.priceChangePct).toFixed(1)}%
                     </span>
                   )}
                 </span>
-              )}
+              ) : entity.ticker ? (
+                <span style={{ fontSize: 9, color: 'rgba(148,163,184,0.5)', marginTop: 1 }}>{entity.ticker}</span>
+              ) : null}
             </div>
+
+            {/* Stock badge */}
+            {entity.entityKind === 'stock' && (
+              <div style={{
+                fontSize: 8, fontWeight: 700, color: '#06b6d4',
+                background: 'rgba(6,182,212,0.12)', border: '1px solid rgba(6,182,212,0.3)',
+                borderRadius: 4, padding: '1px 4px', flexShrink: 0, alignSelf: 'flex-start',
+              }}>
+                STOCK
+              </div>
+            )}
           </div>
 
           {/* Triangle pointer */}
@@ -715,12 +790,15 @@ export default function EntityCard({
           {/* Dot at the map point */}
           <div
             style={{
-              width: 8,
-              height: 8,
+              width: cardHovered ? 10 : 8,
+              height: cardHovered ? 10 : 8,
               borderRadius: '50%',
               background: entity.color,
-              boxShadow: `0 0 8px ${entity.color}, 0 0 16px ${entity.color}55`,
+              boxShadow: cardHovered
+                ? `0 0 12px ${entity.color}, 0 0 24px ${entity.color}88`
+                : `0 0 8px ${entity.color}, 0 0 16px ${entity.color}55`,
               marginTop: -1,
+              transition: 'width 0.18s ease, height 0.18s ease, box-shadow 0.18s ease',
             }}
           />
         </div>
@@ -729,8 +807,8 @@ export default function EntityCard({
       {/* ── Draw-connection port: visible on hover, draggable ── */}
       {cardHovered && !isConnecting && onStartDrawConnection && (
         <div
-          className="no-drag"
-          title="Drag to connect"
+          className="no-drag fade-in"
+          title="Drag to draw a connection"
           onMouseDown={(e) => {
             e.stopPropagation();
             e.preventDefault();
@@ -738,22 +816,24 @@ export default function EntityCard({
           }}
           style={{
             position: 'absolute',
-            left: isSelected ? 72 : 72,
-            top: isSelected ? -52 : -52,
-            width: 16,
-            height: 16,
+            /* pin mode: card top-right corner; selected: top-right of card body */
+            left: isSelected ? 60 : 58,
+            top: isSelected ? -58 : -80,
+            width: 18,
+            height: 18,
             borderRadius: '50%',
-            background: 'rgba(6,182,212,0.9)',
-            border: '2px solid rgba(255,255,255,0.6)',
+            background: 'rgba(6,182,212,0.95)',
+            border: '2px solid rgba(255,255,255,0.7)',
             cursor: 'crosshair',
             zIndex: 400,
-            boxShadow: '0 0 10px rgba(6,182,212,0.8)',
+            boxShadow: '0 0 0 3px rgba(6,182,212,0.25), 0 0 12px rgba(6,182,212,0.7)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            animation: 'fadeIn 0.15s ease',
           }}
         >
-          <div style={{ width: 4, height: 4, borderRadius: '50%', background: 'white' }} />
+          <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'white' }} />
         </div>
       )}
 
@@ -779,8 +859,8 @@ export default function EntityCard({
   );
 }
 
-function ActionBtn({ icon, title, onClick, color }: {
-  icon: React.ReactNode; title: string;
+function ActionBtn({ icon, title, label, onClick, color }: {
+  icon: React.ReactNode; title: string; label?: string;
   onClick: (e: React.MouseEvent) => void; color: string;
 }) {
   return (
@@ -789,13 +869,26 @@ function ActionBtn({ icon, title, onClick, color }: {
       onClick={onClick}
       style={{
         background: 'none', border: 'none', color, cursor: 'pointer',
-        padding: '3px 5px', borderRadius: 5, display: 'flex', alignItems: 'center',
-        transition: 'background 0.1s ease',
+        padding: '4px 6px', borderRadius: 6,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+        transition: 'background 0.12s ease, transform 0.1s ease',
+        minWidth: 32,
       }}
-      onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = `${color}25`)}
-      onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = 'none')}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLElement).style.background = `${color}20`;
+        (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)';
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLElement).style.background = 'none';
+        (e.currentTarget as HTMLElement).style.transform = 'none';
+      }}
     >
       {icon}
+      {label && (
+        <span style={{ fontSize: 8, fontWeight: 600, letterSpacing: '0.03em', lineHeight: 1, opacity: 0.85 }}>
+          {label}
+        </span>
+      )}
     </button>
   );
 }
