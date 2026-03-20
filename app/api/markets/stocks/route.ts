@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
       include: {
         quarterlyStats: {
           orderBy: { periodEnd: 'desc' },
-          take: 1,
+          take: 10, // grab enough to find both a snapshot and a quarterly row
         },
       },
       orderBy: { ticker: 'asc' },
@@ -74,46 +74,50 @@ export async function GET(req: NextRequest) {
 
   // Map to a `stats` shape the Sidebar expects (same fields as old StockKeyStats)
   const stocks = rawStocks.map(({ quarterlyStats, ...s }) => {
-    const q = quarterlyStats[0] ?? null;
+    const snapshot = quarterlyStats.find(r => r.reportType === 'snapshot') ?? null;
+    const quarterly = quarterlyStats.find(r => ['Q1','Q2','Q3','Q4'].includes(r.reportType)) ?? null;
+    // Merge: price fields from snapshot, financials from quarterly (fallback to the other if one is missing)
+    const q = snapshot ?? quarterly;
+    const f = quarterly ?? snapshot;
     return {
       ...s,
       stats: q ? {
-        // Price snapshot
+        // Price snapshot (from snapshot row)
         price:            q.price,
         priceChange:      q.priceChange,
         priceChangePct:   q.priceChangePct,
         week52High:       q.week52High,
         week52Low:        q.week52Low,
-        // Valuation
-        marketCap:        q.marketCapFmt ?? (q.marketCap ? formatMarketCap(q.marketCap) : null),
-        peRatio:          q.peRatio      ? q.peRatio.toFixed(2)      : null,
-        priceToBook:      q.priceToBook  ? q.priceToBook.toFixed(2)  : null,
-        // Income statement
-        revenue:          q.revenue      ? formatFinancialVal(q.revenue)      : null,
-        netIncome:        q.netIncome    ? formatFinancialVal(q.netIncome)    : null,
-        eps:              q.eps          ? `$${q.eps.toFixed(2)}`             : null,
-        epsEstimate:      q.epsEstimate  ? `$${q.epsEstimate.toFixed(2)}`     : null,
-        epsSurprisePct:   q.epsSurprisePct != null
-          ? `${q.epsSurprisePct >= 0 ? '+' : ''}${q.epsSurprisePct.toFixed(1)}%`
+        // Valuation (prefer quarterly, snapshot has marketCap/peRatio too)
+        marketCap:        f?.marketCapFmt ?? (f?.marketCap ? formatMarketCap(f.marketCap) : null),
+        peRatio:          f?.peRatio      ? f.peRatio.toFixed(2)      : null,
+        priceToBook:      f?.priceToBook  ? f.priceToBook.toFixed(2)  : null,
+        // Income statement (from quarterly row)
+        revenue:          f?.revenue      ? formatFinancialVal(f.revenue)      : null,
+        netIncome:        f?.netIncome    ? formatFinancialVal(f.netIncome)    : null,
+        eps:              f?.eps          ? `$${f.eps.toFixed(2)}`             : null,
+        epsEstimate:      f?.epsEstimate  ? `$${f.epsEstimate.toFixed(2)}`     : null,
+        epsSurprisePct:   f?.epsSurprisePct != null
+          ? `${f.epsSurprisePct >= 0 ? '+' : ''}${f.epsSurprisePct.toFixed(1)}%`
           : null,
-        // Balance sheet
-        bookValue:        q.bookValue    ? `$${q.bookValue.toFixed(2)}`       : null,
-        debtToEquity:     q.debtToEquity ? q.debtToEquity.toFixed(2)          : null,
-        currentRatio:     q.currentRatio ? q.currentRatio.toFixed(2)          : null,
-        // Cash flow
-        freeCashFlow:     q.freeCashFlow      ? formatFinancialVal(q.freeCashFlow)      : null,
-        operatingCashFlow: q.operatingCashFlow ? formatFinancialVal(q.operatingCashFlow) : null,
-        // Returns / yield
-        operatingMargin:  q.operatingMargin
-          ? `${(q.operatingMargin * 100).toFixed(1)}%`
+        // Balance sheet (from quarterly row)
+        bookValue:        f?.bookValue    ? `$${f.bookValue.toFixed(2)}`       : null,
+        debtToEquity:     f?.debtToEquity ? f.debtToEquity.toFixed(2)          : null,
+        currentRatio:     f?.currentRatio ? f.currentRatio.toFixed(2)          : null,
+        // Cash flow (from quarterly row)
+        freeCashFlow:     f?.freeCashFlow      ? formatFinancialVal(f.freeCashFlow)      : null,
+        operatingCashFlow: f?.operatingCashFlow ? formatFinancialVal(f.operatingCashFlow) : null,
+        // Returns / yield (from quarterly row)
+        operatingMargin:  f?.operatingMargin
+          ? `${(f.operatingMargin * 100).toFixed(1)}%`
           : null,
-        dividendYield:    q.dividendYield
-          ? `${(q.dividendYield * 100).toFixed(2)}%`
+        dividendYield:    f?.dividendYield
+          ? `${(f.dividendYield * 100).toFixed(2)}%`
           : null,
-        // Period metadata
-        periodEnd:        q.periodEnd,
-        reportType:       q.reportType,
-        fetchedAt:        q.fetchedAt,
+        // Period metadata (from whichever financial row we used)
+        periodEnd:        f?.periodEnd ?? q.periodEnd,
+        reportType:       f?.reportType ?? q.reportType,
+        fetchedAt:        f?.fetchedAt  ?? q.fetchedAt,
       } : null,
     };
   });
