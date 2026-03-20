@@ -6,6 +6,7 @@ import WorldMap from './WorldMap';
 import EntityCard from './EntityCard';
 import RelationshipLayer from './RelationshipLayer';
 import EntityDialog from './EntityDialog';
+import StockFlashcard from './StockFlashcard';
 import RelationshipDialog from './RelationshipDialog';
 import GeoEventNode from './GeoEventNode';
 import GeoEventDialog from './GeoEventDialog';
@@ -86,6 +87,9 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   const [editingEntity, setEditingEntity] = useState<Entity | undefined>();
   const [pendingPosition, setPendingPosition] = useState<{ x: number; y: number } | undefined>();
   const [pendingCountry, setPendingCountry] = useState<string | undefined>();
+
+  // Stock flashcard (opens instead of EntityDialog for stock entities)
+  const [flashcardEntity, setFlashcardEntity] = useState<Entity | null>(null);
 
   // Relationship dialog
   const [relDialogOpen, setRelDialogOpen] = useState(false);
@@ -373,6 +377,11 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   );
 
   const handleEditEntity = useCallback((entity: Entity) => {
+    // Stock entities (imported from library) open the educational flashcard
+    if (entity.entityKind === 'stock' && entity.ticker) {
+      setFlashcardEntity(entity);
+      return;
+    }
     setEditingEntity(entity);
     setPendingPosition(entity.position);
     setEntityDialogOpen(true);
@@ -755,6 +764,14 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
         defaultPosition={pendingPosition}
         defaultCountry={pendingCountry}
       />
+      {flashcardEntity && flashcardEntity.ticker && (
+        <StockFlashcard
+          ticker={flashcardEntity.ticker}
+          entityName={flashcardEntity.name}
+          entitySector={flashcardEntity.sector ?? null}
+          onClose={() => setFlashcardEntity(null)}
+        />
+      )}
       <RelationshipDialog
         isOpen={relDialogOpen}
         onClose={() => { setRelDialogOpen(false); setEditingRel(undefined); }}
