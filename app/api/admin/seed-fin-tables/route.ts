@@ -80,6 +80,59 @@ async function requireAdmin() {
   return ADMIN_EMAILS.includes(session.user.email);
 }
 
+// ── Yahoo Finance crumb auth ──────────────────────────────────────────────────
+// The v10/quoteSummary endpoint requires a crumb token + session cookie.
+// We fetch both once at the start of each POST call and reuse across all tickers.
+
+interface YahooAuth {
+  crumb:   string;
+  cookies: string;
+}
+
+async function getYahooAuth(): Promise<YahooAuth | null> {
+  try {
+    // Step 1 — hit the main Yahoo Finance page to receive a session cookie
+    const homeRes = await fetch('https://finance.yahoo.com/', {
+      headers: {
+        'User-Agent':      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept':          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(10_000),
+    });
+
+    // Collect all Set-Cookie headers into a single cookie string
+    const setCookies: string[] = homeRes.headers.getSetCookie
+      ? homeRes.headers.getSetCookie()
+      : [(homeRes.headers.get('set-cookie') ?? '')];
+    const cookies = setCookies
+      .map(c => c.split(';')[0])   // keep only name=value, drop attributes
+      .filter(Boolean)
+      .join('; ');
+
+    // Step 2 — exchange the session cookie for a crumb token
+    const crumbRes = await fetch('https://query1.finance.yahoo.com/v1/test/getcrumb', {
+      headers: {
+        'User-Agent':      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept':          'text/plain, */*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Cookie':          cookies,
+      },
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!crumbRes.ok) return null;
+
+    const crumb = (await crumbRes.text()).trim();
+    // Sanity check — a valid crumb is a short alphanumeric string, not an HTML page
+    if (!crumb || crumb.length > 50 || crumb.includes('<')) return null;
+
+    return { crumb, cookies };
+  } catch {
+    return null;
+  }
+}
+
 function nullIfZero(v: number): number | null {
   return v === 0 || !isFinite(v) ? null : v;
 }
@@ -137,7 +190,10 @@ interface QuarterMetrics {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyRecord = Record<string, any>;
 
-async function fetchQuarterlyMetrics(ticker: string): Promise<QuarterMetrics[]> {
+async function fetchQuarterlyMetrics(
+  ticker: string,
+  auth: YahooAuth | null,
+): Promise<QuarterMetrics[]> {
   const safe    = encodeURIComponent(ticker);
   const modules = [
     'incomeStatementHistory',
@@ -148,10 +204,19 @@ async function fetchQuarterlyMetrics(ticker: string): Promise<QuarterMetrics[]> 
     'financialData',
   ].join('%2C');
 
-  const url = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${safe}?modules=${modules}`;
+  // Append crumb to the query string when available
+  const crumbParam = auth ? `&crumb=${encodeURIComponent(auth.crumb)}` : '';
+  const url = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${safe}?modules=${modules}${crumbParam}`;
+
+  const headers: Record<string, string> = {
+    'User-Agent':      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept':          'application/json',
+    'Accept-Language': 'en-US,en;q=0.9',
+  };
+  if (auth) headers['Cookie'] = auth.cookies;
 
   const res = await fetch(url, {
-    headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' },
+    headers,
     signal: AbortSignal.timeout(12_000),
   });
   if (!res.ok) return [];
@@ -430,6 +495,9 @@ export async function POST(req: NextRequest) {
     select:  { ticker: true, name: true, exchange: true, sector: true },
   });
 
+  // Fetch Yahoo crumb once — reused for every ticker in this batch
+  const yahooAuth = await getYahooAuth();
+
   let done   = 0;
   let failed = 0;
   let totalQuarters = 0;
@@ -437,7 +505,7 @@ export async function POST(req: NextRequest) {
 
   for (const stock of stocks) {
     try {
-      const quarters = await fetchQuarterlyMetrics(stock.ticker);
+      const quarters = await fetchQuarterlyMetrics(stock.ticker, yahooAuth);
 
       if (quarters.length === 0) {
         failed++;
