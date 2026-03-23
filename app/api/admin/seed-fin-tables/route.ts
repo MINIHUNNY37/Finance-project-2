@@ -219,11 +219,17 @@ async function fetchQuarterlyMetrics(
     headers,
     signal: AbortSignal.timeout(12_000),
   });
-  if (!res.ok) return [];
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Yahoo HTTP ${res.status}: ${body.slice(0, 200)}`);
+  }
 
   const data: AnyRecord = await res.json();
   const r: AnyRecord = data?.quoteSummary?.result?.[0];
-  if (!r) return [];
+  if (!r) {
+    const errMsg = data?.quoteSummary?.error?.description ?? JSON.stringify(data).slice(0, 200);
+    throw new Error(`Yahoo empty result: ${errMsg}`);
+  }
 
   // ── Raw modules ──────────────────────────────────────────────────────────────
   const incomeList: AnyRecord[]  = r.incomeStatementHistory?.incomeStatementHistory ?? [];
@@ -546,6 +552,7 @@ export async function POST(req: NextRequest) {
   const totalUniverse = await prisma.stockUniverse.count();
 
   return NextResponse.json({
+    yahooAuthObtained: yahooAuth !== null,
     done,
     failed,
     totalQuarters,
