@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useSession, signIn } from 'next-auth/react';
-import { Shield, Users, RefreshCw, LogIn, ChevronDown, Check } from 'lucide-react';
+import { Shield, Users, RefreshCw, LogIn, ChevronDown, Check, Database } from 'lucide-react';
+import Link from 'next/link';
 
 const ADMIN_EMAILS = ['minjune043010@gmail.com'];
 
@@ -111,7 +112,7 @@ export default function DashboardPage() {
     <div style={{ minHeight: '100vh', background: '#030712', padding: '32px 24px', fontFamily: 'system-ui, sans-serif' }}>
       {/* Header */}
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <Shield size={24} style={{ color: '#3b82f6' }} />
             <div>
@@ -127,6 +128,19 @@ export default function DashboardPage() {
             <RefreshCw size={13} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
             {loading ? 'Refreshing…' : 'Refresh'}
           </button>
+        </div>
+
+        {/* Nav tabs */}
+        <div style={{ display: 'flex', gap: 4, marginBottom: 28, borderBottom: '1px solid rgba(59,130,246,0.12)', paddingBottom: 0 }}>
+          <div style={{ padding: '8px 16px', fontSize: 13, fontWeight: 500, color: '#3b82f6', borderBottom: '2px solid #3b82f6', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Users size={14} /> Users
+          </div>
+          <Link href="/dashboard/database" style={{ padding: '8px 16px', fontSize: 13, fontWeight: 500, color: '#475569', borderBottom: '2px solid transparent', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}
+            onMouseEnter={e => (e.currentTarget.style.color = '#93c5fd')}
+            onMouseLeave={e => (e.currentTarget.style.color = '#475569')}
+          >
+            <Database size={14} /> Database
+          </Link>
         </div>
 
         {/* Stats row */}
