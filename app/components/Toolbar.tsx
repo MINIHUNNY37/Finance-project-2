@@ -2,9 +2,9 @@
 
 import React, { useState } from 'react';
 import {
-  Save, Share2, Map, Link2, X,
+  Save, Share2, Map,
   ChevronDown, TrendingUp, LogIn, LogOut, User,
-  Lock, Unlock, Clock, Globe, Square, BarChart3,
+  Clock, Globe, Square, BarChart3,
 } from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
 import ShareDialog from './ShareDialog';
@@ -119,38 +119,6 @@ export default function Toolbar({
 
         {/* === Action group === */}
         <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
-
-          {/* Connect toggle */}
-          <button onClick={onToggleConnect} style={{
-            display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
-            borderRadius: 8, fontSize: 13, cursor: 'pointer',
-            border: `1px solid ${isConnecting ? '#06b6d4' : 'rgba(59,130,246,0.3)'}`,
-            background: isConnecting ? 'rgba(6,182,212,0.15)' : 'transparent',
-            color: isConnecting ? '#06b6d4' : '#93c5fd',
-            transition: 'all 0.15s ease',
-          }}>
-            {isConnecting ? <X size={15} /> : <Link2 size={15} />}
-            <span>{isConnecting ? 'Cancel' : 'Connect'}</span>
-          </button>
-
-          {/* Divider */}
-          <div style={{ width: 1, height: 28, background: 'rgba(59,130,246,0.15)', margin: '0 2px' }} />
-
-          {/* Global lock */}
-          <button
-            onClick={toggleGlobalLock}
-            title={globalLocked ? 'Unlock all entities' : 'Lock all entities'}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px',
-              borderRadius: 8, fontSize: 13, cursor: 'pointer',
-              border: `1px solid ${globalLocked ? '#f59e0b' : 'rgba(59,130,246,0.2)'}`,
-              background: globalLocked ? 'rgba(245,158,11,0.12)' : 'transparent',
-              color: globalLocked ? '#f59e0b' : '#94a3b8',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            {globalLocked ? <Lock size={15} /> : <Unlock size={15} />}
-          </button>
 
           {/* Calendar date filter */}
           <CalendarPicker />
