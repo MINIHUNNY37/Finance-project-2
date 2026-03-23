@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
-import { ensureMetaTables } from '../../route';
+import { ensureMetaTables } from '@/lib/db-meta';
 
 const ADMIN_EMAILS = ['minjune043010@gmail.com'];
 
