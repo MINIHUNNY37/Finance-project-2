@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth, ADMIN_EMAILS } from '@/auth';
 import { prisma } from '@/lib/prisma';
-import { v4 as uuidv4 } from 'uuid';
-import { ensureMetaTables } from '@/lib/db-meta';
 
 const DEFAULT_TABLES = [
   {
@@ -63,61 +61,44 @@ export async function POST() {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    await ensureMetaTables();
-
     const created: string[] = [];
     const skipped: string[] = [];
-    const now = new Date().toISOString();
 
     for (const tbl of DEFAULT_TABLES) {
-      const existing = await prisma.$queryRawUnsafe<{ id: string }[]>(
-        `SELECT id FROM "DbTableSchema" WHERE "tableName"=$1`,
-        tbl.tableName
-      );
+      const existing = await prisma.dbTableSchema.findUnique({
+        where: { tableName: tbl.tableName },
+        include: { columns: { select: { id: true } } },
+      });
 
-      let tableId: string;
-
-      if (existing.length > 0) {
-        tableId = existing[0].id;
-        // Check if columns are missing (partial previous run) and backfill
-        const colCount = await prisma.$queryRawUnsafe<{ count: string }[]>(
-          `SELECT COUNT(*) as count FROM "DbColumnSchema" WHERE "tableId"=$1`,
-          tableId
-        );
-        if (parseInt(colCount[0]?.count ?? '0') > 0) {
+      if (existing) {
+        if (existing.columns.length > 0) {
           skipped.push(tbl.tableName);
           continue;
         }
-        // Columns missing — fall through to insert them
-      } else {
-        tableId = uuidv4();
-        await prisma.$executeRawUnsafe(
-          `INSERT INTO "DbTableSchema" ("id","tableName","displayName","description","createdAt","updatedAt")
-           VALUES ($1,$2,$3,$4,$5,$6)`,
-          tableId, tbl.tableName, tbl.displayName, tbl.description, now, now
-        );
+        // Table row exists but columns are missing — backfill
+        await prisma.dbColumnSchema.createMany({
+          data: tbl.columns.map(col => ({ ...col, tableId: existing.id })),
+          skipDuplicates: true,
+        });
+        created.push(tbl.tableName);
+        continue;
       }
 
-      for (const col of tbl.columns) {
-        await prisma.$executeRawUnsafe(
-          `INSERT INTO "DbColumnSchema"
-            ("id","tableId","columnName","displayName","dataType","isPrimaryKey","isForeignKey","foreignTable","isNullable","position","createdAt","updatedAt")
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
-           ON CONFLICT ("tableId","columnName") DO NOTHING`,
-          uuidv4(), tableId,
-          col.columnName, col.displayName, col.dataType,
-          col.isPrimaryKey, col.isForeignKey, col.foreignTable,
-          col.isNullable, col.position, now, now
-        );
-      }
-
+      await prisma.dbTableSchema.create({
+        data: {
+          tableName:   tbl.tableName,
+          displayName: tbl.displayName,
+          description: tbl.description,
+          columns: { create: tbl.columns },
+        },
+      });
       created.push(tbl.tableName);
     }
 
     return NextResponse.json({ ok: true, created, skipped });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error('[db/init] error:', message);
+    console.error('[db/init]', message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

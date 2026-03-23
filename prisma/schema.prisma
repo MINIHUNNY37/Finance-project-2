@@ -166,6 +166,39 @@ model StockFetchProgress {
   @@index([dataType, status])
 }
 
+// ── DB Schema Manager ────────────────────────────────────────────────────────
+// Stores user-defined table/column definitions for the database dashboard.
+// Actual fin_* tables are created separately via the /sync endpoint.
+
+model DbTableSchema {
+  id          String          @id @default(cuid())
+  tableName   String          @unique  // SQL name, e.g. "fin_stock_info"
+  displayName String                   // UI label, e.g. "Stock Info"
+  description String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  columns     DbColumnSchema[]
+}
+
+model DbColumnSchema {
+  id           String        @id @default(cuid())
+  tableId      String
+  columnName   String                  // SQL column name, e.g. "ticker"
+  displayName  String                  // UI label, e.g. "Ticker"
+  dataType     String        @default("TEXT") // TEXT | NUMERIC | INTEGER | BOOLEAN | TIMESTAMPTZ
+  isPrimaryKey Boolean       @default(false)
+  isForeignKey Boolean       @default(false)
+  foreignTable String?                 // SQL table name of referenced table
+  isNullable   Boolean       @default(true)
+  position     Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  table DbTableSchema @relation(fields: [tableId], references: [id], onDelete: Cascade)
+
+  @@unique([tableId, columnName])
+}
+
 // Pre-built template maps available to all users
 model TemplateMap {
   id          String   @id @default(cuid())

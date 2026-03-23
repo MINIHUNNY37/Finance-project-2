@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth, ADMIN_EMAILS } from '@/auth';
 import { prisma } from '@/lib/prisma';
-import { ensureMetaTables } from '@/lib/db-meta';
 
 const SQL_TYPES: Record<string, string> = {
   TEXT:       'TEXT',
@@ -67,31 +66,35 @@ async function getExistingColumns(tableName: string): Promise<string[]> {
 }
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
   const session = await auth();
   if (!session?.user?.email || !ADMIN_EMAILS.includes(session.user.email)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  await ensureMetaTables();
   const { id } = await params;
 
-  const rows = await prisma.$queryRawUnsafe<Record<string, unknown>[]>(
-    `SELECT t.id, t."tableName", t."displayName", t."description",
-      COALESCE(
-        json_agg(json_build_object(
-          'id',c.id,'columnName',c."columnName",'displayName',c."displayName",
-          'dataType',c."dataType",'isPrimaryKey',c."isPrimaryKey",'isForeignKey',c."isForeignKey",
-          'foreignTable',c."foreignTable",'isNullable',c."isNullable",'position',c."position"
-        ) ORDER BY c."position") FILTER (WHERE c.id IS NOT NULL),'[]'::json
-      ) AS columns
-    FROM "DbTableSchema" t LEFT JOIN "DbColumnSchema" c ON c."tableId"=t.id
-    WHERE t.id=$1 GROUP BY t.id`,
-    id
-  );
+  const record = await prisma.dbTableSchema.findUnique({
+    where: { id },
+    include: { columns: { orderBy: { position: 'asc' } } },
+  });
 
-  if (!rows[0]) return NextResponse.json({ error: 'Schema not found' }, { status: 404 });
+  if (!record) return NextResponse.json({ error: 'Schema not found' }, { status: 404 });
 
-  const schema = rows[0] as unknown as TableSchema;
+  const schema: TableSchema = {
+    id:          record.id,
+    tableName:   record.tableName,
+    displayName: record.displayName,
+    columns:     record.columns.map(c => ({
+      columnName:   c.columnName,
+      dataType:     c.dataType,
+      isPrimaryKey: c.isPrimaryKey,
+      isForeignKey: c.isForeignKey,
+      foreignTable: c.foreignTable,
+      isNullable:   c.isNullable,
+      position:     c.position,
+    })),
+  };
   const ops: string[] = [];
 
   if (!(await tableExists(schema.tableName))) {
@@ -148,4 +151,9 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   }
 
   return NextResponse.json({ ok: true, operations: ops });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[db/sync]', message);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
