@@ -493,14 +493,23 @@ export default function DatabaseDashboardPage() {
         a.tableName === 'fin_stock_info' ? -1 : b.tableName === 'fin_stock_info' ? 1 : 0
       );
       const allOps: string[] = [];
+      const errors: string[] = [];
       for (const t of ordered) {
         const res = await fetch(`/api/db/schemas/${t.id}/sync`, { method: 'POST' });
         const data = await res.json();
-        if (data.operations) allOps.push(...data.operations);
+        if (!res.ok) {
+          errors.push(`${t.tableName}: ${data.error ?? 'unknown error'}`);
+        } else if (data.operations) {
+          allOps.push(...data.operations);
+        }
       }
-      showToast(`Synced all tables (${allOps.length} ops)`, true);
-    } catch {
-      showToast('Sync all failed', false);
+      if (errors.length > 0) {
+        showToast(`Sync errors: ${errors.join(' | ')}`, false);
+      } else {
+        showToast(`Synced all tables (${allOps.length} ops)`, true);
+      }
+    } catch (e) {
+      showToast(`Sync all failed: ${e instanceof Error ? e.message : String(e)}`, false);
     } finally {
       setSyncing(false);
     }

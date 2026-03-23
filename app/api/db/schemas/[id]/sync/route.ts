@@ -100,8 +100,15 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   if (!(await tableExists(schema.tableName))) {
     // Create the table from scratch
     const sql = buildCreateSQL(schema);
-    await prisma.$executeRawUnsafe(sql);
-    ops.push(`Created table "${schema.tableName}"`);
+    try {
+      await prisma.$executeRawUnsafe(sql);
+      ops.push(`Created table "${schema.tableName}"`);
+    } catch (createErr: unknown) {
+      const msg = createErr instanceof Error ? createErr.message : String(createErr);
+      console.error(`[db/sync] CREATE TABLE failed for "${schema.tableName}":`, msg);
+      console.error('[db/sync] SQL was:', sql);
+      return NextResponse.json({ error: `CREATE TABLE "${schema.tableName}" failed: ${msg}` }, { status: 500 });
+    }
   } else {
     // Add any missing columns (safe, non-destructive)
     const existing = await getExistingColumns(schema.tableName);
