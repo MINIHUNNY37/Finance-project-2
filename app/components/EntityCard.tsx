@@ -294,13 +294,6 @@ export default function EntityCard({
               <ActionBtn icon={<Edit2 size={12} />} title="Edit" label="Edit" onClick={(e) => { e.stopPropagation(); onEdit(entity); }} color="#3b82f6" />
               <ActionBtn icon={<Link2 size={12} />} title="Connect" label="Link" onClick={(e) => { e.stopPropagation(); setConnectingFrom(entity.id); }} color="#06b6d4" />
               <ActionBtn
-                icon={<GitMerge size={12} />}
-                title="Connect with settings"
-                label="Rel"
-                onClick={handleOpenRelPanel}
-                color="#a78bfa"
-              />
-              <ActionBtn
                 icon={entity.locked ? <Unlock size={12} /> : <Lock size={12} />}
                 title={entity.locked ? 'Unlock position' : 'Lock position'}
                 label={entity.locked ? 'Unlock' : 'Lock'}
