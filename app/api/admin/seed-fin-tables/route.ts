@@ -185,185 +185,88 @@ interface QuarterMetrics {
   shareholderYield: number | null;   // (dividends + buybacks) / mktcap × 100 (latest)
 }
 
-// ── Yahoo Finance fetcher ─────────────────────────────────────────────────────
+// ── Read metrics from StockQuarterlyStats (no external API calls) ─────────────
+//
+// Yahoo Finance's quoteSummary endpoint is blocked from Vercel IPs (HTTP 429).
+// StockQuarterlyStats already holds all the data we need — it is populated by:
+//   • seed-markets ?step=2  → reportType="snapshot" (price + basic valuation)
+//   • seed-history ?step=financials → reportType=Q1/Q2/Q3/Q4 (full financials)
+//
+// We map StockQuarterlyStats columns → QuarterMetrics and use periodEnd as the
+// reported_at timestamp for fin_time.
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyRecord = Record<string, any>;
-
-async function fetchQuarterlyMetrics(
-  ticker: string,
-): Promise<QuarterMetrics[]> {
-  const safe    = encodeURIComponent(ticker);
-  const modules = [
-    'incomeStatementHistory',
-    'balanceSheetHistory',
-    'cashflowStatementHistory',
-    'defaultKeyStatistics',
-    'summaryDetail',
-    'financialData',
-  ].join('%2C');
-
-  // query1 + v11 is less rate-limited than query2 + v10 from server environments
-  const url = `https://query1.finance.yahoo.com/v11/finance/quoteSummary/${safe}?modules=${modules}`;
-
-  const res = await fetch(url, {
-    headers: {
-      'User-Agent':      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept':          'application/json',
-      'Accept-Language': 'en-US,en;q=0.9',
-      'Referer':         'https://finance.yahoo.com/',
-    },
-    signal: AbortSignal.timeout(12_000),
+async function buildQuarterMetrics(ticker: string): Promise<QuarterMetrics[]> {
+  const rows = await prisma.stockQuarterlyStats.findMany({
+    where:   { ticker },
+    orderBy: { periodEnd: 'asc' },   // oldest first so YoY growth look-back works
   });
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(`Yahoo HTTP ${res.status}: ${body.slice(0, 200)}`);
+
+  if (rows.length === 0) return [];
+
+  // Build revenue map for YoY growth: periodEnd ms → revenue
+  const revenueByTime: Record<number, number> = {};
+  for (const r of rows) {
+    if (r.revenue) revenueByTime[r.periodEnd.getTime()] = r.revenue;
   }
 
-  const data: AnyRecord = await res.json();
-  const r: AnyRecord = data?.quoteSummary?.result?.[0];
-  if (!r) {
-    const errMsg = data?.quoteSummary?.error?.description ?? JSON.stringify(data).slice(0, 200);
-    throw new Error(`Yahoo empty result: ${errMsg}`);
-  }
+  return rows.map((r, i): QuarterMetrics => {
+    const marketCap     = r.marketCap    ?? 0;
+    const revenue       = r.revenue      ?? 0;
+    const netIncome     = r.netIncome    ?? 0;
+    const bookValue     = r.bookValue    ?? 0;   // stockholders' equity (stored by seed-history)
+    const fcf           = r.freeCashFlow ?? 0;
+    const cfo           = r.operatingCashFlow ?? 0;
+    const dividendYield = r.dividendYield ?? 0;  // decimal, e.g. 0.0052
 
-  // ── Raw modules ──────────────────────────────────────────────────────────────
-  const incomeList: AnyRecord[]  = r.incomeStatementHistory?.incomeStatementHistory ?? [];
-  const balanceList: AnyRecord[] = r.balanceSheetHistory?.balanceSheetStatements   ?? [];
-  const cashList: AnyRecord[]    = r.cashflowStatementHistory?.cashflowStatements   ?? [];
-  const kStats: AnyRecord        = r.defaultKeyStatistics ?? {};
-  const summary: AnyRecord       = r.summaryDetail        ?? {};
-  const finData: AnyRecord       = r.financialData        ?? {};
+    // ── fin_valuation ─────────────────────────────────────────────────────────
+    const per      = nullIfZero(r.peRatio    ?? 0);
+    const pbr      = nullIfZero(r.priceToBook ?? 0);
+    // EV not stored → ev_ebit stays null until seed-history populates it
+    const evEbit   = null;
+    const fcfYield = (marketCap > 0 && fcf !== 0) ? pct(fcf, marketCap) : null;
 
-  // Index balance sheet and cash flow by quarter-end unix timestamp
-  const balByTs:  Record<number, AnyRecord> = {};
-  for (const b of balanceList) {
-    const ts: number = b.endDate?.raw ?? 0;
-    if (ts) balByTs[ts] = b;
-  }
-
-  const cashByTs: Record<number, AnyRecord> = {};
-  for (const c of cashList) {
-    const ts: number = c.endDate?.raw ?? 0;
-    if (ts) cashByTs[ts] = c;
-  }
-
-  // ── Summary-level values (current snapshot — applied to most-recent quarter) ─
-  const marketCap:      number = summary.marketCap?.raw         ?? 0;
-  const trailingPE:     number = summary.trailingPE?.raw        ?? 0;
-  const dividendYield:  number = summary.dividendYield?.raw     ?? 0;   // e.g. 0.0052
-  const priceToBook:    number = kStats.priceToBook?.raw        ?? 0;
-  const enterpriseValue:number = kStats.enterpriseValue?.raw    ?? 0;
-  const ttmFCF:         number = finData.freeCashflow?.raw      ?? 0;
-  const ttmEbitda:      number = finData.ebitda?.raw            ?? 0;
-  const ttmRevGrowth:   number = finData.revenueGrowth?.raw     ?? 0;   // decimal
-
-  // Build a lookup of revenue by timestamp so we can compute YoY growth per quarter
-  const revenueByTs: Record<number, number> = {};
-  for (const inc of incomeList) {
-    const ts: number = inc.endDate?.raw ?? 0;
-    if (ts) revenueByTs[ts] = inc.totalRevenue?.raw ?? 0;
-  }
-
-  const results: QuarterMetrics[] = [];
-
-  for (let i = 0; i < incomeList.length; i++) {
-    const inc = incomeList[i];
-    const ts: number = inc.endDate?.raw ?? 0;
-    if (!ts) continue;
-
-    const reportedAt = new Date(ts * 1000);
-    const isLatest   = i === 0;   // Yahoo returns newest first
-
-    // ── Income statement ──────────────────────────────────────────────────────
-    const revenue          = (inc.totalRevenue?.raw        ?? 0) as number;
-    const netIncome        = (inc.netIncome?.raw            ?? 0) as number;
-    const operatingIncome  = (inc.operatingIncome?.raw      ?? 0) as number;  // EBIT proxy
-    const interestExpense  = Math.abs((inc.interestExpense?.raw ?? 0) as number);
-
-    // ── Balance sheet ─────────────────────────────────────────────────────────
-    const bal = balByTs[ts] ?? {};
-    const equity        = (bal.totalStockholderEquity?.raw  ?? 0) as number;
-    const longTermDebt  = (bal.longTermDebt?.raw             ?? 0) as number;
-    const shortDebt     = (bal.shortLongTermDebt?.raw        ?? 0) as number;  // current LTD
-    const totalDebt     = longTermDebt + shortDebt;
-    const cashAndEquiv  = ((bal.cash?.raw ?? 0) as number)
-                        + ((bal.shortTermInvestments?.raw ?? 0) as number);
-
-    // ── Cash flow ─────────────────────────────────────────────────────────────
-    const cf    = cashByTs[ts] ?? {};
-    const cfo   = (cf.totalCashFromOperatingActivities?.raw ?? 0) as number;
-    const capex = Math.abs((cf.capitalExpenditures?.raw     ?? 0) as number);
-    const divPaid   = Math.abs((cf.dividendsPaid?.raw       ?? 0) as number);
-    const buybacks  = Math.abs((cf.repurchaseOfStock?.raw   ?? 0) as number);
-
-    const quarterFcf = cfo - capex;
-
-    // ── EBITDA proxy for older quarters (TTM only available via financialData) ─
-    // For the latest quarter use Yahoo's TTM EBITDA; for prior quarters
-    // approximate as operating income (EBIT), which understates slightly.
-    const ebitdaForRow = isLatest ? ttmEbitda : operatingIncome;
-
-    // ── Revenue growth (YoY) ─────────────────────────────────────────────────
-    // Find the same quarter from one year ago (roughly 4 entries back in the list)
+    // ── fin_quality ───────────────────────────────────────────────────────────
+    // YoY revenue growth: find same quarter ~1 year earlier
     let revenueGrowth: number | null = null;
-    if (isLatest) {
-      // Use Yahoo's reported TTM growth for the latest quarter (most accurate)
-      revenueGrowth = nullIfZero(ttmRevGrowth * 100);
-    } else {
-      // For historical quarters look for the matching quarter 12 months earlier
-      const oneYearAgoTs = ts - 365 * 24 * 3600;
-      // Find closest timestamp within ±45 days
-      const priorTs = Object.keys(revenueByTs)
-        .map(Number)
-        .filter(t => Math.abs(t - oneYearAgoTs) < 45 * 24 * 3600)
-        .sort((a, b) => Math.abs(a - oneYearAgoTs) - Math.abs(b - oneYearAgoTs))[0];
-      const priorRevenue = priorTs ? (revenueByTs[priorTs] ?? 0) : 0;
-      revenueGrowth = priorRevenue > 0 ? pct(revenue - priorRevenue, priorRevenue) : null;
+    if (revenue !== 0) {
+      const oneYearAgo = r.periodEnd.getTime() - 365 * 24 * 3600 * 1000;
+      const priorEntry = Object.entries(revenueByTime)
+        .map(([t, v]) => ({ t: Number(t), v }))
+        .filter(e => Math.abs(e.t - oneYearAgo) < 46 * 24 * 3600 * 1000)
+        .sort((a, b) => Math.abs(a.t - oneYearAgo) - Math.abs(b.t - oneYearAgo))[0];
+      if (priorEntry && priorEntry.v !== 0) {
+        revenueGrowth = pct(revenue - priorEntry.v, Math.abs(priorEntry.v));
+      }
     }
 
-    // ── Derived metrics ───────────────────────────────────────────────────────
-
-    // Valuation (P/E and P/B are price-dependent — only accurate for latest quarter)
-    const per      = isLatest ? nullIfZero(trailingPE)   : null;
-    const pbr      = isLatest ? nullIfZero(priceToBook)  : null;
-    const evEbit   = (enterpriseValue > 0 && operatingIncome > 0)
-                       ? ratio(enterpriseValue, operatingIncome)
-                       : null;
-    const fcfYield = (isLatest && marketCap > 0 && ttmFCF !== 0)
-                       ? pct(ttmFCF, marketCap)
-                       : null;
-
-    // Quality
-    const operatingMargin = revenue !== 0
-      ? pct(operatingIncome, revenue)
-      : null;
-    const roe  = equity !== 0 ? pct(netIncome, equity) : null;
-    const investedCapital = totalDebt + equity - cashAndEquiv;
-    const roic = investedCapital > 0 ? pct(operatingIncome, investedCapital) : null;
-    const cfoCoverage = netIncome !== 0 ? ratio(cfo, netIncome) : null;
-
-    // Risk
-    const netDebt        = totalDebt - cashAndEquiv;
-    const netDebtEbitda  = ebitdaForRow !== 0
-      ? ratio(netDebt, ebitdaForRow)
-      : null;
-    const interestCov    = interestExpense > 0 && operatingIncome !== 0
-      ? ratio(operatingIncome, interestExpense)
-      : null;
-    const cashShortDebt  = shortDebt > 0 && cashAndEquiv !== 0
-      ? ratio(cashAndEquiv, shortDebt)
+    // operatingMargin is stored as a decimal (e.g. 0.31) — convert to %
+    const operatingMargin = r.operatingMargin != null
+      ? (Math.abs(r.operatingMargin) < 2 ? r.operatingMargin * 100 : r.operatingMargin)
       : null;
 
-    // Shareholder yield = (dividend yield × market cap + buybacks) / market cap
-    // Best computed for latest quarter since market cap is current
-    const shareholderYield = (isLatest && marketCap > 0)
-      ? pct(dividendYield * marketCap + divPaid + buybacks, marketCap)
-      : null;
+    // ROE = net income / equity (book value)
+    const roe  = bookValue !== 0 && netIncome !== 0 ? pct(netIncome, bookValue) : null;
 
-    results.push({
-      reportedAt,
-      eventType:        quarterLabel(reportedAt),
+    // ROIC requires invested capital breakdown (not stored) → null for now
+    const roic = null;
+
+    // Cash conversion quality = CFO / net income
+    const cfoCoverage = netIncome !== 0 && cfo !== 0 ? ratio(cfo, netIncome) : null;
+
+    // ── fin_risk ──────────────────────────────────────────────────────────────
+    // debtToEquity is stored as a ratio, net_debt_ebitda needs EBITDA → null
+    const netDebtEbitda    = null;
+    const interestCoverage = null;   // interest expense not stored in StockQuarterlyStats
+    const cashShortDebt    = null;   // cash / short-term debt — not stored separately
+
+    // Shareholder yield ≈ dividend yield (buyback component not stored)
+    const shareholderYield = dividendYield > 0 ? dividendYield * 100 : null;
+
+    return {
+      reportedAt:       r.periodEnd,
+      eventType:        r.reportType === 'snapshot'
+                          ? `snapshot_${r.periodEnd.toISOString().split('T')[0]}`
+                          : `${r.reportType}_${r.periodEnd.getUTCFullYear()}`,
       per,
       pbr,
       evEbit,
@@ -373,15 +276,13 @@ async function fetchQuarterlyMetrics(
       roe,
       roic,
       cfoCoverage,
-      quarterFcf:       nullIfZero(quarterFcf),
+      quarterFcf:       nullIfZero(fcf),
       netDebtEbitda,
-      interestCoverage: interestCov,
+      interestCoverage,
       cashShortDebt,
       shareholderYield,
-    });
-  }
-
-  return results;
+    };
+  });
 }
 
 // ── Upsert helpers (raw SQL — fin_* tables are not Prisma models) ─────────────
@@ -504,7 +405,7 @@ export async function POST(req: NextRequest) {
 
   for (const stock of stocks) {
     try {
-      const quarters = await fetchQuarterlyMetrics(stock.ticker);
+      const quarters = await buildQuarterMetrics(stock.ticker);
 
       if (quarters.length === 0) {
         failed++;
@@ -538,8 +439,7 @@ export async function POST(req: NextRequest) {
       errors.push({ ticker: stock.ticker, reason: String(err) });
     }
 
-    // ~150 ms between tickers — polite rate-limit (~6 req/s)
-    await sleep(150);
+    // no sleep needed — reading from our own DB, no external rate limit
   }
 
   const totalUniverse = await prisma.stockUniverse.count();
