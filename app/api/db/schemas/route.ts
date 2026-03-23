@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { auth, ADMIN_EMAILS } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { ensureMetaTables } from '@/lib/db-meta';
 import { v4 as uuidv4 } from 'uuid';
-
-const ADMIN_EMAILS = ['minjune043010@gmail.com'];
 
 async function getAllSchemas() {
   return prisma.$queryRawUnsafe<Record<string, unknown>[]>(`

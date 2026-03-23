@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { auth, ADMIN_EMAILS } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { ensureMetaTables } from '@/lib/db-meta';
-
-const ADMIN_EMAILS = ['minjune043010@gmail.com'];
 
 const SQL_TYPES: Record<string, string> = {
   TEXT:       'TEXT',
