@@ -2,39 +2,30 @@
 
 import React, { useState } from 'react';
 import {
-  Save, Share2, Map, Plus, Link2, X,
+  Save, Share2, Map, Link2, X,
   ChevronDown, TrendingUp, LogIn, LogOut, User,
-  ZoomIn, ZoomOut, RotateCcw, Lock, Unlock, Clock, Globe, Square, BarChart3, Newspaper, Zap,
+  Lock, Unlock, Clock, Globe, Square, BarChart3,
 } from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
 import ShareDialog from './ShareDialog';
 import ComparisonOverlay from './ComparisonOverlay';
-import NewsFeed from './NewsFeed';
-import ScenarioPropagator from './ScenarioPropagator';
 import MapsDialog from './MapsDialog';
 import WorldClockPanel from './WorldClockPanel';
 import CalendarPicker from './CalendarPicker';
 
 interface ToolbarProps {
-  onAddEntity: () => void;
-  onAddGeoEvent: () => void;
   isConnecting: boolean;
   onToggleConnect: () => void;
   session: { user?: { name?: string | null; email?: string | null; image?: string | null } } | null;
   onSignIn: () => void;
   onSignOut: () => void;
-  zoom: number;
-  onZoomIn: () => void;
-  onZoomOut: () => void;
-  onZoomReset: () => void;
   showWorldMap: boolean;
   onToggleWorldMap: () => void;
 }
 
 export default function Toolbar({
-  onAddEntity, onAddGeoEvent, isConnecting, onToggleConnect,
+  isConnecting, onToggleConnect,
   session, onSignIn, onSignOut,
-  zoom, onZoomIn, onZoomOut, onZoomReset,
   showWorldMap, onToggleWorldMap,
 }: ToolbarProps) {
   const { currentMap, saveCurrentMap, globalLocked, toggleGlobalLock } = useMapStore();
@@ -42,8 +33,6 @@ export default function Toolbar({
   const [showMaps, setShowMaps] = useState(false);
   const [showClock, setShowClock] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
-  const [showNews, setShowNews] = useState(false);
-  const [showScenario, setShowScenario] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
@@ -131,27 +120,6 @@ export default function Toolbar({
         {/* === Action group === */}
         <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
 
-          {/* Add Entity */}
-          <button className="btn-primary" onClick={onAddEntity}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13 }}>
-            <Plus size={15} />Add Entity
-          </button>
-
-          {/* Add Geo Event */}
-          <button onClick={onAddGeoEvent} style={{
-            display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
-            borderRadius: 8, fontSize: 13, cursor: 'pointer',
-            border: '1px solid rgba(239,68,68,0.4)',
-            background: 'rgba(239,68,68,0.1)',
-            color: '#fca5a5',
-            transition: 'all 0.15s ease',
-          }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.2)'; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.1)'; }}
-          >
-            🌍 Geo Event
-          </button>
-
           {/* Connect toggle */}
           <button onClick={onToggleConnect} style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
@@ -167,24 +135,6 @@ export default function Toolbar({
 
           {/* Divider */}
           <div style={{ width: 1, height: 28, background: 'rgba(59,130,246,0.15)', margin: '0 2px' }} />
-
-          {/* Zoom controls */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 1,
-            background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(59,130,246,0.2)',
-            borderRadius: 8, padding: '2px 4px',
-          }}>
-            <IconBtn icon={<ZoomOut size={15} />} title="Zoom out (Ctrl –)" onClick={onZoomOut} />
-            <button onClick={onZoomReset} title="Reset zoom (Ctrl 0)" style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: zoom !== 1 ? '#3b82f6' : '#94a3b8', fontSize: 13, fontWeight: 600,
-              padding: '4px 8px', borderRadius: 5, minWidth: 44, textAlign: 'center',
-              transition: 'color 0.15s',
-            }}>
-              {Math.round(zoom * 100)}%
-            </button>
-            <IconBtn icon={<ZoomIn size={15} />} title="Zoom in (Ctrl +)" onClick={onZoomIn} />
-          </div>
 
           {/* Global lock */}
           <button
@@ -207,16 +157,17 @@ export default function Toolbar({
 
           {/* Background type — two separate buttons */}
           <div style={{
-            display: 'flex', borderRadius: 8, overflow: 'hidden',
-            border: '1px solid rgba(59,130,246,0.2)',
+            display: 'flex', borderRadius: 8, overflow: 'visible',
+            border: '1px solid rgba(59,130,246,0.2)', flexShrink: 0,
           }}>
             <button
               title={showWorldMap ? 'World map active' : 'Cannot switch back to world map (irreversible)'}
               onClick={undefined}
               style={{
-                display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px',
-                fontSize: 13, cursor: 'default', border: 'none',
+                display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px',
+                fontSize: 13, cursor: 'default', border: 'none', whiteSpace: 'nowrap',
                 borderRight: '1px solid rgba(59,130,246,0.2)',
+                borderRadius: '8px 0 0 8px',
                 background: showWorldMap ? 'rgba(6,182,212,0.15)' : 'transparent',
                 color: showWorldMap ? '#06b6d4' : '#8899b0',
                 opacity: showWorldMap ? 1 : 0.35,
@@ -230,8 +181,9 @@ export default function Toolbar({
               title={showWorldMap ? 'Switch to plain canvas (irreversible — warns first)' : 'Plain canvas active'}
               onClick={showWorldMap ? onToggleWorldMap : undefined}
               style={{
-                display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px',
-                fontSize: 13, border: 'none',
+                display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px',
+                fontSize: 13, border: 'none', whiteSpace: 'nowrap',
+                borderRadius: '0 8px 8px 0',
                 cursor: showWorldMap ? 'pointer' : 'default',
                 background: !showWorldMap ? 'rgba(59,130,246,0.15)' : 'transparent',
                 color: !showWorldMap ? '#93c5fd' : '#94a3b8',
@@ -278,18 +230,6 @@ export default function Toolbar({
             <BarChart3 size={15} />Compare
           </button>
 
-          {/* News */}
-          <button className="btn-ghost" onClick={() => setShowNews(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', fontSize: 13 }}>
-            <Newspaper size={15} />News
-          </button>
-
-          {/* Scenario */}
-          <button className="btn-ghost" onClick={() => setShowScenario(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', fontSize: 13 }}>
-            <Zap size={15} />Scenario
-          </button>
-
           {/* Share */}
           <button className="btn-ghost" onClick={() => setShowShare(true)}
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', fontSize: 13 }}>
@@ -332,8 +272,6 @@ export default function Toolbar({
       <ShareDialog isOpen={showShare} onClose={() => setShowShare(false)} />
       <MapsDialog isOpen={showMaps} onClose={() => setShowMaps(false)} session={session} onSignIn={onSignIn} />
       <ComparisonOverlay isOpen={showComparison} onClose={() => setShowComparison(false)} />
-      <NewsFeed isOpen={showNews} onClose={() => setShowNews(false)} />
-      <ScenarioPropagator isOpen={showScenario} onClose={() => setShowScenario(false)} />
       {showClock && <WorldClockPanel onClose={() => setShowClock(false)} />}
 
       {/* Login prompt modal */}

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { Plus, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
 import WorldMap from './WorldMap';
 import EntityCard from './EntityCard';
@@ -574,19 +575,6 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   return (
     <div style={{ width: '100vw', height: '100vh' }}>
       <Toolbar
-        onAddEntity={() => {
-          setEditingEntity(undefined);
-          const pos = screenToMap(dims.width / 2, dims.height / 2);
-          setPendingPosition(pos);
-          setPendingCountry(undefined);
-          setEntityDialogOpen(true);
-        }}
-        onAddGeoEvent={() => {
-          setEditingGeoEvent(undefined);
-          const pos = screenToMap(dims.width / 2, dims.height / 2);
-          setPendingGeoPosition(pos);
-          setGeoDialogOpen(true);
-        }}
         isConnecting={isConnecting}
         onToggleConnect={() => {
           setConnectingFrom(null);
@@ -596,10 +584,6 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
         session={session}
         onSignIn={onSignIn}
         onSignOut={onSignOut}
-        zoom={zoom}
-        onZoomIn={() => setZoom((z) => Math.min(MAX_ZOOM, z + ZOOM_STEP))}
-        onZoomOut={() => setZoom((z) => Math.max(MIN_ZOOM, z - ZOOM_STEP))}
-        onZoomReset={() => { setZoom(MIN_ZOOM); setPanOffset({ x: 0, y: 0 }); }}
         showWorldMap={showWorldMap}
         onToggleWorldMap={handleToggleWorldMap}
       />
@@ -707,27 +691,105 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
           </div>
         )}
 
-        {/* Zoom / pan indicator */}
-        {(zoom !== 1 || panOffset.x !== 0 || panOffset.y !== 0) && (
-          <div style={{
-            position: 'absolute', bottom: 16, right: 16,
-            background: 'rgba(15,23,42,0.85)',
-            border: '1px solid rgba(59,130,246,0.25)',
-            borderRadius: 8, padding: '4px 10px',
-            fontSize: 12, color: '#8899b0', pointerEvents: 'none',
-            display: 'flex', gap: 8, alignItems: 'center',
-          }}>
-            <span>{Math.round(zoom * 100)}%</span>
-            {(panOffset.x !== 0 || panOffset.y !== 0) && (
-              <button
-                style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: 11, padding: 0, pointerEvents: 'all' }}
-                onClick={(e) => { e.stopPropagation(); setPanOffset({ x: 0, y: 0 }); setZoom(MIN_ZOOM); }}
-              >
-                Reset view
-              </button>
-            )}
-          </div>
-        )}
+        {/* Bottom-left: Add Entity + Geo Event */}
+        <div style={{
+          position: 'absolute', bottom: 24, left: 24,
+          display: 'flex', flexDirection: 'column', gap: 8,
+          zIndex: 20, pointerEvents: 'all',
+        }}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditingEntity(undefined);
+              const pos = screenToMap(dims.width / 2, dims.height / 2);
+              setPendingPosition(pos);
+              setPendingCountry(undefined);
+              setEntityDialogOpen(true);
+            }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 7, padding: '10px 16px',
+              borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              background: 'rgba(59,130,246,0.85)', border: '1px solid rgba(59,130,246,0.6)',
+              color: 'white', boxShadow: '0 4px 16px rgba(59,130,246,0.35)',
+              backdropFilter: 'blur(8px)', transition: 'all 0.15s',
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,1)'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.85)'; }}
+          >
+            <Plus size={15} /> Add Entity
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditingGeoEvent(undefined);
+              const pos = screenToMap(dims.width / 2, dims.height / 2);
+              setPendingGeoPosition(pos);
+              setGeoDialogOpen(true);
+            }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 7, padding: '10px 16px',
+              borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              background: 'rgba(239,68,68,0.75)', border: '1px solid rgba(239,68,68,0.5)',
+              color: 'white', boxShadow: '0 4px 16px rgba(239,68,68,0.25)',
+              backdropFilter: 'blur(8px)', transition: 'all 0.15s',
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.95)'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.75)'; }}
+          >
+            🌍 Geo Event
+          </button>
+        </div>
+
+        {/* Bottom-right: Zoom controls */}
+        <div style={{
+          position: 'absolute', bottom: 24, right: 24,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+          background: 'rgba(10,17,34,0.88)', border: '1px solid rgba(59,130,246,0.25)',
+          borderRadius: 10, padding: '4px', zIndex: 20, pointerEvents: 'all',
+          backdropFilter: 'blur(8px)', boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+        }}>
+          <button
+            onClick={(e) => { e.stopPropagation(); setZoom((z) => Math.min(MAX_ZOOM, z + ZOOM_STEP)); }}
+            title="Zoom in (Ctrl +)"
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8',
+              padding: '6px 8px', borderRadius: 6, display: 'flex', alignItems: 'center',
+              transition: 'color 0.12s',
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = '#3b82f6'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = '#94a3b8'; }}
+          >
+            <ZoomIn size={16} />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); setZoom(MIN_ZOOM); setPanOffset({ x: 0, y: 0 }); }}
+            title="Reset zoom (Ctrl 0)"
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: zoom !== MIN_ZOOM ? '#3b82f6' : '#64748b',
+              fontSize: 12, fontWeight: 600, padding: '3px 8px',
+              borderRadius: 6, minWidth: 44, textAlign: 'center',
+              borderTop: '1px solid rgba(59,130,246,0.12)',
+              borderBottom: '1px solid rgba(59,130,246,0.12)',
+              transition: 'color 0.12s',
+            }}
+          >
+            {Math.round(zoom * 100)}%
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); setZoom((z) => Math.max(MIN_ZOOM, z - ZOOM_STEP)); }}
+            title="Zoom out (Ctrl –)"
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8',
+              padding: '6px 8px', borderRadius: 6, display: 'flex', alignItems: 'center',
+              transition: 'color 0.12s',
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = '#3b82f6'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = '#94a3b8'; }}
+          >
+            <ZoomOut size={16} />
+          </button>
+        </div>
 
         {/* Draw mode hint */}
         {isDrawMode && !drawingFromId && (
