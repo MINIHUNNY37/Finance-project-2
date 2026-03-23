@@ -77,7 +77,6 @@ model StockDailyOHLC {
 // Quarterly rows are written by seed-history step.
 
 model StockQuarterlyStats {
-  id             String   @id @default(cuid())
   ticker         String
   periodEnd      DateTime @db.Date   // quarter-end date (or today for snapshots)
   reportType     String              // "Q1"|"Q2"|"Q3"|"Q4"|"Annual"|"snapshot"
@@ -120,7 +119,7 @@ model StockQuarterlyStats {
 
   stock StockUniverse @relation(fields: [ticker], references: [ticker], onDelete: Cascade)
 
-  @@unique([ticker, periodEnd, reportType])
+  @@id([ticker, periodEnd, reportType])
   @@index([ticker, periodEnd(sort: Desc)])
 }
 
