@@ -35,17 +35,24 @@ async function getAllSchemas() {
 }
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user?.email || !ADMIN_EMAILS.includes(session.user.email)) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  try {
+    const session = await auth();
+    if (!session?.user?.email || !ADMIN_EMAILS.includes(session.user.email)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
-  await ensureMetaTables();
-  const tables = await getAllSchemas();
-  return NextResponse.json(tables);
+    await ensureMetaTables();
+    const tables = await getAllSchemas();
+    return NextResponse.json(tables);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[db/schemas GET] error:', message);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {
+  try {
   const session = await auth();
   if (!session?.user?.email || !ADMIN_EMAILS.includes(session.user.email)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -95,4 +102,9 @@ export async function POST(req: Request) {
   );
 
   return NextResponse.json(rows[0], { status: 201 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[db/schemas POST] error:', message);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }

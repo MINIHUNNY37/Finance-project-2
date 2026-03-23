@@ -75,24 +75,36 @@ export async function POST() {
         tbl.tableName
       );
 
-      if (existing.length > 0) {
-        skipped.push(tbl.tableName);
-        continue;
-      }
+      let tableId: string;
 
-      const id = uuidv4();
-      await prisma.$executeRawUnsafe(
-        `INSERT INTO "DbTableSchema" ("id","tableName","displayName","description","createdAt","updatedAt")
-         VALUES ($1,$2,$3,$4,$5,$6)`,
-        id, tbl.tableName, tbl.displayName, tbl.description, now, now
-      );
+      if (existing.length > 0) {
+        tableId = existing[0].id;
+        // Check if columns are missing (partial previous run) and backfill
+        const colCount = await prisma.$queryRawUnsafe<{ count: string }[]>(
+          `SELECT COUNT(*) as count FROM "DbColumnSchema" WHERE "tableId"=$1`,
+          tableId
+        );
+        if (parseInt(colCount[0]?.count ?? '0') > 0) {
+          skipped.push(tbl.tableName);
+          continue;
+        }
+        // Columns missing — fall through to insert them
+      } else {
+        tableId = uuidv4();
+        await prisma.$executeRawUnsafe(
+          `INSERT INTO "DbTableSchema" ("id","tableName","displayName","description","createdAt","updatedAt")
+           VALUES ($1,$2,$3,$4,$5,$6)`,
+          tableId, tbl.tableName, tbl.displayName, tbl.description, now, now
+        );
+      }
 
       for (const col of tbl.columns) {
         await prisma.$executeRawUnsafe(
           `INSERT INTO "DbColumnSchema"
             ("id","tableId","columnName","displayName","dataType","isPrimaryKey","isForeignKey","foreignTable","isNullable","position","createdAt","updatedAt")
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
-          uuidv4(), id,
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+           ON CONFLICT ("tableId","columnName") DO NOTHING`,
+          uuidv4(), tableId,
           col.columnName, col.displayName, col.dataType,
           col.isPrimaryKey, col.isForeignKey, col.foreignTable,
           col.isNullable, col.position, now, now

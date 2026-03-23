@@ -1,8 +1,18 @@
 import { prisma } from '@/lib/prisma';
 
+/** Run DDL and silently ignore "already exists" errors — safe to call repeatedly. */
+async function tryDDL(sql: string) {
+  try {
+    await prisma.$executeRawUnsafe(sql);
+  } catch (err: unknown) {
+    const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+    if (msg.includes('already exists')) return;
+    throw err;
+  }
+}
+
 export async function ensureMetaTables() {
-  // Use simple inline PK/UNIQUE — no named constraints to avoid collision on re-runs
-  await prisma.$executeRawUnsafe(`
+  await tryDDL(`
     CREATE TABLE IF NOT EXISTS "DbTableSchema" (
       "id"          TEXT        PRIMARY KEY,
       "tableName"   TEXT        NOT NULL UNIQUE,
@@ -13,7 +23,7 @@ export async function ensureMetaTables() {
     )
   `);
 
-  await prisma.$executeRawUnsafe(`
+  await tryDDL(`
     CREATE TABLE IF NOT EXISTS "DbColumnSchema" (
       "id"           TEXT        PRIMARY KEY,
       "tableId"      TEXT        NOT NULL REFERENCES "DbTableSchema"("id") ON DELETE CASCADE,
