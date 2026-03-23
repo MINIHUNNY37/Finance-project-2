@@ -46,6 +46,8 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
 
   const [showMapPicker, setShowMapPicker] = useState(true);
   const [cloudMapsLoading, setCloudMapsLoading] = useState(!!session?.user?.email);
+  const [sidebarWidth, setSidebarWidth] = useState(380);
+  const [investmentPanelWidth, setInvestmentPanelWidth] = useState(44);
 
   // Warning dialog for switching world → plain (irreversible)
   const [showPlainWarning, setShowPlainWarning] = useState(false);
@@ -588,7 +590,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
         onToggleWorldMap={handleToggleWorldMap}
       />
 
-      <InvestmentPanel />
+      <InvestmentPanel onWidthChange={setInvestmentPanelWidth} />
 
       <Sidebar
         onFocusEntity={handleFocusEntity}
@@ -604,6 +606,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
         onArrowSizeChange={setArrowSizeMult}
         isDrawMode={isDrawMode}
         onToggleDrawMode={() => setIsDrawMode((v) => !v)}
+        onWidthChange={setSidebarWidth}
       />
 
       {/* Outer clip container */}
@@ -693,9 +696,10 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
 
         {/* Bottom-left: Add Entity + Geo Event */}
         <div style={{
-          position: 'absolute', bottom: 24, left: 24,
+          position: 'absolute', bottom: 24, left: sidebarWidth + 16,
           display: 'flex', flexDirection: 'column', gap: 8,
           zIndex: 20, pointerEvents: 'all',
+          transition: 'left 0.2s ease',
         }}>
           <button
             onClick={(e) => {
@@ -742,11 +746,12 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
 
         {/* Bottom-right: Zoom controls */}
         <div style={{
-          position: 'absolute', bottom: 24, right: 24,
+          position: 'absolute', bottom: 24, right: investmentPanelWidth + 16,
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
           background: 'rgba(10,17,34,0.88)', border: '1px solid rgba(59,130,246,0.25)',
           borderRadius: 10, padding: '4px', zIndex: 20, pointerEvents: 'all',
           backdropFilter: 'blur(8px)', boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+          transition: 'right 0.2s ease',
         }}>
           <button
             onClick={(e) => { e.stopPropagation(); setZoom((z) => Math.min(MAX_ZOOM, z + ZOOM_STEP)); }}

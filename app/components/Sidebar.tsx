@@ -34,6 +34,7 @@ interface SidebarProps {
   onArrowSizeChange: (v: number) => void;
   isDrawMode: boolean;
   onToggleDrawMode: () => void;
+  onWidthChange?: (width: number) => void;
 }
 
 export default function Sidebar({
@@ -50,6 +51,7 @@ export default function Sidebar({
   onArrowSizeChange,
   isDrawMode,
   onToggleDrawMode,
+  onWidthChange,
 }: SidebarProps) {
   const {
     currentMap, selectedEntityId, setSelectedEntity, setConnectingFrom,
@@ -321,6 +323,10 @@ export default function Sidebar({
   const [collapsed, setCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('entities');
   const [sidebarWidth, setSidebarWidth] = useState(380);
+
+  useEffect(() => {
+    onWidthChange?.(collapsed ? 44 : sidebarWidth);
+  }, [collapsed, sidebarWidth]);
 
   const handleResizeSidebar = (e: React.MouseEvent) => {
     e.preventDefault();

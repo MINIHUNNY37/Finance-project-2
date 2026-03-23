@@ -1,12 +1,16 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { ChevronRight, ChevronLeft, Plus, Trash2, TrendingUp } from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
 
-export default function InvestmentPanel() {
+export default function InvestmentPanel({ onWidthChange }: { onWidthChange?: (w: number) => void }) {
   const { currentMap, investmentPlan, updateInvestmentPlan } = useMapStore();
   const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    onWidthChange?.(collapsed ? 44 : 300);
+  }, [collapsed]);
   const [showPicker, setShowPicker] = useState(false);
   // Per-row percent drafts (while user is actively typing %)
   const [pctDraft, setPctDraft] = useState<Record<string, string>>({});
