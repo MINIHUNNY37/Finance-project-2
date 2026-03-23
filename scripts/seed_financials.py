@@ -345,6 +345,17 @@ def fetch_batch(tickers: list[str]) -> dict[str, list[dict] | None]:
     fin_data    = t.financial_data  # dict[ticker -> dict | str]
 
     results: dict[str, list[dict] | None] = {}
+    errors:  dict[str, str] = {}
+
+    # Capture raw Yahoo responses for the first ticker to aid debugging
+    _debug_sample = tickers[0] if tickers else None
+    if _debug_sample:
+        raw_fd = fin_data.get(_debug_sample)
+        if isinstance(raw_fd, str):
+            print(f"\n[DEBUG] Yahoo financial_data for {_debug_sample}: {raw_fd!r}", flush=True)
+        raw_inc = income_df if isinstance(income_df, str) else None
+        if raw_inc:
+            print(f"[DEBUG] income_statement response: {raw_inc!r}", flush=True)
 
     for ticker in tickers:
         try:
@@ -356,18 +367,29 @@ def fetch_batch(tickers: list[str]) -> dict[str, list[dict] | None]:
             # yahooquery returns a string like "No fundamentals data found..."
             # when a ticker is invalid or has no financial filings (e.g. ETFs)
             if isinstance(fd, str):
+                errors[ticker] = f"financial_data error: {fd}"
                 results[ticker] = None
                 continue
 
             if not isinstance(fd, dict):
                 fd = {}
 
+            if inc.empty:
+                errors[ticker] = "income_statement returned empty (ETF, delisted, or Yahoo API error)"
+                results[ticker] = None
+                continue
+
             quarters = build_quarters(ticker, inc, bal, cf, fd)
             results[ticker] = quarters or None
+            if not quarters:
+                errors[ticker] = "build_quarters returned no rows"
 
-        except Exception:
+        except Exception as exc:
+            errors[ticker] = f"exception: {exc}"
             results[ticker] = None
 
+    # Surface unique error reasons so caller can log them
+    results["__errors__"] = errors  # type: ignore[assignment]
     return results
 
 
@@ -600,16 +622,19 @@ def main() -> None:
             # Keep DB connection alive across potentially slow batches
             conn = ensure_alive(conn, db_url)
 
+            # Extract per-ticker error detail captured in fetch_batch
+            ticker_errors: dict[str, str] = batch_results.pop("__errors__", {})  # type: ignore[arg-type]
+
             # Write each ticker in the batch
             for row in batch:
                 ticker, name, exchange, sector = row
                 quarters = batch_results.get(ticker)
 
                 if not quarters:
-                    reason = (
-                        "yahooquery returned no data (ETF, foreign listing, or delisted?)"
-                        if ticker in batch_results
-                        else "ticker missing from fetch results"
+                    reason = ticker_errors.get(
+                        ticker,
+                        "ticker missing from fetch results" if ticker not in batch_results
+                        else "yahooquery returned no data (ETF, foreign listing, or delisted?)"
                     )
                     error_log.append({"ticker": ticker, "reason": reason})
                     failed += 1
