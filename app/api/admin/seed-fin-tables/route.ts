@@ -192,7 +192,6 @@ type AnyRecord = Record<string, any>;
 
 async function fetchQuarterlyMetrics(
   ticker: string,
-  auth: YahooAuth | null,
 ): Promise<QuarterMetrics[]> {
   const safe    = encodeURIComponent(ticker);
   const modules = [
@@ -204,19 +203,16 @@ async function fetchQuarterlyMetrics(
     'financialData',
   ].join('%2C');
 
-  // Append crumb to the query string when available
-  const crumbParam = auth ? `&crumb=${encodeURIComponent(auth.crumb)}` : '';
-  const url = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${safe}?modules=${modules}${crumbParam}`;
-
-  const headers: Record<string, string> = {
-    'User-Agent':      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Accept':          'application/json',
-    'Accept-Language': 'en-US,en;q=0.9',
-  };
-  if (auth) headers['Cookie'] = auth.cookies;
+  // query1 + v11 is less rate-limited than query2 + v10 from server environments
+  const url = `https://query1.finance.yahoo.com/v11/finance/quoteSummary/${safe}?modules=${modules}`;
 
   const res = await fetch(url, {
-    headers,
+    headers: {
+      'User-Agent':      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept':          'application/json',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Referer':         'https://finance.yahoo.com/',
+    },
     signal: AbortSignal.timeout(12_000),
   });
   if (!res.ok) {
@@ -501,9 +497,6 @@ export async function POST(req: NextRequest) {
     select:  { ticker: true, name: true, exchange: true, sector: true },
   });
 
-  // Fetch Yahoo crumb once — reused for every ticker in this batch
-  const yahooAuth = await getYahooAuth();
-
   let done   = 0;
   let failed = 0;
   let totalQuarters = 0;
@@ -511,7 +504,7 @@ export async function POST(req: NextRequest) {
 
   for (const stock of stocks) {
     try {
-      const quarters = await fetchQuarterlyMetrics(stock.ticker, yahooAuth);
+      const quarters = await fetchQuarterlyMetrics(stock.ticker);
 
       if (quarters.length === 0) {
         failed++;
@@ -552,7 +545,6 @@ export async function POST(req: NextRequest) {
   const totalUniverse = await prisma.stockUniverse.count();
 
   return NextResponse.json({
-    yahooAuthObtained: yahooAuth !== null,
     done,
     failed,
     totalQuarters,
