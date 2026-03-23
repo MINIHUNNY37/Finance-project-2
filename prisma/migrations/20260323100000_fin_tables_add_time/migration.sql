@@ -14,10 +14,11 @@
 --
 -- This migration is safe to re-run (all statements are IF NOT EXISTS / IF EXISTS).
 
--- ── 1. fin_time ───────────────────────────────────────────────────────────────
--- Ensure the table exists with the expected shape.
--- If the user already created it via the UI it will be left unchanged except
--- for the optional event_type column addition.
+-- ── 0. Create all fin_* tables if they don't exist ───────────────────────────
+--
+-- These tables are NOT Prisma models, so `prisma migrate deploy` will never
+-- drop them — but it also won't create them unless this migration does it.
+-- Using IF NOT EXISTS makes every statement idempotent.
 
 CREATE TABLE IF NOT EXISTS "fin_time" (
   "reported_at" TIMESTAMPTZ NOT NULL,
@@ -25,7 +26,49 @@ CREATE TABLE IF NOT EXISTS "fin_time" (
   PRIMARY KEY ("reported_at")
 );
 
--- If the table was created by the UI without event_type, add it safely.
+CREATE TABLE IF NOT EXISTS "fin_stock_info" (
+  "ticker"       TEXT NOT NULL,
+  "company_name" TEXT NOT NULL,
+  "exchange"     TEXT NOT NULL DEFAULT '',
+  "sector"       TEXT,
+  PRIMARY KEY ("ticker")
+);
+
+CREATE TABLE IF NOT EXISTS "fin_valuation" (
+  "ticker"                TEXT        NOT NULL,
+  "reported_at"           TIMESTAMPTZ NOT NULL,
+  "per"                   DOUBLE PRECISION,
+  "pbr"                   DOUBLE PRECISION,
+  "ev_ebit"               DOUBLE PRECISION,
+  "fcf_yield"             DOUBLE PRECISION,
+  "valuation_percentile"  DOUBLE PRECISION,
+  PRIMARY KEY ("ticker", "reported_at")
+);
+
+CREATE TABLE IF NOT EXISTS "fin_quality" (
+  "ticker"           TEXT        NOT NULL,
+  "reported_at"      TIMESTAMPTZ NOT NULL,
+  "revenue_growth"   DOUBLE PRECISION,
+  "operating_margin" DOUBLE PRECISION,
+  "roe"              DOUBLE PRECISION,
+  "roic"             DOUBLE PRECISION,
+  "cfo_net_income"   DOUBLE PRECISION,
+  PRIMARY KEY ("ticker", "reported_at")
+);
+
+CREATE TABLE IF NOT EXISTS "fin_risk" (
+  "ticker"            TEXT        NOT NULL,
+  "reported_at"       TIMESTAMPTZ NOT NULL,
+  "fcf"               DOUBLE PRECISION,
+  "net_debt_ebitda"   DOUBLE PRECISION,
+  "interest_coverage" DOUBLE PRECISION,
+  "cash_short_debt"   DOUBLE PRECISION,
+  "shareholder_yield" DOUBLE PRECISION,
+  PRIMARY KEY ("ticker", "reported_at")
+);
+
+-- ── 1. fin_time ───────────────────────────────────────────────────────────────
+-- If the table was created above without event_type (older DB), add it safely.
 ALTER TABLE "fin_time"
   ADD COLUMN IF NOT EXISTS "event_type" TEXT;
 
