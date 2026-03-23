@@ -65,7 +65,6 @@ export default function EntityCard({
     toggleEntityLock,
     connectingFromId,
     selectedEntityId,
-    globalLocked,
     globalViewDate,
   } = useMapStore();
 
@@ -83,7 +82,7 @@ export default function EntityCard({
   } | null>(null);
 
   const isSelected = selectedEntityId === entity.id;
-  const isLocked = globalLocked || !!entity.locked;
+  const isLocked = !!entity.locked;
 
   // Always fixed size: scale(1/zoom) → constant visual size on screen regardless of zoom.
   // entitySizeMult lets the user adjust the overall size from the sidebar slider.
