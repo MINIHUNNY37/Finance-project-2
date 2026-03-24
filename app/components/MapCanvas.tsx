@@ -254,6 +254,21 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
     return () => window.removeEventListener('resize', update);
   }, []);
 
+  // Re-measure dims whenever the container bounds change (presentation mode, sidebar toggles)
+  useEffect(() => {
+    const rafId = requestAnimationFrame(() => {
+      if (containerRef.current) {
+        const w = containerRef.current.offsetWidth;
+        const h = containerRef.current.offsetHeight;
+        if (w > 0 && h > 0) {
+          dimsRef.current = { width: w, height: h };
+          setDims({ width: w, height: h });
+        }
+      }
+    });
+    return () => cancelAnimationFrame(rafId);
+  }, [presentationSubMode, presLeftOpen, presRightOpen]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
