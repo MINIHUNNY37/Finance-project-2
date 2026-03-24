@@ -37,6 +37,8 @@ interface EntityCardProps {
   isDrawMode?: boolean;
   /** Horizontal offset (in map-space pixels) for world-wrap ghost copies. Default 0. */
   offsetX?: number;
+  /** Presentation emphasis state — dims non-active entities during play mode. */
+  emphasisState?: { activeEntityIds: string[] } | null;
 }
 
 export default function EntityCard({
@@ -56,6 +58,7 @@ export default function EntityCard({
   onDropConnection,
   isDrawMode = false,
   offsetX = 0,
+  emphasisState,
 }: EntityCardProps) {
   const {
     moveEntity,
@@ -87,6 +90,9 @@ export default function EntityCard({
   // Always fixed size: scale(1/zoom) → constant visual size on screen regardless of zoom.
   // entitySizeMult lets the user adjust the overall size from the sidebar slider.
   const entityScale = (1 / zoom) * entitySizeMult;
+
+  // Presentation dimming: fade out non-active entities
+  const isDimmed = emphasisState != null && !emphasisState.activeEntityIds.includes(entity.id);
 
   // Drag to move
   const handleMouseDown = useCallback(
@@ -251,10 +257,12 @@ export default function EntityCard({
         position: 'absolute',
         left: entity.position.x + offsetX,
         top: entity.position.y,
-        pointerEvents: 'all',
+        pointerEvents: isDimmed ? 'none' : 'all',
         zIndex: isSelected ? 200 : 50,
         transform: `scale(${entityScale})`,
         transformOrigin: '0 0',
+        opacity: isDimmed ? 0.18 : 1,
+        transition: 'opacity 0.35s ease',
       }}
       onMouseDown={(e) => { handleMouseDownDraw(e); handleMouseDown(e); }}
       onMouseUp={(e) => {

@@ -147,6 +147,17 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   const emphasisState = usePresentationStore((s) => s.emphasisState);
   const presentationStore = usePresentationStore();
   const [presentationNoteVisible, setPresentationNoteVisible] = useState(false);
+  const [presentationControlsVisible, setPresentationControlsVisible] = useState(true);
+  const [showPresentSizeBars, setShowPresentSizeBars] = useState(false);
+  const presentationSubModeRef = useRef(presentationSubMode);
+  useEffect(() => { presentationSubModeRef.current = presentationSubMode; }, [presentationSubMode]);
+  // Reset UI state whenever entering play mode
+  useEffect(() => {
+    if (presentationSubMode === 'play') {
+      setPresentationControlsVisible(true);
+      setShowPresentSizeBars(false);
+    }
+  }, [presentationSubMode]);
 
   // Sidebar width: during presentation edit mode, the left panel is 320px
   const PRESENTATION_SIDEBAR_W = 320;
@@ -241,6 +252,27 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   // Keyboard shortcuts
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Presentation arrow-key navigation
+      if (presentationSubModeRef.current === 'play') {
+        if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          const s = usePresentationStore.getState();
+          const total = s.activePresentation?.steps.length ?? 0;
+          if (total === 0) return;
+          if (s.currentStepIndex < total - 1) s.nextStep();
+          else s.goToStep(0); // loop back to first
+          return;
+        }
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          const s = usePresentationStore.getState();
+          const total = s.activePresentation?.steps.length ?? 0;
+          if (total === 0) return;
+          if (s.currentStepIndex > 0) s.prevStep();
+          else s.goToStep(total - 1); // loop to last
+          return;
+        }
+      }
       if (e.key === 'Escape') {
         setConnectingFrom(null);
         setSelectedEntity(null);
@@ -392,6 +424,11 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
 
   const handleCanvasClick = useCallback(() => {
     if (wasPanning.current) return;
+    // In presentation play mode: clicking map toggles controls visibility
+    if (presentationSubModeRef.current === 'play') {
+      setPresentationControlsVisible((v) => !v);
+      return;
+    }
     setSelectedEntity(null);
     setSelectedGeoEventId(null);
     if (connectingFromId) {
@@ -595,6 +632,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
           onDropConnection={handleDropConnection}
           isDrawMode={isDrawMode}
           offsetX={offsetX}
+          emphasisState={emphasisState}
         />
       ))}
     </>
@@ -768,6 +806,30 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
           )}
         </div>
 
+        {/* ── Aspect-ratio letterbox (black bars outside the frame) ── */}
+        {presentationSubMode === 'play' && presentationStore.activePresentation && (() => {
+          const ar = presentationStore.activePresentation.aspectRatio;
+          const [rw, rh] = ar === '16:9' ? [16, 9] : [9, 16];
+          const ratio = rw / rh;
+          const containerRatio = dims.width / dims.height;
+          if (Math.abs(containerRatio - ratio) < 0.02) return null;
+          const frameW = containerRatio > ratio ? dims.height * ratio : dims.width;
+          const frameH = containerRatio > ratio ? dims.height : dims.width / ratio;
+          return (
+            <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 120, overflow: 'hidden' }}>
+              <div style={{
+                position: 'absolute',
+                left: (dims.width - frameW) / 2,
+                top: (dims.height - frameH) / 2,
+                width: frameW,
+                height: frameH,
+                boxShadow: '0 0 0 9999px rgba(0,0,0,0.94)',
+                pointerEvents: 'none',
+              }} />
+            </div>
+          );
+        })()}
+
         {/* Empty state */}
         {currentMap.entities.length === 0 && (
           <div style={{
@@ -897,6 +959,65 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
           </button>
         </div>
 
+        {/* ── Presentation play mode: floating size-bars panel ── */}
+        {presentationSubMode === 'play' && (
+          <div style={{ position: 'absolute', bottom: 24, right: investmentPanelWidth + 80, zIndex: 20, pointerEvents: 'all' }}
+            onClick={(e) => e.stopPropagation()}>
+            {showPresentSizeBars && (
+              <div style={{
+                position: 'absolute', bottom: 40, right: 0,
+                width: 190, padding: '12px 14px',
+                background: 'rgba(10,17,34,0.95)', border: '1px solid rgba(59,130,246,0.25)',
+                borderRadius: 10, backdropFilter: 'blur(12px)',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+              }}>
+                <div style={{ fontSize: 11, color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
+                  Display Size
+                </div>
+                <div style={{ marginBottom: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                    <span style={{ fontSize: 11, color: '#94a3b8' }}>Entities</span>
+                    <span style={{ fontSize: 11, color: '#3b82f6', fontWeight: 600 }}>{Math.round(entitySizeMult * 100)}%</span>
+                  </div>
+                  <input type="range" min={0.4} max={2.5} step={0.05} value={entitySizeMult}
+                    onChange={(e) => setEntitySizeMult(parseFloat(e.target.value))}
+                    style={{ width: '100%', accentColor: '#3b82f6', cursor: 'pointer' }} />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                    <span style={{ fontSize: 11, color: '#94a3b8' }}>Arrows</span>
+                    <span style={{ fontSize: 11, color: '#06b6d4', fontWeight: 600 }}>{Math.round(arrowSizeMult * 100)}%</span>
+                  </div>
+                  <input type="range" min={0.4} max={3} step={0.05} value={arrowSizeMult}
+                    onChange={(e) => setArrowSizeMult(parseFloat(e.target.value))}
+                    style={{ width: '100%', accentColor: '#06b6d4', cursor: 'pointer' }} />
+                </div>
+                {(entitySizeMult !== 1 || arrowSizeMult !== 1) && (
+                  <button onClick={() => { setEntitySizeMult(1); setArrowSizeMult(1); }}
+                    style={{ marginTop: 8, width: '100%', padding: '4px 0', borderRadius: 6, background: 'transparent', border: '1px solid rgba(59,130,246,0.2)', color: '#94a3b8', fontSize: 11, cursor: 'pointer' }}>
+                    Reset sizes
+                  </button>
+                )}
+              </div>
+            )}
+            <button
+              onClick={() => setShowPresentSizeBars((v) => !v)}
+              title="Display size"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 34, height: 34, borderRadius: 8,
+                background: showPresentSizeBars ? 'rgba(59,130,246,0.25)' : 'rgba(10,17,34,0.88)',
+                border: `1px solid ${showPresentSizeBars ? 'rgba(59,130,246,0.5)' : 'rgba(59,130,246,0.25)'}`,
+                color: showPresentSizeBars ? '#93c5fd' : '#64748b',
+                cursor: 'pointer', backdropFilter: 'blur(8px)',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+              }}
+            >
+              ⊞
+            </button>
+          </div>
+        )}
+
         {/* Draw mode hint */}
         {isDrawMode && !drawingFromId && (
           <div style={{
@@ -965,10 +1086,15 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
         onNoteVisible={setPresentationNoteVisible}
       />
 
-      {/* Presentation play controls — shown during play mode */}
+      {/* Presentation play controls — shown during play mode, toggled by map click */}
       {presentationSubMode === 'play' && (
         <div style={{ position: 'fixed', top: 68, left: 0, right: 0, display: 'flex', justifyContent: 'center', zIndex: 200, pointerEvents: 'none' }}>
-          <div style={{ pointerEvents: 'auto' }}>
+          <div style={{
+            opacity: presentationControlsVisible ? 1 : 0,
+            transform: presentationControlsVisible ? 'translateY(0)' : 'translateY(-8px)',
+            transition: 'opacity 0.25s ease, transform 0.25s ease',
+            pointerEvents: presentationControlsVisible ? 'auto' : 'none',
+          }}>
             <PresentationPlayControls
               currentStep={presentationStore.currentStepIndex}
               totalSteps={presentationStore.activePresentation ? [...presentationStore.activePresentation.steps].length : 0}
@@ -983,6 +1109,16 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
               onExit={() => { presentationStore.exitPresentationMode(); setPresentationNoteVisible(false); }}
             />
           </div>
+        </div>
+      )}
+      {/* Hint when controls are hidden */}
+      {presentationSubMode === 'play' && !presentationControlsVisible && (
+        <div style={{
+          position: 'fixed', top: 76, left: '50%', transform: 'translateX(-50%)',
+          color: 'rgba(148,163,184,0.35)', fontSize: 11, fontWeight: 500,
+          pointerEvents: 'none', zIndex: 199, letterSpacing: '0.04em',
+        }}>
+          click map to show controls
         </div>
       )}
 

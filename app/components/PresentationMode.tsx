@@ -33,6 +33,7 @@ export default function PresentationMode({ onAnimateCamera, onNoteVisible }: Pro
 
   const autoPlayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const phase2TimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const steps = activePresentation
     ? [...activePresentation.steps].sort((a, b) => a.order - b.order)
@@ -47,13 +48,42 @@ export default function PresentationMode({ onAnimateCamera, onNoteVisible }: Pro
       .filter(Boolean);
     if (!targetEntities.length) return;
 
-    // Camera target: destination entity takes priority for relation steps
-    let cx: number, cy: number;
+    if (phase2TimerRef.current) clearTimeout(phase2TimerRef.current);
+
+    setEmphasisState({
+      activeEntityIds: step.targetEntityIds,
+      sourceEntityId: step.sourceEntityId,
+      destinationEntityId: step.destinationEntityId,
+      effect: step.emphasisEffect,
+    });
+
+    // For relation steps: two-phase camera — follow the stream source → destination
     if (step.sourceEntityId && step.destinationEntityId) {
+      const src = currentMap.entities.find((e) => e.id === step.sourceEntityId);
       const dest = currentMap.entities.find((e) => e.id === step.destinationEntityId);
-      cx = dest?.position.x ?? targetEntities[0]!.position.x;
-      cy = dest?.position.y ?? targetEntities[0]!.position.y;
-    } else if (targetEntities.length === 1) {
+      if (src && dest) {
+        const phase1Dur = Math.round(step.cameraMoveDuration * 0.38);
+        const phase2Dur = step.cameraMoveDuration - phase1Dur;
+        // Phase 1: pan to source entity
+        onAnimateCamera({ x: src.position.x, y: src.position.y, zoom: step.zoomLevel, duration: phase1Dur });
+        // Phase 2: after phase1, animate to destination
+        phase2TimerRef.current = setTimeout(() => {
+          onAnimateCamera({ x: dest.position.x, y: dest.position.y, zoom: step.zoomLevel, duration: phase2Dur });
+        }, phase1Dur);
+        // Note appears during phase 2
+        onNoteVisible(false);
+        if (noteTimerRef.current) clearTimeout(noteTimerRef.current);
+        noteTimerRef.current = setTimeout(
+          () => onNoteVisible(true),
+          Math.max(200, phase1Dur + phase2Dur * 0.7)
+        );
+        return;
+      }
+    }
+
+    // Single or multi-entity step: animate directly to center
+    let cx: number, cy: number;
+    if (targetEntities.length === 1) {
       cx = targetEntities[0]!.position.x;
       cy = targetEntities[0]!.position.y;
     } else {
@@ -62,13 +92,6 @@ export default function PresentationMode({ onAnimateCamera, onNoteVisible }: Pro
     }
 
     onAnimateCamera({ x: cx, y: cy, zoom: step.zoomLevel, duration: step.cameraMoveDuration });
-
-    setEmphasisState({
-      activeEntityIds: step.targetEntityIds,
-      sourceEntityId: step.sourceEntityId,
-      destinationEntityId: step.destinationEntityId,
-      effect: step.emphasisEffect,
-    });
 
     // Note appears after most of the camera move is done
     onNoteVisible(false);
@@ -106,6 +129,7 @@ export default function PresentationMode({ onAnimateCamera, onNoteVisible }: Pro
     return () => {
       if (autoPlayTimerRef.current) clearTimeout(autoPlayTimerRef.current);
       if (noteTimerRef.current) clearTimeout(noteTimerRef.current);
+      if (phase2TimerRef.current) clearTimeout(phase2TimerRef.current);
     };
   }, [subMode, currentStepIndex, isPlaying, isAutoPlay]);
 
