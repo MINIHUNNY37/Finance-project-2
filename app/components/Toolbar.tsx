@@ -53,7 +53,7 @@ export default function Toolbar({
       currentMap.id,
       title,
       currentMap.mapType === 'plain' ? 'plain' : 'world',
-      '19.5:9'
+      '16:9'
     );
     loadPresentation(id);
     enterEditMode(id);
