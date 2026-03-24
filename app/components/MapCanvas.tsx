@@ -15,6 +15,8 @@ import Toolbar from './Toolbar';
 import Sidebar from './Sidebar';
 import InvestmentPanel from './InvestmentPanel';
 import MapsDialog from './MapsDialog';
+import PresentationMode from './PresentationMode';
+import { usePresentationStore } from '../store/presentationStore';
 import type { Entity, Relationship, ArrowStyle, GeoEvent } from '../types';
 
 interface MapCanvasProps {
@@ -136,9 +138,64 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
 
   const isConnecting = !!connectingFromId;
 
+  // Presentation store
+  const presentationSubMode = usePresentationStore((s) => s.subMode);
+  const emphasisState = usePresentationStore((s) => s.emphasisState);
+
   // Keep refs in sync with state
   useEffect(() => { zoomRef.current = zoom; }, [zoom]);
   useEffect(() => { panRef.current = panOffset; }, [panOffset]);
+
+  // Smooth camera animation (used by PresentationMode)
+  const animationRef = useRef<number | null>(null);
+  const handleAnimateCamera = useCallback(
+    (target: { x: number; y: number; zoom: number; duration: number }) => {
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+
+      const startPan = { ...panRef.current };
+      const startZoom = zoomRef.current;
+      const startTime = performance.now();
+
+      const targetPan = {
+        x: target.zoom * (dimsRef.current.width / 2 - target.x),
+        y: target.zoom * (dimsRef.current.height / 2 - target.y),
+      };
+
+      const easeInOutCubic = (t: number) =>
+        t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+      const animate = (now: number) => {
+        const elapsed = now - startTime;
+        const progress = Math.min(1, elapsed / target.duration);
+        const eased = easeInOutCubic(progress);
+
+        const newZoom = startZoom + (target.zoom - startZoom) * eased;
+        const newPan = {
+          x: startPan.x + (targetPan.x - startPan.x) * eased,
+          y: startPan.y + (targetPan.y - startPan.y) * eased,
+        };
+
+        zoomRef.current = newZoom;
+        panRef.current = newPan;
+        setZoom(newZoom);
+        setPanOffset(newPan);
+
+        if (progress < 1) {
+          animationRef.current = requestAnimationFrame(animate);
+        } else {
+          animationRef.current = null;
+        }
+      };
+
+      animationRef.current = requestAnimationFrame(animate);
+    },
+    []
+  );
+
+  // Clean up animation on unmount
+  useEffect(() => {
+    return () => { if (animationRef.current) cancelAnimationFrame(animationRef.current); };
+  }, []);
 
   // When switching to world map mode, enforce min zoom
   useEffect(() => {
@@ -564,6 +621,7 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
       drawingFromId={drawingFromId}
       drawPath={drawPath}
       offsetX={offsetX}
+      emphasisState={emphasisState}
     />
   );
 
@@ -858,6 +916,15 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
         initialData={editingGeoEvent}
         defaultPosition={pendingGeoPosition}
       />
+      {/* Presentation Mode overlay */}
+      <PresentationMode
+        zoom={zoom}
+        panOffset={panOffset}
+        dims={dims}
+        onAnimateCamera={handleAnimateCamera}
+        onFocusEntity={handleFocusEntity}
+      />
+
       <MapsDialog
         isOpen={showMapPicker}
         onClose={() => setShowMapPicker(false)}

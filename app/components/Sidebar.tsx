@@ -7,6 +7,7 @@ import {
   Globe, BookOpen, Search, PlusCircle, ChevronUp,
 } from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
+import { usePresentationStore } from '../store/presentationStore';
 import { isVisibleAtDate, getLatestStatsByLabel } from '../utils/dateFilter';
 import type { ArrowStyle } from '../types';
 import { RELATIONSHIP_COLORS, ENTITY_COLORS, GEO_EVENT_TYPES } from '../types';
@@ -63,6 +64,9 @@ export default function Sidebar({
     toggleRelationshipHidden,
     addConnectionFolder, deleteConnectionFolder, addConnectionToFolder, removeConnectionFromFolder,
   } = useMapStore();
+
+  const presSubMode = usePresentationStore((s) => s.subMode);
+  const presAddStep = usePresentationStore((s) => s.addStep);
 
   // Entity folder state
   const [creatingFolder, setCreatingFolder] = useState(false);
@@ -633,6 +637,31 @@ export default function Sidebar({
                       </div>
                     )}
                   </div>
+                  {presSubMode === 'edit' && (
+                    <button
+                      title="Add to presentation"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onFocusEntity(entity.position);
+                        presAddStep({
+                          targetEntityIds: [entity.id],
+                          zoomLevel: 2.0,
+                          cameraMoveDuration: 1200,
+                          holdDuration: 3000,
+                          transitionType: 'smooth',
+                          emphasisEffect: 'pulse',
+                          heading: entity.name,
+                          subheading: entity.subtitle || '',
+                          bodyNote: '',
+                        });
+                      }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f59e0b', padding: '2px 3px', display: 'flex', flexShrink: 0, opacity: 0.7, transition: 'opacity 0.1s' }}
+                      onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = '1')}
+                      onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = '0.7')}
+                    >
+                      <PlusCircle size={14} />
+                    </button>
+                  )}
                   <button
                     title={entity.hidden ? 'Show' : 'Hide'}
                     onClick={(e) => { e.stopPropagation(); toggleEntityHidden(entity.id); }}

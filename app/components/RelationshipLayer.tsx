@@ -2,8 +2,15 @@
 
 import React, { useState } from 'react';
 import { Trash2, Edit2, MessageSquare } from 'lucide-react';
-import type { Entity, Relationship } from '../types';
+import type { Entity, Relationship, EmphasisEffect } from '../types';
 import { useMapStore } from '../store/mapStore';
+
+interface EmphasisState {
+  activeEntityIds: string[];
+  sourceEntityId?: string;
+  destinationEntityId?: string;
+  effect: EmphasisEffect;
+}
 
 interface RelationshipLayerProps {
   entities: Entity[];
@@ -19,6 +26,8 @@ interface RelationshipLayerProps {
   drawPath?: { x: number; y: number }[];
   /** Horizontal offset for world-wrap ghost copies. Default 0. */
   offsetX?: number;
+  /** Presentation emphasis state */
+  emphasisState?: EmphasisState | null;
 }
 
 /** Convert an array of points into a smooth SVG path using midpoint quadratic beziers */
@@ -53,6 +62,18 @@ function getControlPoint(x1: number, y1: number, x2: number, y2: number) {
   return { x: midX - (dy / len) * offset, y: midY + (dx / len) * offset };
 }
 
+function getEmphasisClass(effect: EmphasisEffect): string {
+  switch (effect) {
+    case 'pulse': return 'em-pulse';
+    case 'cash-flow': return 'em-cash-flow';
+    case 'competitor': return 'em-competitor';
+    case 'risk': return 'em-risk';
+    case 'supply-chain': return 'em-supply-chain';
+    case 'ownership': return 'em-ownership';
+    default: return '';
+  }
+}
+
 export default function RelationshipLayer({
   entities,
   relationships,
@@ -66,6 +87,7 @@ export default function RelationshipLayer({
   drawingFromId,
   drawPath = [],
   offsetX = 0,
+  emphasisState,
 }: RelationshipLayerProps) {
   const { deleteRelationship, setSelectedRelationship, selectedRelationshipId } = useMapStore();
   const [hoveredRelId, setHoveredRelId] = useState<string | null>(null);
@@ -109,6 +131,26 @@ export default function RelationshipLayer({
             .arrow-animated {
               animation: flowDash 0.6s linear infinite;
             }
+            @keyframes emphasisPulse {
+              0%, 100% { stroke-opacity: 0.4; filter: none; }
+              50% { stroke-opacity: 1; filter: drop-shadow(0 0 6px var(--em-color, #3b82f6)); }
+            }
+            @keyframes emphasisCashFlow {
+              from { stroke-dashoffset: 0; }
+              to { stroke-dashoffset: -24; }
+            }
+            @keyframes emphasisRisk {
+              0%, 100% { stroke-opacity: 0.5; }
+              30% { stroke-opacity: 1; filter: drop-shadow(0 0 8px #ef4444); }
+              60% { stroke-opacity: 0.3; }
+            }
+            .em-pulse { animation: emphasisPulse 1.8s ease-in-out infinite; }
+            .em-cash-flow { animation: emphasisCashFlow 0.8s linear infinite; }
+            .em-competitor { stroke: #ef4444 !important; stroke-opacity: 0.9; filter: drop-shadow(0 0 4px rgba(239,68,68,0.5)); }
+            .em-risk { animation: emphasisRisk 1.2s ease-in-out infinite; }
+            .em-supply-chain { animation: emphasisCashFlow 1.0s linear infinite; }
+            .em-ownership { stroke-opacity: 1; filter: drop-shadow(0 0 6px var(--em-color, #8b5cf6)); }
+            .em-dimmed { opacity: 0.15 !important; }
           `}</style>
 
           {relationships.map((rel) => (
@@ -194,8 +236,16 @@ export default function RelationshipLayer({
           const isAnimated = rel.arrowStyle === 'animated';
           const sw = isSelected || isHovered ? strokeSelected : strokeNormal;
 
+          // Emphasis state
+          const isEmphasized = emphasisState && (
+            (emphasisState.sourceEntityId === rel.fromEntityId && emphasisState.destinationEntityId === rel.toEntityId) ||
+            (emphasisState.activeEntityIds.includes(rel.fromEntityId) && emphasisState.activeEntityIds.includes(rel.toEntityId))
+          );
+          const isDimmed = emphasisState && !isEmphasized;
+          const emClass = isEmphasized ? getEmphasisClass(emphasisState.effect) : '';
+
           return (
-            <g key={rel.id}>
+            <g key={rel.id} className={isDimmed ? 'em-dimmed' : undefined}>
               {/* Wide invisible hit area (counter-scaled so it stays usable at any zoom) */}
               <path
                 d={pathD}
@@ -224,13 +274,17 @@ export default function RelationshipLayer({
               <path
                 d={pathD}
                 stroke={rel.color}
-                strokeWidth={sw}
+                strokeWidth={isEmphasized ? sw * 1.5 : sw}
                 fill="none"
-                strokeDasharray={isAnimated ? `${8 / zf} ${8 / zf}` : isSelected ? `${7 / zf} ${4 / zf}` : 'none'}
-                className={isAnimated ? 'arrow-animated' : undefined}
+                strokeDasharray={
+                  isEmphasized && (emphasisState!.effect === 'cash-flow' || emphasisState!.effect === 'supply-chain')
+                    ? `${12 / zf} ${6 / zf}`
+                    : isAnimated ? `${8 / zf} ${8 / zf}` : isSelected ? `${7 / zf} ${4 / zf}` : 'none'
+                }
+                className={isEmphasized ? emClass : isAnimated ? 'arrow-animated' : undefined}
                 markerEnd={`url(#arrow-${rel.id})`}
                 opacity={isSelected ? 1 : 0.85}
-                style={{ pointerEvents: 'none' }}
+                style={{ pointerEvents: 'none', ['--em-color' as string]: rel.color }}
               />
 
               {/* Label pill at bezier midpoint */}

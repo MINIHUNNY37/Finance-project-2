@@ -4,9 +4,10 @@ import React, { useState } from 'react';
 import {
   Save, Share2, Map,
   ChevronDown, TrendingUp, LogIn, LogOut, User,
-  Clock, Globe, Square, BarChart3,
+  Clock, Globe, Square, BarChart3, Presentation,
 } from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
+import { usePresentationStore } from '../store/presentationStore';
 import ShareDialog from './ShareDialog';
 import ComparisonOverlay from './ComparisonOverlay';
 import MapsDialog from './MapsDialog';
@@ -29,6 +30,11 @@ export default function Toolbar({
   showWorldMap, onToggleWorldMap,
 }: ToolbarProps) {
   const { currentMap, saveCurrentMap, globalLocked, toggleGlobalLock } = useMapStore();
+  const {
+    presentations, activePresentation, subMode,
+    createPresentation, enterEditMode, loadPresentation,
+    getPresentationsForMap,
+  } = usePresentationStore();
   const [showShare, setShowShare] = useState(false);
   const [showMaps, setShowMaps] = useState(false);
   const [showClock, setShowClock] = useState(false);
@@ -36,6 +42,30 @@ export default function Toolbar({
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [showPresentDialog, setShowPresentDialog] = useState(false);
+  const [newPresTitle, setNewPresTitle] = useState('');
+
+  const mapPresentations = getPresentationsForMap(currentMap.id);
+
+  const handleCreatePresentation = () => {
+    const title = newPresTitle.trim() || 'Untitled Presentation';
+    const id = createPresentation(
+      currentMap.id,
+      title,
+      currentMap.mapType === 'plain' ? 'plain' : 'world',
+      '19.5:9'
+    );
+    loadPresentation(id);
+    enterEditMode(id);
+    setShowPresentDialog(false);
+    setNewPresTitle('');
+  };
+
+  const handleOpenPresentation = (id: string) => {
+    loadPresentation(id);
+    enterEditMode(id);
+    setShowPresentDialog(false);
+  };
 
   const handleSave = async () => {
     // Always save locally first
@@ -198,6 +228,35 @@ export default function Toolbar({
             <BarChart3 size={15} />Compare
           </button>
 
+          {/* Present */}
+          <button
+            className="btn-ghost"
+            onClick={() => {
+              if (subMode) return; // already in presentation mode
+              if (mapPresentations.length === 0) {
+                // Quick-create and enter edit mode
+                const id = createPresentation(
+                  currentMap.id,
+                  currentMap.name + ' — Presentation',
+                  currentMap.mapType === 'plain' ? 'plain' : 'world',
+                  '19.5:9'
+                );
+                loadPresentation(id);
+                enterEditMode(id);
+              } else {
+                setShowPresentDialog(true);
+              }
+            }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', fontSize: 13,
+              background: subMode ? 'rgba(245,158,11,0.15)' : undefined,
+              color: subMode ? '#f59e0b' : undefined,
+              border: subMode ? '1px solid rgba(245,158,11,0.3)' : undefined,
+            }}
+          >
+            <Presentation size={15} />Present
+          </button>
+
           {/* Share */}
           <button className="btn-ghost" onClick={() => setShowShare(true)}
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', fontSize: 13 }}>
@@ -241,6 +300,81 @@ export default function Toolbar({
       <MapsDialog isOpen={showMaps} onClose={() => setShowMaps(false)} session={session} onSignIn={onSignIn} />
       <ComparisonOverlay isOpen={showComparison} onClose={() => setShowComparison(false)} />
       {showClock && <WorldClockPanel onClose={() => setShowClock(false)} />}
+
+      {/* Presentation picker dialog */}
+      {showPresentDialog && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+        }} onClick={() => setShowPresentDialog(false)}>
+          <div style={{
+            background: 'rgba(15,23,42,0.98)', border: '1px solid rgba(59,130,246,0.3)',
+            borderRadius: 16, padding: 24, maxWidth: 420, width: '90%',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#e2e8f0', marginBottom: 16 }}>
+              Presentations
+            </div>
+
+            {/* Existing presentations */}
+            {mapPresentations.length > 0 && (
+              <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {mapPresentations.map((p) => (
+                  <button key={p.id} onClick={() => handleOpenPresentation(p.id)} style={{
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
+                    borderRadius: 8, background: 'rgba(30,41,59,0.6)',
+                    border: '1px solid rgba(51,65,85,0.5)', cursor: 'pointer',
+                    color: '#e2e8f0', fontSize: 13, fontWeight: 500,
+                    textAlign: 'left', width: '100%', transition: 'all 0.15s',
+                  }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(59,130,246,0.5)'; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(51,65,85,0.5)'; }}
+                  >
+                    <Presentation size={16} style={{ color: '#f59e0b', flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.title}</div>
+                      <div style={{ fontSize: 11, color: '#64748b' }}>
+                        {p.steps.length} step{p.steps.length !== 1 ? 's' : ''} · {p.aspectRatio}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Create new */}
+            <div style={{
+              borderTop: mapPresentations.length > 0 ? '1px solid rgba(59,130,246,0.15)' : 'none',
+              paddingTop: mapPresentations.length > 0 ? 16 : 0,
+            }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8', marginBottom: 8 }}>
+                New Presentation
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  value={newPresTitle}
+                  onChange={(e) => setNewPresTitle(e.target.value)}
+                  placeholder="Presentation title..."
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleCreatePresentation(); }}
+                  style={{
+                    flex: 1, padding: '8px 12px', borderRadius: 8,
+                    background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(59,130,246,0.2)',
+                    color: '#e2e8f0', fontSize: 13, outline: 'none',
+                  }}
+                />
+                <button onClick={handleCreatePresentation} style={{
+                  padding: '8px 16px', borderRadius: 8,
+                  background: 'rgba(59,130,246,0.85)', border: '1px solid rgba(59,130,246,0.6)',
+                  color: 'white', cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                }}>
+                  Create
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Login prompt modal */}
       {showLoginPrompt && (

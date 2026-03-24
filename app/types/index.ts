@@ -216,6 +216,55 @@ export interface GeoEvent {
   createdAt: string;
 }
 
+// ── Presentation Mode ────────────────────────────────────────────────────────
+
+export type PresentationTransition = 'smooth' | 'fade' | 'slide' | 'zoom-in' | 'zoom-out';
+
+export type EmphasisEffect =
+  | 'none'
+  | 'pulse'         // general pulse glow
+  | 'cash-flow'     // moving pulse along edge
+  | 'competitor'    // red tension highlight
+  | 'risk'          // warning pulse
+  | 'supply-chain'  // directional flow animation
+  | 'ownership';    // steady glow
+
+export interface PresentationStep {
+  id: string;
+  order: number;
+  // Target entities
+  targetEntityIds: string[];
+  // Optional relation-based movement (source → destination)
+  sourceEntityId?: string;
+  destinationEntityId?: string;
+  // Camera
+  zoomLevel: number;
+  cameraMoveDuration: number;  // ms
+  holdDuration: number;        // ms
+  transitionType: PresentationTransition;
+  emphasisEffect: EmphasisEffect;
+  // Bottom note content
+  heading: string;
+  subheading: string;
+  bodyNote: string;
+  keyMetrics?: string[];
+  whyItMatters?: string;
+}
+
+export type PresentationAspectRatio = '19.5:9' | '20:9';
+export type PresentationBackground = 'world' | 'plain';
+
+export interface Presentation {
+  id: string;
+  title: string;
+  mapId: string;
+  background: PresentationBackground;
+  aspectRatio: PresentationAspectRatio;
+  steps: PresentationStep[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export const SECTOR_PRESETS = [
   'Technology', 'Healthcare', 'Financials', 'Energy', 'Consumer Discretionary',
   'Consumer Staples', 'Industrials', 'Materials', 'Real Estate', 'Utilities',
