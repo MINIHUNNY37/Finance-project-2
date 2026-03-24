@@ -577,6 +577,10 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
                           e.stopPropagation();
                           if (isCurrent && allMaps.length === 1) return; // keep at least one map
                           deleteMap(map.id);
+                          // Also remove from cloud so it doesn't reappear on next load
+                          if (session?.user) {
+                            fetch(`/api/maps/${map.id}`, { method: 'DELETE' }).catch(() => {});
+                          }
                         }}
                         style={{
                           background: 'none', border: 'none', cursor: 'pointer',

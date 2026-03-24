@@ -257,13 +257,33 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   // Re-measure dims synchronously (before paint) whenever the container bounds change.
   // useLayoutEffect ensures dimsRef is correct on the very first frame after a mode/sidebar change,
   // preventing the one-frame stale-dims flash that causes entities to appear shifted.
+  // We also adjust panOffset to compensate for any change in canvas dimensions so that
+  // entities don't appear to jump when the canvas is resized (e.g. entering presentation mode).
   useLayoutEffect(() => {
     if (containerRef.current) {
       const w = containerRef.current.offsetWidth;
       const h = containerRef.current.offsetHeight;
       if (w > 0 && h > 0) {
+        const oldW = dimsRef.current.width;
+        const oldH = dimsRef.current.height;
         dimsRef.current = { width: w, height: h };
         setDims({ width: w, height: h });
+        // Compensate pan so entity visual positions stay stable when canvas size changes.
+        // Entity screen-X = panX + W/2 + (ex - W/2)*zoom. When W changes, screen-X shifts
+        // by (newW - oldW)/2 * (1 - zoom). We cancel that shift by adjusting pan.
+        const dw = w - oldW;
+        const dh = h - oldH;
+        if (dw !== 0 || dh !== 0) {
+          const z = zoomRef.current;
+          setPanOffset((prev) => {
+            const next = {
+              x: prev.x - dw / 2 * (1 - z),
+              y: prev.y - dh / 2 * (1 - z),
+            };
+            panRef.current = next;
+            return next;
+          });
+        }
       }
     }
   }, [presentationSubMode, presLeftOpen, presRightOpen]);
