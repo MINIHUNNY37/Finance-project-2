@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { Plus, ZoomIn, ZoomOut, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
 import WorldMap from './WorldMap';
@@ -254,19 +254,18 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
     return () => window.removeEventListener('resize', update);
   }, []);
 
-  // Re-measure dims whenever the container bounds change (presentation mode, sidebar toggles)
-  useEffect(() => {
-    const rafId = requestAnimationFrame(() => {
-      if (containerRef.current) {
-        const w = containerRef.current.offsetWidth;
-        const h = containerRef.current.offsetHeight;
-        if (w > 0 && h > 0) {
-          dimsRef.current = { width: w, height: h };
-          setDims({ width: w, height: h });
-        }
+  // Re-measure dims synchronously (before paint) whenever the container bounds change.
+  // useLayoutEffect ensures dimsRef is correct on the very first frame after a mode/sidebar change,
+  // preventing the one-frame stale-dims flash that causes entities to appear shifted.
+  useLayoutEffect(() => {
+    if (containerRef.current) {
+      const w = containerRef.current.offsetWidth;
+      const h = containerRef.current.offsetHeight;
+      if (w > 0 && h > 0) {
+        dimsRef.current = { width: w, height: h };
+        setDims({ width: w, height: h });
       }
-    });
-    return () => cancelAnimationFrame(rafId);
+    }
   }, [presentationSubMode, presLeftOpen, presRightOpen]);
 
   // Keyboard shortcuts
