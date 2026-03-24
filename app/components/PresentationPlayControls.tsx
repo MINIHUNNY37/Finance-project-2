@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Play, Pause, SkipForward, SkipBack, RotateCcw, X, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Play, Pause, SkipForward, SkipBack, RotateCcw, X, ToggleLeft, ToggleRight, Edit2 } from 'lucide-react';
 
 interface Props {
   currentStep: number;
@@ -15,11 +15,12 @@ interface Props {
   onRestart: () => void;
   onToggleAutoPlay: () => void;
   onExit: () => void;
+  onEdit: () => void;
 }
 
 export default function PresentationPlayControls({
   currentStep, totalSteps, isPlaying, isAutoPlay,
-  onPlay, onPause, onNext, onPrev, onRestart, onToggleAutoPlay, onExit,
+  onPlay, onPause, onNext, onPrev, onRestart, onToggleAutoPlay, onExit, onEdit,
 }: Props) {
   const btnStyle: React.CSSProperties = {
     background: 'none', border: 'none', cursor: 'pointer',
@@ -78,6 +79,12 @@ export default function PresentationPlayControls({
         onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = '#3b82f6'; }}
         onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = isAutoPlay ? '#10b981' : '#94a3b8'; }}>
         {isAutoPlay ? <ToggleRight size={18} style={{ color: '#10b981' }} /> : <ToggleLeft size={18} />}
+      </button>
+
+      <button onClick={onEdit} style={btnStyle} title="Back to edit (open sidebar)"
+        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = '#f59e0b'; }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = '#94a3b8'; }}>
+        <Edit2 size={15} />
       </button>
 
       <button onClick={onExit} style={{ ...btnStyle, marginLeft: 4 }} title="Exit presentation"

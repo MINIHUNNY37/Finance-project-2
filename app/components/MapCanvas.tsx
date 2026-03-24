@@ -145,8 +145,22 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   // Presentation store
   const presentationSubMode = usePresentationStore((s) => s.subMode);
   const emphasisState = usePresentationStore((s) => s.emphasisState);
+  const activePresentation = usePresentationStore((s) => s.activePresentation);
   const presentationStore = usePresentationStore();
   const [presentationNoteVisible, setPresentationNoteVisible] = useState(false);
+  const [presentationControlsVisible, setPresentationControlsVisible] = useState(true);
+  const presentationSubModeRef = useRef(presentationSubMode);
+  useEffect(() => { presentationSubModeRef.current = presentationSubMode; }, [presentationSubMode]);
+  // Show controls when entering play mode
+  useEffect(() => {
+    if (presentationSubMode === 'play') setPresentationControlsVisible(true);
+  }, [presentationSubMode]);
+  // Exit presentation if active presentation belongs to a different map
+  useEffect(() => {
+    if (activePresentation && activePresentation.mapId !== currentMap.id) {
+      presentationStore.exitPresentationMode();
+    }
+  }, [currentMap.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sidebar width: during presentation edit mode, the left panel is 320px
   const PRESENTATION_SIDEBAR_W = 320;
@@ -241,6 +255,27 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   // Keyboard shortcuts
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Presentation arrow-key navigation (play mode)
+      if (presentationSubModeRef.current === 'play') {
+        if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          const s = usePresentationStore.getState();
+          const total = s.activePresentation?.steps.length ?? 0;
+          if (total === 0) return;
+          if (s.currentStepIndex < total - 1) s.nextStep();
+          else s.goToStep(0);
+          return;
+        }
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          const s = usePresentationStore.getState();
+          const total = s.activePresentation?.steps.length ?? 0;
+          if (total === 0) return;
+          if (s.currentStepIndex > 0) s.prevStep();
+          else s.goToStep(total - 1);
+          return;
+        }
+      }
       if (e.key === 'Escape') {
         setConnectingFrom(null);
         setSelectedEntity(null);
@@ -392,6 +427,10 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
 
   const handleCanvasClick = useCallback(() => {
     if (wasPanning.current) return;
+    if (presentationSubModeRef.current === 'play') {
+      setPresentationControlsVisible((v) => !v);
+      return;
+    }
     setSelectedEntity(null);
     setSelectedGeoEventId(null);
     if (connectingFromId) {
@@ -965,10 +1004,15 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
         onNoteVisible={setPresentationNoteVisible}
       />
 
-      {/* Presentation play controls — shown during play mode */}
+      {/* Presentation play controls — shown during play mode, toggled by map click */}
       {presentationSubMode === 'play' && (
         <div style={{ position: 'fixed', top: 68, left: 0, right: 0, display: 'flex', justifyContent: 'center', zIndex: 200, pointerEvents: 'none' }}>
-          <div style={{ pointerEvents: 'auto' }}>
+          <div style={{
+            pointerEvents: presentationControlsVisible ? 'auto' : 'none',
+            opacity: presentationControlsVisible ? 1 : 0,
+            transform: presentationControlsVisible ? 'translateY(0)' : 'translateY(-6px)',
+            transition: 'opacity 0.2s ease, transform 0.2s ease',
+          }}>
             <PresentationPlayControls
               currentStep={presentationStore.currentStepIndex}
               totalSteps={presentationStore.activePresentation ? [...presentationStore.activePresentation.steps].length : 0}
@@ -981,8 +1025,19 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
               onRestart={presentationStore.restart}
               onToggleAutoPlay={presentationStore.toggleAutoPlay}
               onExit={() => { presentationStore.exitPresentationMode(); setPresentationNoteVisible(false); }}
+              onEdit={() => { presentationStore.enterEditMode(); setPresentationNoteVisible(false); }}
             />
           </div>
+        </div>
+      )}
+      {/* Hint when controls are hidden */}
+      {presentationSubMode === 'play' && !presentationControlsVisible && (
+        <div style={{
+          position: 'fixed', top: 78, left: '50%', transform: 'translateX(-50%)',
+          color: 'rgba(148,163,184,0.3)', fontSize: 11, pointerEvents: 'none', zIndex: 199,
+          letterSpacing: '0.05em',
+        }}>
+          click map to show controls
         </div>
       )}
 

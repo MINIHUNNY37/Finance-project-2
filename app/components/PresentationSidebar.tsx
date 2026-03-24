@@ -64,7 +64,7 @@ export default function PresentationSidebar({ onPlay, onPreviewStep, width }: Pr
   const input: React.CSSProperties = {
     width: '100%', padding: '6px 10px', borderRadius: 7,
     background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(59,130,246,0.2)',
-    color: '#e2e8f0', fontSize: 12, outline: 'none',
+    color: '#e2e8f0', fontSize: 13, outline: 'none',
   };
 
   return (
@@ -90,10 +90,10 @@ export default function PresentationSidebar({ onPlay, onPreviewStep, width }: Pr
             <Presentation size={14} color="white" />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {activePresentation.title}
             </div>
-            <div style={{ fontSize: 10, color: '#64748b' }}>
+            <div style={{ fontSize: 12, color: '#64748b' }}>
               {steps.length} step{steps.length !== 1 ? 's' : ''} · {activePresentation.aspectRatio === '16:9' ? 'PPT' : 'Short Form'}
             </div>
           </div>
@@ -117,12 +117,12 @@ export default function PresentationSidebar({ onPlay, onPreviewStep, width }: Pr
             <div style={{ display: 'flex', gap: 6 }}>
               {/* Aspect ratio toggle */}
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 10, color: '#64748b', fontWeight: 600, marginBottom: 4 }}>Format</div>
+                <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600, marginBottom: 4 }}>Format</div>
                 <div style={{ display: 'flex', borderRadius: 7, overflow: 'hidden', border: '1px solid rgba(59,130,246,0.2)' }}>
                   {([['16:9', 'PPT (16:9)'], ['9:16', 'Short (9:16)']] as [PresentationAspectRatio, string][]).map(([val, label]) => (
                     <button key={val} onClick={() => updatePresentation(activePresentation.id, { aspectRatio: val })}
                       style={{
-                        flex: 1, padding: '5px 4px', fontSize: 10, fontWeight: 600, border: 'none', cursor: 'pointer',
+                        flex: 1, padding: '5px 4px', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer',
                         background: activePresentation.aspectRatio === val ? 'rgba(59,130,246,0.25)' : 'transparent',
                         color: activePresentation.aspectRatio === val ? '#93c5fd' : '#64748b',
                         transition: 'all 0.15s',
@@ -134,12 +134,12 @@ export default function PresentationSidebar({ onPlay, onPreviewStep, width }: Pr
               </div>
               {/* Background toggle */}
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 10, color: '#64748b', fontWeight: 600, marginBottom: 4 }}>Background</div>
+                <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600, marginBottom: 4 }}>Background</div>
                 <div style={{ display: 'flex', borderRadius: 7, overflow: 'hidden', border: '1px solid rgba(59,130,246,0.2)' }}>
                   {([['world', 'World'], ['plain', 'Plain']] as [PresentationBackground, string][]).map(([val, label]) => (
                     <button key={val} onClick={() => updatePresentation(activePresentation.id, { background: val })}
                       style={{
-                        flex: 1, padding: '5px 4px', fontSize: 10, fontWeight: 600, border: 'none', cursor: 'pointer',
+                        flex: 1, padding: '5px 4px', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer',
                         background: activePresentation.background === val ? 'rgba(59,130,246,0.25)' : 'transparent',
                         color: activePresentation.background === val ? '#93c5fd' : '#64748b',
                         transition: 'all 0.15s',
@@ -157,7 +157,7 @@ export default function PresentationSidebar({ onPlay, onPreviewStep, width }: Pr
       {/* ── Step list ── */}
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {steps.length === 0 ? (
-          <div style={{ padding: '20px 16px', textAlign: 'center', color: '#475569', fontSize: 12, lineHeight: 1.7 }}>
+          <div style={{ padding: '20px 16px', textAlign: 'center', color: '#475569', fontSize: 13, lineHeight: 1.7 }}>
             No steps yet.<br />
             Click any entity below or use&nbsp;<strong style={{ color: '#93c5fd' }}>+ Add Step</strong>.
           </div>
@@ -201,7 +201,7 @@ export default function PresentationSidebar({ onPlay, onPreviewStep, width }: Pr
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', marginBottom: 3 }}>
                   {step.targetEntityIds.slice(0, 2).map((id) => (
                     <span key={id} style={{
-                      fontSize: 11, fontWeight: 600,
+                      fontSize: 13, fontWeight: 600,
                       color: isSelected ? '#e2e8f0' : '#cbd5e1',
                       whiteSpace: 'nowrap',
                     }}>
@@ -209,23 +209,23 @@ export default function PresentationSidebar({ onPlay, onPreviewStep, width }: Pr
                     </span>
                   ))}
                   {step.targetEntityIds.length > 2 && (
-                    <span style={{ fontSize: 10, color: '#64748b' }}>+{step.targetEntityIds.length - 2}</span>
+                    <span style={{ fontSize: 12, color: '#64748b' }}>+{step.targetEntityIds.length - 2}</span>
                   )}
                 </div>
 
                 {/* Relation info */}
                 {hasRelation && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 3 }}>
-                    <span style={{ fontSize: 10, color: '#94a3b8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 80 }}>
+                    <span style={{ fontSize: 12, color: '#94a3b8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 80 }}>
                       {entityLabel(step.sourceEntityId!)}
                     </span>
                     <ArrowRight size={10} style={{ color: rel?.color || '#3b82f6', flexShrink: 0 }} />
-                    <span style={{ fontSize: 10, color: '#94a3b8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 80 }}>
+                    <span style={{ fontSize: 12, color: '#94a3b8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 80 }}>
                       {entityLabel(step.destinationEntityId!)}
                     </span>
                     {rel?.label && (
                       <span style={{
-                        fontSize: 9, padding: '1px 5px', borderRadius: 4,
+                        fontSize: 11, padding: '1px 5px', borderRadius: 4,
                         background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)',
                         color: '#60a5fa', whiteSpace: 'nowrap',
                       }}>{rel.label}</span>
@@ -235,7 +235,7 @@ export default function PresentationSidebar({ onPlay, onPreviewStep, width }: Pr
 
                 {/* Heading */}
                 {step.heading && (
-                  <div style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontSize: 12, color: '#94a3b8', fontStyle: 'italic', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     "{step.heading}"
                   </div>
                 )}
@@ -243,21 +243,21 @@ export default function PresentationSidebar({ onPlay, onPreviewStep, width }: Pr
                 {/* Duration chips */}
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                   <span style={{
-                    fontSize: 9, padding: '1px 6px', borderRadius: 4,
+                    fontSize: 11, padding: '1px 6px', borderRadius: 4,
                     background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)',
                     color: '#6ee7b7',
                   }}>
                     {step.zoomLevel.toFixed(1)}x
                   </span>
                   <span style={{
-                    fontSize: 9, padding: '1px 6px', borderRadius: 4,
+                    fontSize: 11, padding: '1px 6px', borderRadius: 4,
                     background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)',
                     color: '#a5b4fc',
                   }}>
                     {(step.cameraMoveDuration / 1000).toFixed(1)}s move
                   </span>
                   <span style={{
-                    fontSize: 9, padding: '1px 6px', borderRadius: 4,
+                    fontSize: 11, padding: '1px 6px', borderRadius: 4,
                     background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)',
                     color: '#fcd34d',
                   }}>
@@ -265,7 +265,7 @@ export default function PresentationSidebar({ onPlay, onPreviewStep, width }: Pr
                   </span>
                   {step.emphasisEffect !== 'none' && (
                     <span style={{
-                      fontSize: 9, padding: '1px 6px', borderRadius: 4,
+                      fontSize: 11, padding: '1px 6px', borderRadius: 4,
                       background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
                       color: '#fca5a5',
                     }}>
@@ -301,13 +301,13 @@ export default function PresentationSidebar({ onPlay, onPreviewStep, width }: Pr
         {/* ── Entity quick-add section ── */}
         {currentMap.entities.filter((e) => !e.hidden).length > 0 && (
           <div style={{ padding: '12px 12px 8px' }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
               Quick-add entity as step
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
               {currentMap.entities.filter((e) => !e.hidden).map((e) => (
                 <button key={e.id} onClick={() => handleAddEntityStep(e.id)} style={{
-                  padding: '3px 8px', borderRadius: 5, fontSize: 11,
+                  padding: '3px 8px', borderRadius: 5, fontSize: 13,
                   background: 'rgba(30,41,59,0.7)', border: '1px solid rgba(51,65,85,0.5)',
                   color: '#94a3b8', cursor: 'pointer', transition: 'all 0.15s',
                 }}
@@ -342,7 +342,7 @@ export default function PresentationSidebar({ onPlay, onPreviewStep, width }: Pr
           flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
           padding: '8px 0', borderRadius: 7,
           background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.25)',
-          color: '#93c5fd', cursor: 'pointer', fontSize: 12, fontWeight: 600,
+          color: '#93c5fd', cursor: 'pointer', fontSize: 13, fontWeight: 600,
         }}>
           <Plus size={13} /> Add Step
         </button>
@@ -351,7 +351,7 @@ export default function PresentationSidebar({ onPlay, onPreviewStep, width }: Pr
             flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
             padding: '8px 0', borderRadius: 7,
             background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)',
-            color: '#6ee7b7', cursor: 'pointer', fontSize: 12, fontWeight: 600,
+            color: '#6ee7b7', cursor: 'pointer', fontSize: 13, fontWeight: 600,
           }}>
             <Play size={13} /> Play
           </button>
