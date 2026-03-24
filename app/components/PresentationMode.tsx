@@ -97,8 +97,8 @@ export default function PresentationMode({ onAnimateCamera, onNoteVisible }: Pro
         if (s.currentStepIndex < sorted.length - 1) {
           nextStep();
         } else {
-          pause();
-          onNoteVisible(true); // keep note visible at end
+          usePresentationStore.getState().enterEditMode();
+          onNoteVisible(false);
         }
       }, total);
     }

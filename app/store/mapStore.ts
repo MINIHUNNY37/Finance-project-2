@@ -77,6 +77,7 @@ interface MapState {
   loadMap: (id: string) => void;
   createNewMap: (name: string, description: string, mapType?: 'world' | 'plain') => void;
   deleteMap: (id: string) => void;
+  renameMap: (id: string, name: string) => void;
   generateShareToken: () => string;
   mergeCloudMaps: (cloudMaps: ScenarioMap[]) => void;
   importMapFromCode: (code: string) => boolean;
@@ -507,7 +508,24 @@ export const useMapStore = create<MapState>()(
       },
 
       deleteMap: (id) => {
-        set((state) => ({ savedMaps: state.savedMaps.filter((m) => m.id !== id) }));
+        const { currentMap, savedMaps } = get();
+        const isCurrentMap = currentMap.id === id;
+        const remaining = savedMaps.filter((m) => m.id !== id);
+        if (isCurrentMap) {
+          // Switch to another saved map, or create a fresh default
+          const next = remaining[0] ?? createDefaultMap();
+          set({ currentMap: next, savedMaps: remaining, selectedEntityId: null, selectedRelationshipId: null });
+        } else {
+          set({ savedMaps: remaining });
+        }
+      },
+
+      renameMap: (id, name) => {
+        const now = new Date().toISOString();
+        set((state) => ({
+          savedMaps: state.savedMaps.map((m) => m.id === id ? { ...m, name, updatedAt: now } : m),
+          currentMap: state.currentMap.id === id ? { ...state.currentMap, name, updatedAt: now } : state.currentMap,
+        }));
       },
 
       generateShareToken: () => {

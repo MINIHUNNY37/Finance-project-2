@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Plus, Trash2, ChevronUp, ChevronDown, Play, Eye, X,
-  Settings, ArrowRight, Presentation,
+  ArrowRight, Presentation,
 } from 'lucide-react';
 import { usePresentationStore } from '../store/presentationStore';
 import { useMapStore } from '../store/mapStore';
@@ -26,8 +26,6 @@ export default function PresentationSidebar({ onPlay, onPreviewStep, width }: Pr
     exitPresentationMode,
   } = usePresentationStore();
   const { currentMap } = useMapStore();
-
-  const [showSettings, setShowSettings] = useState(false);
 
   if (!activePresentation || subMode !== 'edit') return null;
 
@@ -97,61 +95,56 @@ export default function PresentationSidebar({ onPlay, onPreviewStep, width }: Pr
               {steps.length} step{steps.length !== 1 ? 's' : ''} · {activePresentation.aspectRatio === '16:9' ? 'PPT' : 'Short Form'}
             </div>
           </div>
-          <button onClick={() => setShowSettings(v => !v)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: showSettings ? '#3b82f6' : '#64748b', padding: 4, flexShrink: 0 }}>
-            <Settings size={14} />
-          </button>
           <button onClick={exitPresentationMode} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 4, flexShrink: 0 }} title="Exit Presentation Mode">
             <X size={14} />
           </button>
         </div>
 
-        {/* Settings */}
-        {showSettings && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 8, borderTop: '1px solid rgba(59,130,246,0.1)' }}>
-            <input
-              value={activePresentation.title}
-              onChange={(e) => updatePresentation(activePresentation.id, { title: e.target.value })}
-              placeholder="Presentation title"
-              style={input}
-            />
-            <div style={{ display: 'flex', gap: 6 }}>
-              {/* Aspect ratio toggle */}
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600, marginBottom: 4 }}>Format</div>
-                <div style={{ display: 'flex', borderRadius: 7, overflow: 'hidden', border: '1px solid rgba(59,130,246,0.2)' }}>
-                  {([['16:9', 'PPT (16:9)'], ['9:16', 'Short (9:16)']] as [PresentationAspectRatio, string][]).map(([val, label]) => (
-                    <button key={val} onClick={() => updatePresentation(activePresentation.id, { aspectRatio: val })}
-                      style={{
-                        flex: 1, padding: '5px 4px', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer',
-                        background: activePresentation.aspectRatio === val ? 'rgba(59,130,246,0.25)' : 'transparent',
-                        color: activePresentation.aspectRatio === val ? '#93c5fd' : '#64748b',
-                        transition: 'all 0.15s',
-                      }}>
-                      {label}
-                    </button>
-                  ))}
-                </div>
+        {/* Settings — always shown */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 8, borderTop: '1px solid rgba(59,130,246,0.1)' }}>
+          <input
+            value={activePresentation.title}
+            onChange={(e) => updatePresentation(activePresentation.id, { title: e.target.value })}
+            placeholder="Presentation title"
+            style={input}
+          />
+          <div style={{ display: 'flex', gap: 6 }}>
+            {/* Aspect ratio toggle */}
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600, marginBottom: 4 }}>Format</div>
+              <div style={{ display: 'flex', borderRadius: 7, overflow: 'hidden', border: '1px solid rgba(59,130,246,0.2)' }}>
+                {([['16:9', 'PPT (16:9)'], ['9:16', 'Short (9:16)']] as [PresentationAspectRatio, string][]).map(([val, label]) => (
+                  <button key={val} onClick={() => updatePresentation(activePresentation.id, { aspectRatio: val })}
+                    style={{
+                      flex: 1, padding: '5px 4px', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer',
+                      background: activePresentation.aspectRatio === val ? 'rgba(59,130,246,0.25)' : 'transparent',
+                      color: activePresentation.aspectRatio === val ? '#93c5fd' : '#64748b',
+                      transition: 'all 0.15s',
+                    }}>
+                    {label}
+                  </button>
+                ))}
               </div>
-              {/* Background toggle */}
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600, marginBottom: 4 }}>Background</div>
-                <div style={{ display: 'flex', borderRadius: 7, overflow: 'hidden', border: '1px solid rgba(59,130,246,0.2)' }}>
-                  {([['world', 'World'], ['plain', 'Plain']] as [PresentationBackground, string][]).map(([val, label]) => (
-                    <button key={val} onClick={() => updatePresentation(activePresentation.id, { background: val })}
-                      style={{
-                        flex: 1, padding: '5px 4px', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer',
-                        background: activePresentation.background === val ? 'rgba(59,130,246,0.25)' : 'transparent',
-                        color: activePresentation.background === val ? '#93c5fd' : '#64748b',
-                        transition: 'all 0.15s',
-                      }}>
-                      {label}
-                    </button>
-                  ))}
-                </div>
+            </div>
+            {/* Background toggle */}
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600, marginBottom: 4 }}>Background</div>
+              <div style={{ display: 'flex', borderRadius: 7, overflow: 'hidden', border: '1px solid rgba(59,130,246,0.2)' }}>
+                {([['world', 'World'], ['plain', 'Plain']] as [PresentationBackground, string][]).map(([val, label]) => (
+                  <button key={val} onClick={() => updatePresentation(activePresentation.id, { background: val })}
+                    style={{
+                      flex: 1, padding: '5px 4px', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer',
+                      background: activePresentation.background === val ? 'rgba(59,130,246,0.25)' : 'transparent',
+                      color: activePresentation.background === val ? '#93c5fd' : '#64748b',
+                      transition: 'all 0.15s',
+                    }}>
+                    {label}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
-        )}
+        </div>
       </div>
 
       {/* ── Step list ── */}

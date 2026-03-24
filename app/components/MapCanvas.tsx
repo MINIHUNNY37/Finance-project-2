@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Plus, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { Plus, ZoomIn, ZoomOut, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
 import WorldMap from './WorldMap';
 import EntityCard from './EntityCard';
@@ -149,6 +149,8 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   const presentationStore = usePresentationStore();
   const [presentationNoteVisible, setPresentationNoteVisible] = useState(false);
   const [presentationControlsVisible, setPresentationControlsVisible] = useState(true);
+  const [presLeftOpen, setPresLeftOpen] = useState(true);
+  const [presRightOpen, setPresRightOpen] = useState(true);
   const presentationSubModeRef = useRef(presentationSubMode);
   useEffect(() => { presentationSubModeRef.current = presentationSubMode; }, [presentationSubMode]);
   // Show controls when entering play mode
@@ -699,32 +701,78 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
 
       {/* Right panel: Investment OR Presentation Step Editor */}
       {presentationSubMode === 'edit' ? (
-        <PresentationStepEditor />
+        <>
+          {presRightOpen && <PresentationStepEditor />}
+          {/* Right sidebar collapse/expand toggle */}
+          <button
+            onClick={() => setPresRightOpen((v) => !v)}
+            title={presRightOpen ? 'Collapse step editor' : 'Expand step editor'}
+            style={{
+              position: 'fixed', top: '50%', right: presRightOpen ? PRESENTATION_PROPS_W : 0,
+              transform: 'translateY(-50%)',
+              zIndex: 55, background: 'rgba(10,17,34,0.9)',
+              border: '1px solid rgba(59,130,246,0.25)',
+              borderRight: presRightOpen ? '1px solid rgba(59,130,246,0.25)' : 'none',
+              borderRadius: presRightOpen ? '6px 0 0 6px' : '0 6px 6px 0',
+              color: '#64748b', cursor: 'pointer',
+              padding: '8px 4px', display: 'flex', alignItems: 'center',
+              transition: 'right 0.2s ease',
+            }}
+            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = '#93c5fd')}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = '#64748b')}
+          >
+            {presRightOpen ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+          </button>
+        </>
       ) : presentationSubMode !== 'play' ? (
         <InvestmentPanel onWidthChange={setInvestmentPanelWidth} />
       ) : null}
 
       {/* Left panel: normal Sidebar OR Presentation Sidebar */}
       {presentationSubMode === 'edit' ? (
-        <PresentationSidebar
-          width={PRESENTATION_SIDEBAR_W}
-          onPlay={() => {
-            presentationStore.enterPlayMode();
-            if (presentationStore.activePresentation?.steps.length) {
-              presentationStore.goToStep(0);
-              presentationStore.play();
-            }
-          }}
-          onPreviewStep={(stepId) => {
-            const step = presentationStore.activePresentation?.steps.find((s) => s.id === stepId);
-            if (!step?.targetEntityIds.length) return;
-            const ents = step.targetEntityIds.map((id) => currentMap.entities.find((e) => e.id === id)).filter(Boolean);
-            if (!ents.length) return;
-            const cx = ents.reduce((s, e) => s + e!.position.x, 0) / ents.length;
-            const cy = ents.reduce((s, e) => s + e!.position.y, 0) / ents.length;
-            handleAnimateCamera({ x: cx, y: cy, zoom: step.zoomLevel, duration: step.cameraMoveDuration });
-          }}
-        />
+        <>
+          {presLeftOpen && (
+            <PresentationSidebar
+              width={PRESENTATION_SIDEBAR_W}
+              onPlay={() => {
+                presentationStore.enterPlayMode();
+                if (presentationStore.activePresentation?.steps.length) {
+                  presentationStore.goToStep(0);
+                  presentationStore.play();
+                }
+              }}
+              onPreviewStep={(stepId) => {
+                const step = presentationStore.activePresentation?.steps.find((s) => s.id === stepId);
+                if (!step?.targetEntityIds.length) return;
+                const ents = step.targetEntityIds.map((id) => currentMap.entities.find((e) => e.id === id)).filter(Boolean);
+                if (!ents.length) return;
+                const cx = ents.reduce((s, e) => s + e!.position.x, 0) / ents.length;
+                const cy = ents.reduce((s, e) => s + e!.position.y, 0) / ents.length;
+                handleAnimateCamera({ x: cx, y: cy, zoom: step.zoomLevel, duration: step.cameraMoveDuration });
+              }}
+            />
+          )}
+          {/* Left sidebar collapse/expand toggle */}
+          <button
+            onClick={() => setPresLeftOpen((v) => !v)}
+            title={presLeftOpen ? 'Collapse presentation sidebar' : 'Expand presentation sidebar'}
+            style={{
+              position: 'fixed', top: '50%', left: presLeftOpen ? PRESENTATION_SIDEBAR_W : 0,
+              transform: 'translateY(-50%)',
+              zIndex: 55, background: 'rgba(10,17,34,0.9)',
+              border: '1px solid rgba(59,130,246,0.25)',
+              borderLeft: presLeftOpen ? '1px solid rgba(59,130,246,0.25)' : 'none',
+              borderRadius: presLeftOpen ? '0 6px 6px 0' : '6px 0 0 6px',
+              color: '#64748b', cursor: 'pointer',
+              padding: '8px 4px', display: 'flex', alignItems: 'center',
+              transition: 'left 0.2s ease',
+            }}
+            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = '#93c5fd')}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = '#64748b')}
+          >
+            {presLeftOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+          </button>
+        </>
       ) : presentationSubMode !== 'play' ? (
         <Sidebar
           onFocusEntity={handleFocusEntity}
@@ -749,8 +797,8 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
         ref={containerRef}
         style={{
           position: 'fixed', top: 68,
-          left: presentationSubMode === 'edit' ? PRESENTATION_SIDEBAR_W : 0,
-          right: presentationSubMode === 'edit' ? PRESENTATION_PROPS_W : 0,
+          left: presentationSubMode === 'edit' ? (presLeftOpen ? PRESENTATION_SIDEBAR_W : 0) : 0,
+          right: presentationSubMode === 'edit' ? (presRightOpen ? PRESENTATION_PROPS_W : 0) : 0,
           bottom: 0,
           overflow: 'hidden',
           cursor: isConnecting ? 'crosshair' : isDrawMode ? 'crosshair' : 'grab',

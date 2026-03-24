@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, Plus, Trash2, Map, Clock, Globe, Square, LogIn, Upload, AlertCircle, LayoutTemplate, Download, CheckCircle } from 'lucide-react';
+import { X, Plus, Trash2, Map, Clock, Globe, Square, LogIn, Upload, AlertCircle, LayoutTemplate, Download, CheckCircle, Pencil, Check } from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
 
 interface TemplateMetadata {
@@ -22,8 +22,10 @@ interface MapsDialogProps {
 }
 
 export default function MapsDialog({ isOpen, onClose, required = false, loading = false, session, onSignIn }: MapsDialogProps) {
-  const { savedMaps, currentMap, loadMap, createNewMap, deleteMap, saveCurrentMap, importMapFromCode, mergeCloudMaps } = useMapStore();
+  const { savedMaps, currentMap, loadMap, createNewMap, deleteMap, renameMap, saveCurrentMap, importMapFromCode, mergeCloudMaps } = useMapStore();
   const [creating, setCreating] = useState(false);
+  const [editingMapId, setEditingMapId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [mapTypeChoice, setMapTypeChoice] = useState<'world' | 'plain'>('world');
@@ -461,6 +463,7 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
             <>
               {allMaps.map((map) => {
                 const isCurrent = map.id === currentMap.id;
+                const isEditing = editingMapId === map.id;
                 return (
                   <div
                     key={map.id}
@@ -476,7 +479,7 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
                       cursor: isCurrent ? 'default' : 'pointer',
                       transition: 'all 0.15s ease',
                     }}
-                    onClick={() => !isCurrent && handleLoad(map.id)}
+                    onClick={() => !isCurrent && !isEditing && handleLoad(map.id)}
                     onMouseEnter={(e) => { if (!isCurrent) (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.08)'; }}
                     onMouseLeave={(e) => { if (!isCurrent) (e.currentTarget as HTMLElement).style.background = 'rgba(15,23,42,0.5)'; }}
                   >
@@ -486,38 +489,103 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
                     }
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontWeight: 600, color: isCurrent ? '#93c5fd' : '#e2e8f0', fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {map.name}
-                        </span>
-                        {isCurrent && (
+                        {isEditing ? (
+                          <input
+                            autoFocus
+                            value={editingName}
+                            onChange={(e) => setEditingName(e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => {
+                              e.stopPropagation();
+                              if (e.key === 'Enter' && editingName.trim()) {
+                                renameMap(map.id, editingName.trim());
+                                setEditingMapId(null);
+                              } else if (e.key === 'Escape') {
+                                setEditingMapId(null);
+                              }
+                            }}
+                            style={{
+                              flex: 1, background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(59,130,246,0.4)',
+                              color: '#e2e8f0', borderRadius: 6, padding: '2px 8px', fontSize: 14, outline: 'none',
+                            }}
+                          />
+                        ) : (
+                          <span style={{ fontWeight: 600, color: isCurrent ? '#93c5fd' : '#e2e8f0', fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {map.name}
+                          </span>
+                        )}
+                        {isCurrent && !isEditing && (
                           <span style={{ fontSize: 10, background: 'rgba(6,182,212,0.2)', color: '#06b6d4', borderRadius: 4, padding: '1px 6px', flexShrink: 0 }}>
                             Active
                           </span>
                         )}
-                        <span style={{ fontSize: 10, background: 'rgba(59,130,246,0.1)', color: '#94a3b8', borderRadius: 4, padding: '1px 6px', flexShrink: 0 }}>
-                          {map.mapType === 'plain' ? 'Plain' : 'World Map'}
-                        </span>
+                        {!isEditing && (
+                          <span style={{ fontSize: 10, background: 'rgba(59,130,246,0.1)', color: '#94a3b8', borderRadius: 4, padding: '1px 6px', flexShrink: 0 }}>
+                            {map.mapType === 'plain' ? 'Plain' : 'World Map'}
+                          </span>
+                        )}
                       </div>
-                      {map.description && (
+                      {map.description && !isEditing && (
                         <div style={{ fontSize: 11, color: '#8899b0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {map.description}
                         </div>
                       )}
-                      <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
-                        <span style={{ fontSize: 10, color: '#94a3b8' }}>{map.entities.length} entities</span>
-                        <span style={{ fontSize: 10, color: '#94a3b8' }}>{map.relationships.length} connections</span>
-                        <span style={{ fontSize: 10, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 3 }}>
-                          <Clock size={9} />
-                          {new Date(map.updatedAt).toLocaleDateString()}
-                        </span>
-                      </div>
+                      {!isEditing && (
+                        <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
+                          <span style={{ fontSize: 10, color: '#94a3b8' }}>{(map.entities ?? []).length} entities</span>
+                          <span style={{ fontSize: 10, color: '#94a3b8' }}>{(map.relationships ?? []).length} connections</span>
+                          <span style={{ fontSize: 10, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 3 }}>
+                            <Clock size={9} />
+                            {new Date(map.updatedAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                    {!isCurrent && (
+                    {/* Rename confirm button */}
+                    {isEditing && (
                       <button
-                        onClick={(e) => { e.stopPropagation(); deleteMap(map.id); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (editingName.trim()) { renameMap(map.id, editingName.trim()); }
+                          setEditingMapId(null);
+                        }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#10b981', padding: 4, flexShrink: 0 }}
+                      >
+                        <Check size={14} />
+                      </button>
+                    )}
+                    {/* Rename (pencil) button */}
+                    {!isEditing && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingMapId(map.id);
+                          setEditingName(map.name);
+                        }}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 4, flexShrink: 0 }}
-                        onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = '#ef4444')}
+                        title="Rename map"
+                        onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = '#93c5fd')}
                         onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = '#94a3b8')}
+                      >
+                        <Pencil size={13} />
+                      </button>
+                    )}
+                    {/* Delete button */}
+                    {!isEditing && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isCurrent && allMaps.length === 1) return; // keep at least one map
+                          deleteMap(map.id);
+                        }}
+                        style={{
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          color: isCurrent && allMaps.length === 1 ? '#334155' : '#94a3b8',
+                          padding: 4, flexShrink: 0,
+                        }}
+                        title={isCurrent && allMaps.length === 1 ? 'Cannot delete the only map' : 'Delete map'}
+                        onMouseEnter={(e) => { if (!(isCurrent && allMaps.length === 1)) (e.currentTarget as HTMLElement).style.color = '#ef4444'; }}
+                        onMouseLeave={(e) => { if (!(isCurrent && allMaps.length === 1)) (e.currentTarget as HTMLElement).style.color = '#94a3b8'; }}
                       >
                         <Trash2 size={14} />
                       </button>
