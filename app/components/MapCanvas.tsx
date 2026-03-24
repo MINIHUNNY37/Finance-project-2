@@ -16,6 +16,10 @@ import Sidebar from './Sidebar';
 import InvestmentPanel from './InvestmentPanel';
 import MapsDialog from './MapsDialog';
 import PresentationMode from './PresentationMode';
+import PresentationSidebar from './PresentationSidebar';
+import PresentationStepEditor from './PresentationStepEditor';
+import PresentationPlayControls from './PresentationPlayControls';
+import PresentationNotePanel from './PresentationNotePanel';
 import { usePresentationStore } from '../store/presentationStore';
 import type { Entity, Relationship, ArrowStyle, GeoEvent } from '../types';
 
@@ -141,6 +145,12 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   // Presentation store
   const presentationSubMode = usePresentationStore((s) => s.subMode);
   const emphasisState = usePresentationStore((s) => s.emphasisState);
+  const presentationStore = usePresentationStore();
+  const [presentationNoteVisible, setPresentationNoteVisible] = useState(false);
+
+  // Sidebar width: during presentation edit mode, the left panel is 320px
+  const PRESENTATION_SIDEBAR_W = 320;
+  const PRESENTATION_PROPS_W = 300;
 
   // Keep refs in sync with state
   useEffect(() => { zoomRef.current = zoom; }, [zoom]);
@@ -648,30 +658,61 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
         onToggleWorldMap={handleToggleWorldMap}
       />
 
-      <InvestmentPanel onWidthChange={setInvestmentPanelWidth} />
+      {/* Right panel: Investment OR Presentation Step Editor */}
+      {presentationSubMode === 'edit' ? (
+        <PresentationStepEditor />
+      ) : presentationSubMode !== 'play' ? (
+        <InvestmentPanel onWidthChange={setInvestmentPanelWidth} />
+      ) : null}
 
-      <Sidebar
-        onFocusEntity={handleFocusEntity}
-        onConnectWithSettings={handleConnectWithSettings}
-        isConnecting={isConnecting}
-        connectingFromId={connectingFromId}
-        pendingRelSettings={pendingRelSettings}
-        onConnectTo={handleConnectTo}
-        onCancelConnect={handleCancelConnect}
-        entitySizeMult={entitySizeMult}
-        onEntitySizeChange={setEntitySizeMult}
-        arrowSizeMult={arrowSizeMult}
-        onArrowSizeChange={setArrowSizeMult}
-        isDrawMode={isDrawMode}
-        onToggleDrawMode={() => setIsDrawMode((v) => !v)}
-        onWidthChange={setSidebarWidth}
-      />
+      {/* Left panel: normal Sidebar OR Presentation Sidebar */}
+      {presentationSubMode === 'edit' ? (
+        <PresentationSidebar
+          width={PRESENTATION_SIDEBAR_W}
+          onPlay={() => {
+            presentationStore.enterPlayMode();
+            if (presentationStore.activePresentation?.steps.length) {
+              presentationStore.goToStep(0);
+              presentationStore.play();
+            }
+          }}
+          onPreviewStep={(stepId) => {
+            const step = presentationStore.activePresentation?.steps.find((s) => s.id === stepId);
+            if (!step?.targetEntityIds.length) return;
+            const ents = step.targetEntityIds.map((id) => currentMap.entities.find((e) => e.id === id)).filter(Boolean);
+            if (!ents.length) return;
+            const cx = ents.reduce((s, e) => s + e!.position.x, 0) / ents.length;
+            const cy = ents.reduce((s, e) => s + e!.position.y, 0) / ents.length;
+            handleAnimateCamera({ x: cx, y: cy, zoom: step.zoomLevel, duration: step.cameraMoveDuration });
+          }}
+        />
+      ) : presentationSubMode !== 'play' ? (
+        <Sidebar
+          onFocusEntity={handleFocusEntity}
+          onConnectWithSettings={handleConnectWithSettings}
+          isConnecting={isConnecting}
+          connectingFromId={connectingFromId}
+          pendingRelSettings={pendingRelSettings}
+          onConnectTo={handleConnectTo}
+          onCancelConnect={handleCancelConnect}
+          entitySizeMult={entitySizeMult}
+          onEntitySizeChange={setEntitySizeMult}
+          arrowSizeMult={arrowSizeMult}
+          onArrowSizeChange={setArrowSizeMult}
+          isDrawMode={isDrawMode}
+          onToggleDrawMode={() => setIsDrawMode((v) => !v)}
+          onWidthChange={setSidebarWidth}
+        />
+      ) : null}
 
       {/* Outer clip container */}
       <div
         ref={containerRef}
         style={{
-          position: 'fixed', top: 68, left: 0, right: 0, bottom: 0,
+          position: 'fixed', top: 68,
+          left: presentationSubMode === 'edit' ? PRESENTATION_SIDEBAR_W : 0,
+          right: presentationSubMode === 'edit' ? PRESENTATION_PROPS_W : 0,
+          bottom: 0,
           overflow: 'hidden',
           cursor: isConnecting ? 'crosshair' : isDrawMode ? 'crosshair' : 'grab',
         }}
@@ -752,10 +793,12 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
           </div>
         )}
 
-        {/* Bottom-left: Add Entity + Geo Event */}
+        {/* Bottom-left: Add Entity + Geo Event — hidden during presentation mode */}
         <div style={{
-          position: 'absolute', bottom: 24, left: sidebarWidth + 16,
-          display: 'flex', flexDirection: 'column', gap: 8,
+          position: 'absolute', bottom: 24,
+          left: presentationSubMode ? 16 : sidebarWidth + 16,
+          display: presentationSubMode ? 'none' : 'flex',
+          flexDirection: 'column', gap: 8,
           zIndex: 20, pointerEvents: 'all',
           transition: 'left 0.2s ease',
         }}>
@@ -916,14 +959,39 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
         initialData={editingGeoEvent}
         defaultPosition={pendingGeoPosition}
       />
-      {/* Presentation Mode overlay */}
+      {/* Presentation Mode — logic only (no overlay) */}
       <PresentationMode
-        zoom={zoom}
-        panOffset={panOffset}
-        dims={dims}
         onAnimateCamera={handleAnimateCamera}
-        onFocusEntity={handleFocusEntity}
+        onNoteVisible={setPresentationNoteVisible}
       />
+
+      {/* Presentation play controls — shown during play mode */}
+      {presentationSubMode === 'play' && (
+        <div style={{ position: 'fixed', top: 68, left: 0, right: 0, display: 'flex', justifyContent: 'center', zIndex: 200, pointerEvents: 'none' }}>
+          <div style={{ pointerEvents: 'auto' }}>
+            <PresentationPlayControls
+              currentStep={presentationStore.currentStepIndex}
+              totalSteps={presentationStore.activePresentation ? [...presentationStore.activePresentation.steps].length : 0}
+              isPlaying={presentationStore.isPlaying}
+              isAutoPlay={presentationStore.isAutoPlay}
+              onPlay={presentationStore.play}
+              onPause={presentationStore.pause}
+              onNext={presentationStore.nextStep}
+              onPrev={presentationStore.prevStep}
+              onRestart={presentationStore.restart}
+              onToggleAutoPlay={presentationStore.toggleAutoPlay}
+              onExit={() => { presentationStore.exitPresentationMode(); setPresentationNoteVisible(false); }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Note panel — shown during play mode */}
+      {presentationSubMode === 'play' && presentationStore.activePresentation && (() => {
+        const steps = [...presentationStore.activePresentation.steps].sort((a, b) => a.order - b.order);
+        const step = steps[presentationStore.currentStepIndex] ?? null;
+        return <PresentationNotePanel step={step} visible={presentationNoteVisible} />;
+      })()}
 
       <MapsDialog
         isOpen={showMapPicker}

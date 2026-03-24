@@ -251,7 +251,8 @@ export interface PresentationStep {
   whyItMatters?: string;
 }
 
-export type PresentationAspectRatio = '19.5:9' | '20:9';
+/** 16:9 = landscape PPT-style · 9:16 = portrait short-form/phone */
+export type PresentationAspectRatio = '16:9' | '9:16';
 export type PresentationBackground = 'world' | 'plain';
 
 export interface Presentation {

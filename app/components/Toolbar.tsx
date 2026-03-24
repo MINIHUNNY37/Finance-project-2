@@ -33,7 +33,7 @@ export default function Toolbar({
   const {
     presentations, activePresentation, subMode,
     createPresentation, enterEditMode, loadPresentation,
-    getPresentationsForMap,
+    exitPresentationMode, getPresentationsForMap,
   } = usePresentationStore();
   const [showShare, setShowShare] = useState(false);
   const [showMaps, setShowMaps] = useState(false);
@@ -228,18 +228,21 @@ export default function Toolbar({
             <BarChart3 size={15} />Compare
           </button>
 
-          {/* Present */}
+          {/* Present — toggles on/off */}
           <button
             className="btn-ghost"
             onClick={() => {
-              if (subMode) return; // already in presentation mode
+              if (subMode) {
+                // Already active — exit
+                exitPresentationMode();
+                return;
+              }
               if (mapPresentations.length === 0) {
-                // Quick-create and enter edit mode
                 const id = createPresentation(
                   currentMap.id,
                   currentMap.name + ' — Presentation',
                   currentMap.mapType === 'plain' ? 'plain' : 'world',
-                  '19.5:9'
+                  '16:9'
                 );
                 loadPresentation(id);
                 enterEditMode(id);
@@ -252,9 +255,10 @@ export default function Toolbar({
               background: subMode ? 'rgba(245,158,11,0.15)' : undefined,
               color: subMode ? '#f59e0b' : undefined,
               border: subMode ? '1px solid rgba(245,158,11,0.3)' : undefined,
+              borderRadius: 8,
             }}
           >
-            <Presentation size={15} />Present
+            <Presentation size={15} />{subMode ? 'Exit Presentation' : 'Present'}
           </button>
 
           {/* Share */}
@@ -335,7 +339,7 @@ export default function Toolbar({
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.title}</div>
                       <div style={{ fontSize: 11, color: '#64748b' }}>
-                        {p.steps.length} step{p.steps.length !== 1 ? 's' : ''} · {p.aspectRatio}
+                        {p.steps.length} step{p.steps.length !== 1 ? 's' : ''} · {p.aspectRatio === '16:9' ? 'PPT Presentation' : 'Short Form'}
                       </div>
                     </div>
                   </button>

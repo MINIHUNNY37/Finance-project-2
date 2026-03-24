@@ -44,6 +44,9 @@ interface PresentationState {
     effect: EmphasisEffect;
   } | null;
 
+  // Selected step in edit mode
+  selectedStepId: string | null;
+
   // Actions — presentation CRUD
   createPresentation: (mapId: string, title: string, background: PresentationBackground, aspectRatio: PresentationAspectRatio) => string;
   updatePresentation: (id: string, updates: Partial<Pick<Presentation, 'title' | 'background' | 'aspectRatio'>>) => void;
@@ -75,6 +78,9 @@ interface PresentationState {
   setCameraTarget: (target: PresentationState['cameraTarget']) => void;
   setEmphasisState: (state: PresentationState['emphasisState']) => void;
   clearCameraTarget: () => void;
+
+  // Actions — step selection (edit mode)
+  selectStep: (id: string | null) => void;
 }
 
 const createDefaultStep = (order: number, targetEntityIds: string[]): PresentationStep => ({
@@ -102,6 +108,7 @@ export const usePresentationStore = create<PresentationState>()(
       isAutoPlay: true,
       cameraTarget: null,
       emphasisState: null,
+      selectedStepId: null,
 
       createPresentation: (mapId, title, background, aspectRatio) => {
         const id = uuidv4();
@@ -219,11 +226,11 @@ export const usePresentationStore = create<PresentationState>()(
       // Mode
       enterEditMode: (presentationId) => {
         if (presentationId) get().loadPresentation(presentationId);
-        set({ subMode: 'edit', isPlaying: false, currentStepIndex: 0, cameraTarget: null, emphasisState: null });
+        set({ subMode: 'edit', isPlaying: false, currentStepIndex: 0, cameraTarget: null, emphasisState: null, selectedStepId: null });
       },
 
       enterPlayMode: () => {
-        set({ subMode: 'play', currentStepIndex: 0, isPlaying: false });
+        set({ subMode: 'play', currentStepIndex: 0, isPlaying: false, selectedStepId: null });
       },
 
       exitPresentationMode: () => {
@@ -233,6 +240,7 @@ export const usePresentationStore = create<PresentationState>()(
           currentStepIndex: 0,
           cameraTarget: null,
           emphasisState: null,
+          selectedStepId: null,
         });
       },
 
@@ -267,6 +275,7 @@ export const usePresentationStore = create<PresentationState>()(
       setCameraTarget: (target) => set({ cameraTarget: target }),
       setEmphasisState: (state) => set({ emphasisState: state }),
       clearCameraTarget: () => set({ cameraTarget: null }),
+      selectStep: (id) => set({ selectedStepId: id }),
     }),
     { name: 'presentation-store' }
   )

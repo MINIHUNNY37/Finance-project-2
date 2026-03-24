@@ -32,22 +32,21 @@ export default function PresentationNotePanel({ step, visible }: Props) {
   return (
     <div
       style={{
-        position: 'absolute',
-        bottom: 24,
+        position: 'fixed',
+        bottom: 32,
         left: '50%',
         transform: 'translateX(-50%)',
-        width: '88%',
-        maxWidth: 380,
+        width: 'min(88vw, 520px)',
+        maxWidth: 520,
         background: 'linear-gradient(180deg, rgba(10,17,34,0.92) 0%, rgba(10,17,34,0.98) 100%)',
         border: '1px solid rgba(59,130,246,0.25)',
         borderRadius: 14,
         padding: '18px 20px',
-        zIndex: 100,
+        zIndex: 200,
         opacity,
         transition: 'opacity 0.4s ease',
         backdropFilter: 'blur(12px)',
         boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-        pointerEvents: 'none',
       }}
     >
       {currentStep.heading && (
