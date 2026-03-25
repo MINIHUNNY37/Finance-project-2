@@ -1160,11 +1160,24 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
         </div>
       )}
 
-      {/* Note panel — shown during play mode */}
+      {/* Note panel — shown during play mode, sized to the AR frame */}
       {presentationSubMode === 'play' && presentationStore.activePresentation && (() => {
         const steps = [...presentationStore.activePresentation.steps].sort((a, b) => a.order - b.order);
         const step = steps[presentationStore.currentStepIndex] ?? null;
-        return <PresentationNotePanel step={step} visible={presentationNoteVisible} />;
+        // Compute frame rect in viewport space (play mode: container starts at top:68, left:0)
+        const ar = presentationStore.activePresentation.aspectRatio;
+        const [arW, arH] = ar === '9:16' ? [9, 16] : [16, 9];
+        const cW = containerVisualDims.width;
+        const cH = containerVisualDims.height;
+        const byH = cH * arW / arH;
+        const frameW = byH <= cW ? byH : cW;
+        const frameH = byH <= cW ? cH : cW * arH / arW;
+        const frameLeft = (cW - frameW) / 2;           // from left edge of container
+        const frameTop  = (cH - frameH) / 2;           // from top edge of container
+        // "bottomFromViewport" = distance from the bottom of the viewport to the bottom of the frame
+        const frameBottomFromViewport = window.innerHeight - (68 + frameTop + frameH);
+        const frameRect = { left: frameLeft, width: frameW, bottomFromViewport: Math.max(0, frameBottomFromViewport) };
+        return <PresentationNotePanel step={step} visible={presentationNoteVisible} frameRect={frameRect} />;
       })()}
 
       <MapsDialog
