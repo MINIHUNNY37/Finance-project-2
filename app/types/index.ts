@@ -72,6 +72,8 @@ export interface Entity {
   tags?: string[];
   // Research hub
   links?: EntityLink[];
+  // Flashcard insight
+  insight?: { price?: string; valuation?: number; quality?: number; risk?: number };
 }
 
 export type ArrowStyle = 'normal' | 'animated';

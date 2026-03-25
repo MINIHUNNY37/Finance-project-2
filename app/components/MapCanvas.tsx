@@ -911,17 +911,6 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
                 boxShadow: isPlay ? '0 0 0 1px rgba(59,130,246,0.15)' : 'none',
                 pointerEvents: 'none',
               }} />
-              {/* ratio label */}
-              <div style={{
-                position: 'absolute',
-                left: frameLeft + 8, top: frameTop + 6,
-                fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
-                color: isPlay ? 'rgba(59,130,246,0.8)' : 'rgba(59,130,246,0.55)',
-                background: 'rgba(3,9,18,0.7)', padding: '2px 6px', borderRadius: 4,
-                pointerEvents: 'none',
-              }}>
-                {activePresentation.aspectRatio}
-              </div>
             </div>
           );
         })()}

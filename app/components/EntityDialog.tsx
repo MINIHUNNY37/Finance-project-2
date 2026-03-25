@@ -16,7 +16,7 @@ interface EntityDialogProps {
   defaultCountry?: string;
 }
 
-type Tab = 'basic' | 'details' | 'stats' | 'invest';
+type Tab = 'basic' | 'details' | 'stats' | 'invest' | 'flashcard';
 
 const STAT_CATEGORIES: { id: string; label: string; presets: string[] }[] = [
   { id: 'income',    label: 'Income',     presets: ['Revenue', 'Net Income', 'Gross Profit', 'Operating Income', 'EBITDA'] },
@@ -179,6 +179,12 @@ export default function EntityDialog({
   const [links, setLinks] = useState<EntityLink[]>([]);
   const [linkUrl, setLinkUrl] = useState('');
   const [linkTitle, setLinkTitle] = useState('');
+  // Flashcard insight
+  const [insightPrice, setInsightPrice] = useState('');
+  const [insightValuation, setInsightValuation] = useState<number>(50);
+  const [insightQuality, setInsightQuality] = useState<number>(50);
+  const [insightRisk, setInsightRisk] = useState<number>(50);
+  const [flashcardEditing, setFlashcardEditing] = useState(false);
 
   useEffect(() => {
     if (initialData) {
@@ -208,6 +214,10 @@ export default function EntityDialog({
       setSector(initialData.sector || '');
       setTags(initialData.tags || []);
       setLinks(initialData.links || []);
+      setInsightPrice(initialData.insight?.price || '');
+      setInsightValuation(initialData.insight?.valuation ?? 50);
+      setInsightQuality(initialData.insight?.quality ?? 50);
+      setInsightRisk(initialData.insight?.risk ?? 50);
     } else {
       // Empty icon forces the user to explicitly pick one before saving
       setName(''); setIcon(''); setSubtitle(''); setDescription('');
@@ -220,7 +230,9 @@ export default function EntityDialog({
       setThesis(''); setExitCriteria(''); setConviction(0);
       setCatalysts([]); setSector(''); setTags([]);
       setLinks([]); setLinkUrl(''); setLinkTitle('');
+      setInsightPrice(''); setInsightValuation(50); setInsightQuality(50); setInsightRisk(50);
     }
+    setFlashcardEditing(false);
     setTickerError('');
     setActiveTab('basic');
     setShowAllStats(false);
@@ -293,6 +305,7 @@ export default function EntityDialog({
       sector: sector || undefined,
       tags: tags.length > 0 ? tags : undefined,
       links: links.length > 0 ? links : undefined,
+      insight: { price: insightPrice || undefined, valuation: insightValuation, quality: insightQuality, risk: insightRisk },
     });
     onClose();
   };
@@ -302,6 +315,7 @@ export default function EntityDialog({
     { id: 'details', label: 'Details' },
     { id: 'stats', label: 'Statistics' },
     { id: 'invest', label: 'Invest' },
+    { id: 'flashcard', label: 'Flashcard' },
   ];
 
   return (
@@ -1196,6 +1210,113 @@ export default function EntityDialog({
               })()}
             </div>
           )}
+
+          {/* === FLASHCARD TAB === */}
+          {activeTab === 'flashcard' && (() => {
+            const valColor = insightValuation >= 70 ? '#10b981' : insightValuation >= 40 ? '#f59e0b' : '#f43f5e';
+            const qualColor = insightQuality >= 70 ? '#10b981' : insightQuality >= 40 ? '#f59e0b' : '#f43f5e';
+            const riskColor = insightRisk < 30 ? '#10b981' : insightRisk <= 60 ? '#f59e0b' : '#f43f5e';
+
+            const ScoreBar = ({ label, value, barColor }: { label: string; value: number; barColor: string }) => (
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ fontSize: 12, color: '#94a3b8', fontWeight: 500 }}>{label}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: barColor }}>{value}</span>
+                </div>
+                <div style={{ height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%', width: `${value}%`, borderRadius: 3,
+                    background: `linear-gradient(90deg, ${barColor}aa, ${barColor})`,
+                    transition: 'width 0.4s ease',
+                  }} />
+                </div>
+                {flashcardEditing && (
+                  <input
+                    type="range" min={0} max={100} value={value}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      if (label === 'Valuation Score') setInsightValuation(v);
+                      else if (label === 'Quality Score') setInsightQuality(v);
+                      else setInsightRisk(v);
+                    }}
+                    style={{ width: '100%', marginTop: 6, accentColor: barColor, cursor: 'pointer' }}
+                  />
+                )}
+              </div>
+            );
+
+            return (
+              <div style={{
+                background: '#111b2d', borderRadius: 14,
+                border: '1px solid rgba(59,130,246,0.15)',
+                overflow: 'hidden',
+              }}>
+                {/* Header */}
+                <div style={{
+                  padding: '18px 20px 14px',
+                  borderBottom: '1px solid rgba(59,130,246,0.1)',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+                }}>
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#475569', textTransform: 'uppercase', marginBottom: 4 }}>
+                      INSIGHT CARD
+                    </div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: '#e2e8f0' }}>{name || 'Entity Name'}</div>
+                    {subtitle && <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{subtitle}</div>}
+                  </div>
+                  <button
+                    onClick={() => setFlashcardEditing((v) => !v)}
+                    style={{
+                      background: flashcardEditing ? 'rgba(16,185,129,0.12)' : 'rgba(59,130,246,0.1)',
+                      border: `1px solid ${flashcardEditing ? 'rgba(16,185,129,0.35)' : 'rgba(59,130,246,0.3)'}`,
+                      borderRadius: 8, padding: '5px 12px', cursor: 'pointer',
+                      color: flashcardEditing ? '#10b981' : '#93c5fd', fontSize: 12, fontWeight: 600,
+                      display: 'flex', alignItems: 'center', gap: 5,
+                    }}
+                  >
+                    {flashcardEditing ? '✓ Done' : '✎ Edit'}
+                  </button>
+                </div>
+
+                {/* Price section */}
+                <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(59,130,246,0.1)' }}>
+                  <div style={{ fontSize: 10, color: '#475569', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                    Price / Value
+                  </div>
+                  {flashcardEditing ? (
+                    <input
+                      className="input-field"
+                      value={insightPrice}
+                      onChange={(e) => setInsightPrice(e.target.value)}
+                      placeholder="e.g. $182.50"
+                      style={{ fontSize: 22, fontWeight: 700, color: '#e2e8f0', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: 8, padding: '8px 12px', width: '100%' }}
+                    />
+                  ) : (
+                    <div style={{ fontSize: 28, fontWeight: 700, color: insightPrice ? '#e2e8f0' : '#334155' }}>
+                      {insightPrice || '—'}
+                    </div>
+                  )}
+                </div>
+
+                {/* Scores section */}
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(59,130,246,0.1)' }}>
+                  <ScoreBar label="Valuation Score" value={insightValuation} barColor={valColor} />
+                  <ScoreBar label="Quality Score" value={insightQuality} barColor={qualColor} />
+                  <ScoreBar label="Risk Factor" value={insightRisk} barColor={riskColor} />
+                </div>
+
+                {/* Footer */}
+                <div style={{
+                  padding: '12px 20px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <div style={{ fontSize: 11, color: '#334155', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                    VIEW FULL ANALYSIS
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Footer */}
