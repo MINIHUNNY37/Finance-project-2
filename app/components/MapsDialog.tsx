@@ -29,6 +29,7 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [mapTypeChoice, setMapTypeChoice] = useState<'world' | 'plain'>('world');
+  const [themeChoice, setThemeChoice] = useState<'dark' | 'forest' | 'aurora' | 'slate'>('dark');
   const [showAuthGate, setShowAuthGate] = useState(false);
 
   // Import from code
@@ -100,11 +101,12 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
       setShowAuthGate(true);
       return;
     }
-    createNewMap(newName.trim(), newDesc.trim(), mapTypeChoice);
+    createNewMap(newName.trim(), newDesc.trim(), mapTypeChoice, themeChoice);
     setNewName('');
     setNewDesc('');
     setCreating(false);
     setMapTypeChoice('world');
+    setThemeChoice('dark');
     onClose();
   };
 
@@ -443,6 +445,43 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
                       : 'Clean blank canvas — great for org charts and abstract diagrams.'}
                   </div>
                 </div>
+
+                {/* Theme selection — only shown for plain maps */}
+                {mapTypeChoice === 'plain' && (
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: '#8899b0', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+                      Colour Theme
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                      {([
+                        { id: 'dark',   label: 'Dark Navy',      swatch: 'linear-gradient(135deg,#0c1f3d,#050d1a)' },
+                        { id: 'forest', label: 'Deep Forest',    swatch: 'linear-gradient(135deg,#0a1e0f,#020b05)' },
+                        { id: 'aurora', label: 'Aurora',         swatch: 'linear-gradient(135deg,#1a0a2e,#040110)' },
+                        { id: 'slate',  label: 'Slate Steel',    swatch: 'linear-gradient(135deg,#111827,#060d18)' },
+                      ] as { id: 'dark'|'forest'|'aurora'|'slate'; label: string; swatch: string }[]).map(({ id, label, swatch }) => {
+                        const active = themeChoice === id;
+                        return (
+                          <button
+                            key={id}
+                            onClick={() => setThemeChoice(id)}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 8,
+                              padding: '7px 10px', borderRadius: 8, cursor: 'pointer',
+                              border: `1px solid ${active ? 'rgba(6,182,212,0.6)' : 'rgba(59,130,246,0.18)'}`,
+                              background: active ? 'rgba(6,182,212,0.08)' : 'transparent',
+                              color: active ? '#06b6d4' : '#8899b0',
+                              fontSize: 12, fontWeight: active ? 600 : 400,
+                              transition: 'all 0.15s',
+                            }}
+                          >
+                            <div style={{ width: 18, height: 18, borderRadius: 4, background: swatch, flexShrink: 0, border: '1px solid rgba(255,255,255,0.08)' }} />
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button className="btn-primary" onClick={handleCreate} style={{ flex: 1 }}>Create</button>

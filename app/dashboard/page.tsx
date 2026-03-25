@@ -96,12 +96,37 @@ export default function DashboardPage() {
   if (!isAdmin) {
     return (
       <div style={pageStyle}>
-        <div style={cardStyle}>
-          <Shield size={36} style={{ color: '#ef4444', marginBottom: 12 }} />
-          <h2 style={{ color: '#e2e8f0', fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Access Denied</h2>
-          <p style={{ color: '#64748b', fontSize: 13 }}>
-            Your account (<strong style={{ color: '#94a3b8' }}>{session.user?.email}</strong>) does not have admin permissions.
-          </p>
+        <div style={{ ...cardStyle, maxWidth: 440, textAlign: 'left' }}>
+          {/* Avatar + name */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+            {session.user?.image
+              ? <img src={session.user.image} alt="" style={{ width: 52, height: 52, borderRadius: '50%', border: '2px solid rgba(6,182,212,0.4)' }} />
+              : <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(6,182,212,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 700, color: '#06b6d4' }}>
+                  {(session.user?.name || session.user?.email || '?')[0].toUpperCase()}
+                </div>
+            }
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: '#e2e8f0' }}>{session.user?.name || 'User'}</div>
+              <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>{session.user?.email}</div>
+            </div>
+          </div>
+
+          {/* Role badge */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+            <User size={13} style={{ color: '#06b6d4' }} />
+            <span style={{ fontSize: 12, color: '#64748b' }}>Role</span>
+            <span style={{
+              fontSize: 11, fontWeight: 600, borderRadius: 6, padding: '2px 8px',
+              background: 'rgba(100,116,139,0.2)', color: '#94a3b8',
+              border: '1px solid rgba(100,116,139,0.3)',
+            }}>
+              member
+            </span>
+          </div>
+
+          <div style={{ borderTop: '1px solid rgba(59,130,246,0.12)', paddingTop: 16, fontSize: 12, color: '#475569' }}>
+            You are signed in. Admin access is required to view the full dashboard.
+          </div>
         </div>
       </div>
     );

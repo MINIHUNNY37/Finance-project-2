@@ -75,7 +75,7 @@ interface MapState {
   // Map actions
   saveCurrentMap: () => void;
   loadMap: (id: string) => void;
-  createNewMap: (name: string, description: string, mapType?: 'world' | 'plain') => void;
+  createNewMap: (name: string, description: string, mapType?: 'world' | 'plain', theme?: 'dark' | 'forest' | 'aurora' | 'slate') => void;
   deleteMap: (id: string) => void;
   renameMap: (id: string, name: string) => void;
   generateShareToken: () => string;
@@ -103,6 +103,7 @@ const createDefaultMap = (): ScenarioMap => ({
   ownerId: 'local',
   sharedWith: [],
   mapType: 'world',
+  theme: 'dark',
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 });
@@ -497,11 +498,11 @@ export const useMapStore = create<MapState>()(
         if (map) set({ currentMap: map, selectedEntityId: null, selectedRelationshipId: null });
       },
 
-      createNewMap: (name, description, mapType = 'world') => {
+      createNewMap: (name, description, mapType = 'world', theme = 'dark') => {
         const { saveCurrentMap } = get();
         saveCurrentMap();
         set({
-          currentMap: { ...createDefaultMap(), name, description, mapType },
+          currentMap: { ...createDefaultMap(), name, description, mapType, theme },
           selectedEntityId: null,
           selectedRelationshipId: null,
         });

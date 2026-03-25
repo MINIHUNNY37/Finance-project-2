@@ -130,6 +130,8 @@ export interface ScenarioMap {
   sharedWith: string[];
   shareToken?: string;
   mapType?: 'world' | 'plain';
+  /** Visual colour theme for the plain-canvas background */
+  theme?: 'dark' | 'forest' | 'aurora' | 'slate';
   createdAt: string;
   updatedAt: string;
 }

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import {
   Save, Share2, Map,
-  ChevronDown, TrendingUp, LogIn, LogOut, User,
+  ChevronDown, LogIn, LogOut, User,
   Clock, Globe, Square, BarChart3, Presentation,
 } from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
@@ -106,10 +106,16 @@ export default function Toolbar({
         <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginRight: 10, flexShrink: 0 }}>
           <div style={{
             width: 38, height: 38, borderRadius: 10,
-            background: 'linear-gradient(135deg, #3b82f6, #06b6d4)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: '#00d4a8',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           }}>
-            <TrendingUp size={19} color="white" />
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="1" y="2" width="10" height="9" rx="2.5" fill="#0b1a2e"/>
+              <rect x="14" y="3" width="7" height="6" rx="2" fill="#0f2438"/>
+              <rect x="1" y="15" width="8" height="6" rx="2" fill="#0f2438"/>
+              <rect x="11" y="5.5" width="3" height="2" rx="1" fill="#0b1a2e"/>
+              <rect x="4.5" y="11" width="2" height="4" rx="1" fill="#0b1a2e"/>
+            </svg>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontSize: 15, fontWeight: 700, color: '#e2e8f0', lineHeight: 1.2 }}>Plotifolio</span>

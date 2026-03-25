@@ -151,6 +151,8 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   const [presentationControlsVisible, setPresentationControlsVisible] = useState(true);
   const [presLeftOpen, setPresLeftOpen] = useState(true);
   const [presRightOpen, setPresRightOpen] = useState(true);
+  // Visible container dimensions (used only for the aspect-ratio frame overlay)
+  const [containerVisualDims, setContainerVisualDims] = useState({ width: 1200, height: 800 });
   const presentationSubModeRef = useRef(presentationSubMode);
   useEffect(() => { presentationSubModeRef.current = presentationSubMode; }, [presentationSubMode]);
   // Show controls when entering play mode
@@ -167,6 +169,17 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   // Sidebar width: during presentation edit mode, the left panel is 320px
   const PRESENTATION_SIDEBAR_W = 320;
   const PRESENTATION_PROPS_W = 300;
+
+  // Track container's visual size (separate from dims/coordinate-space) for the AR frame
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const ro = new ResizeObserver((entries) => {
+      const e = entries[0];
+      if (e) setContainerVisualDims({ width: e.contentRect.width, height: e.contentRect.height });
+    });
+    ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, []);
 
   // Keep refs in sync with state
   useEffect(() => { zoomRef.current = zoom; }, [zoom]);
@@ -836,25 +849,82 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
             </WorldMap>
           ) : (
             /* ── Plain background ── */
+            (() => {
+              const themeMap = {
+                forest: { bg: 'radial-gradient(ellipse at 50% 40%, #0a1e0f 0%, #051209 60%, #020b05 100%)', grid: 'rgba(34,197,94,0.05)' },
+                aurora: { bg: 'radial-gradient(ellipse at 50% 40%, #1a0a2e 0%, #0d0520 60%, #040110 100%)', grid: 'rgba(168,85,247,0.05)' },
+                slate:  { bg: 'radial-gradient(ellipse at 50% 40%, #111827 0%, #0b1120 60%, #060d18 100%)', grid: 'rgba(148,163,184,0.04)' },
+                dark:   { bg: 'radial-gradient(ellipse at 50% 40%, #0c1f3d 0%, #071224 60%, #050d1a 100%)', grid: 'rgba(59,130,246,0.04)' },
+              };
+              const t = themeMap[(currentMap.theme ?? 'dark') as keyof typeof themeMap] ?? themeMap.dark;
+              return (
             <div style={{
               position: 'relative', width: dims.width, height: dims.height,
-              background: 'radial-gradient(ellipse at 50% 40%, #0c1f3d 0%, #071224 60%, #050d1a 100%)',
+              background: t.bg,
             }}>
               {/* Subtle grid */}
               <svg style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} width={dims.width} height={dims.height}>
                 {Array.from({ length: 24 }, (_, i) => (
-                  <line key={`h${i}`} x1={0} y1={dims.height * (i / 24)} x2={dims.width} y2={dims.height * (i / 24)} stroke="rgba(59,130,246,0.04)" strokeWidth={1} />
+                  <line key={`h${i}`} x1={0} y1={dims.height * (i / 24)} x2={dims.width} y2={dims.height * (i / 24)} stroke={t.grid} strokeWidth={1} />
                 ))}
                 {Array.from({ length: 40 }, (_, i) => (
-                  <line key={`v${i}`} x1={dims.width * (i / 40)} y1={0} x2={dims.width * (i / 40)} y2={dims.height} stroke="rgba(59,130,246,0.04)" strokeWidth={1} />
+                  <line key={`v${i}`} x1={dims.width * (i / 40)} y1={0} x2={dims.width * (i / 40)} y2={dims.height} stroke={t.grid} strokeWidth={1} />
                 ))}
               </svg>
               {renderRelationships(0)}
               {renderEntities('P', 0)}
               {renderGeoEvents()}
             </div>
+              );
+            })()
           )}
         </div>
+
+        {/* ── Aspect-ratio frame overlay (edit + play) ── */}
+        {presentationSubMode && activePresentation && (() => {
+          const [arW, arH] = activePresentation.aspectRatio === '9:16' ? [9, 16] : [16, 9];
+          const cW = containerVisualDims.width;
+          const cH = containerVisualDims.height;
+          const byH = cH * arW / arH;
+          const frameW = byH <= cW ? byH : cW;
+          const frameH = byH <= cW ? cH : cW * arH / arW;
+          const frameLeft = (cW - frameW) / 2;
+          const frameTop = (cH - frameH) / 2;
+          const isPlay = presentationSubMode === 'play';
+          return (
+            <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 180 }}>
+              {isPlay && frameTop > 0 && <>
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: frameTop, background: 'rgba(0,0,0,0.72)' }} />
+                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: frameTop, background: 'rgba(0,0,0,0.72)' }} />
+              </>}
+              {isPlay && frameLeft > 0 && <>
+                <div style={{ position: 'absolute', top: frameTop, bottom: frameTop, left: 0, width: frameLeft, background: 'rgba(0,0,0,0.72)' }} />
+                <div style={{ position: 'absolute', top: frameTop, bottom: frameTop, right: 0, width: frameLeft, background: 'rgba(0,0,0,0.72)' }} />
+              </>}
+              <div style={{
+                position: 'absolute',
+                left: frameLeft, top: frameTop, width: frameW, height: frameH,
+                border: isPlay
+                  ? '2px solid rgba(59,130,246,0.6)'
+                  : '1.5px dashed rgba(59,130,246,0.45)',
+                borderRadius: 2,
+                boxShadow: isPlay ? '0 0 0 1px rgba(59,130,246,0.15)' : 'none',
+                pointerEvents: 'none',
+              }} />
+              {/* ratio label */}
+              <div style={{
+                position: 'absolute',
+                left: frameLeft + 8, top: frameTop + 6,
+                fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
+                color: isPlay ? 'rgba(59,130,246,0.8)' : 'rgba(59,130,246,0.55)',
+                background: 'rgba(3,9,18,0.7)', padding: '2px 6px', borderRadius: 4,
+                pointerEvents: 'none',
+              }}>
+                {activePresentation.aspectRatio}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Empty state */}
         {currentMap.entities.length === 0 && (
