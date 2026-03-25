@@ -1,9 +1,23 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, Search } from 'lucide-react';
 import type { GeoEvent, GeoEventType } from '../types';
 import { GEO_EVENT_TYPES } from '../types';
+
+const ALL_COUNTRIES = [
+  'Afghanistan','Albania','Algeria','Angola','Argentina','Australia','Austria','Bangladesh',
+  'Belgium','Bolivia','Brazil','Bulgaria','Cambodia','Cameroon','Canada','Sri Lanka','Chile',
+  'China','Colombia','DR Congo','Croatia','Cuba','Cyprus','Czech Republic','Denmark','Ecuador',
+  'Egypt','Ethiopia','Finland','France','Germany','Ghana','Greece','Guatemala','Haiti','Honduras',
+  'Hungary','India','Indonesia','Iran','Iraq','Ireland','Israel','Italy','Jamaica','Japan',
+  'Jordan','Kazakhstan','Kenya','North Korea','South Korea','Kuwait','Laos','Lebanon','Libya',
+  'Mexico','Morocco','Mozambique','Namibia','Nepal','Netherlands','New Zealand','Nigeria','Norway',
+  'Oman','Pakistan','Panama','Peru','Philippines','Poland','Portugal','Qatar','Romania','Russia',
+  'Saudi Arabia','Somalia','South Africa','Spain','Sudan','Sweden','Switzerland','Syria','Taiwan',
+  'Thailand','Tunisia','Turkey','Uganda','Ukraine','UAE','United Kingdom','United States',
+  'Uruguay','Uzbekistan','Venezuela','Vietnam','Yemen','Zambia','Zimbabwe',
+].sort();
 
 interface GeoEventDialogProps {
   isOpen: boolean;
@@ -23,6 +37,8 @@ export default function GeoEventDialog({
   const [hasEndDate, setHasEndDate] = useState(false);
   const [details, setDetails] = useState('');
   const [size, setSize] = useState(1);
+  const [countries, setCountries] = useState<string[]>([]);
+  const [countrySearch, setCountrySearch] = useState('');
 
   useEffect(() => {
     if (initialData) {
@@ -33,10 +49,12 @@ export default function GeoEventDialog({
       setHasEndDate(!!initialData.endDate);
       setDetails(initialData.details || '');
       setSize(initialData.size ?? 1);
+      setCountries(initialData.countries || []);
     } else {
       setName(''); setType('war'); setStartDate(''); setEndDate('');
-      setHasEndDate(false); setDetails(''); setSize(1);
+      setHasEndDate(false); setDetails(''); setSize(1); setCountries([]);
     }
+    setCountrySearch('');
   }, [initialData, isOpen]);
 
   if (!isOpen) return null;
@@ -53,6 +71,7 @@ export default function GeoEventDialog({
       endDate: hasEndDate && endDate ? endDate : undefined,
       details: details.trim(),
       size,
+      countries: countries.length > 0 ? countries : undefined,
       position: initialData?.position ?? defaultPosition ?? { x: 400, y: 300 },
     });
     onClose();
@@ -231,6 +250,78 @@ export default function GeoEventDialog({
                 />
               ))}
             </div>
+          </div>
+
+          {/* Affected Countries */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={labelStyle}>
+              Affected Countries
+              {countries.length > 0 && (
+                <span style={{ marginLeft: 6, color: color, fontSize: 10, textTransform: 'none', letterSpacing: 0, fontWeight: 600 }}>
+                  — {countries.length} selected (highlighted on map)
+                </span>
+              )}
+            </label>
+            {/* Selected chips */}
+            {countries.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
+                {countries.map((c) => (
+                  <div key={c} style={{
+                    display: 'flex', alignItems: 'center', gap: 4,
+                    background: `${color}20`, border: `1px solid ${color}55`,
+                    borderRadius: 6, padding: '2px 7px', fontSize: 11, color,
+                  }}>
+                    <span>{c}</span>
+                    <button onClick={() => setCountries(countries.filter((x) => x !== c))}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color, padding: 0, lineHeight: 1, fontSize: 12 }}>
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* Search input */}
+            <div style={{ position: 'relative', marginBottom: 4 }}>
+              <Search size={12} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: '#64748b', pointerEvents: 'none' }} />
+              <input
+                value={countrySearch}
+                onChange={(e) => setCountrySearch(e.target.value)}
+                placeholder="Search countries…"
+                style={{
+                  width: '100%', fontSize: 12, padding: '6px 10px 6px 28px',
+                  background: 'rgba(15,23,42,0.6)', border: `1px solid ${color}33`,
+                  borderRadius: 7, color: '#e2e8f0', outline: 'none',
+                }}
+              />
+            </div>
+            {/* Dropdown list */}
+            {countrySearch.trim() && (() => {
+              const filtered = ALL_COUNTRIES.filter((c) =>
+                c.toLowerCase().includes(countrySearch.toLowerCase()) && !countries.includes(c)
+              ).slice(0, 8);
+              return filtered.length > 0 ? (
+                <div style={{
+                  background: 'rgba(8,15,30,0.98)', border: `1px solid ${color}33`,
+                  borderRadius: 8, overflow: 'hidden', maxHeight: 180, overflowY: 'auto',
+                }}>
+                  {filtered.map((c) => (
+                    <button key={c} onClick={() => { setCountries([...countries, c]); setCountrySearch(''); }}
+                      style={{
+                        width: '100%', textAlign: 'left', padding: '7px 12px',
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        fontSize: 12, color: '#cbd5e1',
+                        borderBottom: '1px solid rgba(30,41,59,0.5)',
+                        transition: 'background 0.1s',
+                      }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = `${color}18`; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'none'; }}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              ) : null;
+            })()}
           </div>
 
           {/* Details */}

@@ -217,6 +217,7 @@ export interface GeoEvent {
   fixedSize?: boolean; // true (default) = constant screen size regardless of zoom
   hidden?: boolean;
   folderId?: string;
+  countries?: string[]; // country names that glow on the world map
   createdAt: string;
 }
 

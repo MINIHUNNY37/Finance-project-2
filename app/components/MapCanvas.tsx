@@ -835,7 +835,12 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
           }}
         >
           {showWorldMap ? (
-            <WorldMap onCountryClick={handleCountryClick} width={dims.width} height={dims.height}>
+            <WorldMap
+              onCountryClick={handleCountryClick}
+              width={dims.width}
+              height={dims.height}
+              highlightedCountries={(currentMap.geoEvents ?? []).flatMap((ev) => ev.countries ?? [])}
+            >
               {/* Left ghost copy */}
               {renderRelationships(-dims.width)}
               {renderEntities('L', -dims.width)}

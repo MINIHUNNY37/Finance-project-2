@@ -10,6 +10,7 @@ interface WorldMapProps {
   children?: React.ReactNode;
   width: number;
   height: number;
+  highlightedCountries?: string[];
 }
 
 // Country code to name mapping (ISO 3166-1 numeric)
@@ -52,6 +53,7 @@ interface CountryPath {
 function WorldMapBackground({
   paths,
   hoveredCountry,
+  highlightedCountries,
   width,
   height,
   offsetX,
@@ -63,6 +65,7 @@ function WorldMapBackground({
 }: {
   paths: CountryPath[];
   hoveredCountry: string | null;
+  highlightedCountries?: string[];
   width: number;
   height: number;
   offsetX: number;
@@ -97,6 +100,22 @@ function WorldMapBackground({
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
+        <filter id={`hlGlow${svgIdSuffix}`} x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="4" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+        <style>{`
+          @keyframes countryPulse${svgIdSuffix} {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+          }
+          .hl-country-${svgIdSuffix} {
+            animation: countryPulse${svgIdSuffix} 2s ease-in-out infinite;
+          }
+        `}</style>
       </defs>
       <rect width={width} height={height} fill={`url(#${gradId})`} />
 
@@ -120,29 +139,36 @@ function WorldMapBackground({
 
       {/* Countries */}
       <g>
-        {paths.map(({ path, name }, index) => (
-          <path
-            key={`country-${index}`}
-            d={path}
-            className="country-path"
-            fill={
-              interactive && hoveredCountry === name
-                ? 'rgba(59, 130, 246, 0.22)'
-                : 'rgba(30, 58, 95, 0.7)'
-            }
-            stroke="rgba(59, 130, 246, 0.35)"
-            strokeWidth={0.5}
-            onClick={interactive ? (e) => onCountryClick?.(name, e.clientX, e.clientY) : undefined}
-            onMouseEnter={interactive ? () => onHoverEnter?.(name) : undefined}
-            onMouseLeave={interactive ? () => onHoverLeave?.() : undefined}
-          />
-        ))}
+        {paths.map(({ path, name }, index) => {
+          const isHighlighted = highlightedCountries?.includes(name);
+          const isHovered = interactive && hoveredCountry === name;
+          return (
+            <path
+              key={`country-${index}`}
+              d={path}
+              className={isHighlighted ? `country-path hl-country-${svgIdSuffix}` : 'country-path'}
+              fill={
+                isHighlighted
+                  ? 'rgba(251, 191, 36, 0.45)'
+                  : isHovered
+                    ? 'rgba(59, 130, 246, 0.22)'
+                    : 'rgba(30, 58, 95, 0.7)'
+              }
+              stroke={isHighlighted ? 'rgba(251, 191, 36, 0.8)' : 'rgba(59, 130, 246, 0.35)'}
+              strokeWidth={isHighlighted ? 1.2 : 0.5}
+              filter={isHighlighted ? `url(#hlGlow${svgIdSuffix})` : undefined}
+              onClick={interactive ? (e) => onCountryClick?.(name, e.clientX, e.clientY) : undefined}
+              onMouseEnter={interactive ? () => onHoverEnter?.(name) : undefined}
+              onMouseLeave={interactive ? () => onHoverLeave?.() : undefined}
+            />
+          );
+        })}
       </g>
     </svg>
   );
 }
 
-export default function WorldMap({ onCountryClick, children, width, height }: WorldMapProps) {
+export default function WorldMap({ onCountryClick, children, width, height, highlightedCountries }: WorldMapProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [paths, setPaths] = useState<CountryPath[]>([]);
   const [hoveredCountry, setHoveredCountry] = useState<string | null>(null);
@@ -213,6 +239,7 @@ export default function WorldMap({ onCountryClick, children, width, height }: Wo
       <WorldMapBackground
         paths={paths}
         hoveredCountry={hoveredCountry}
+        highlightedCountries={highlightedCountries}
         width={width}
         height={height}
         offsetX={-width}
@@ -227,6 +254,7 @@ export default function WorldMap({ onCountryClick, children, width, height }: Wo
       <WorldMapBackground
         paths={paths}
         hoveredCountry={hoveredCountry}
+        highlightedCountries={highlightedCountries}
         width={width}
         height={height}
         offsetX={0}
@@ -241,6 +269,7 @@ export default function WorldMap({ onCountryClick, children, width, height }: Wo
       <WorldMapBackground
         paths={paths}
         hoveredCountry={hoveredCountry}
+        highlightedCountries={highlightedCountries}
         width={width}
         height={height}
         offsetX={width}
