@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useSession, signIn } from 'next-auth/react';
-import { Shield, Users, RefreshCw, LogIn, ChevronDown, Check, Database } from 'lucide-react';
+import { Shield, Users, RefreshCw, LogIn, ChevronDown, Check, Database, User } from 'lucide-react';
 import Link from 'next/link';
 
 const ADMIN_EMAILS = ['minjune043010@gmail.com'];
