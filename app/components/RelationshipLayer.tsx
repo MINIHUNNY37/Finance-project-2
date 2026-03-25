@@ -74,6 +74,17 @@ function getEmphasisClass(effect: EmphasisEffect): string {
   }
 }
 
+type AnimFlavor = 'capital' | 'conflict' | 'synergy' | 'logistics' | 'default';
+
+function getAnimFlavor(label: string): AnimFlavor {
+  const l = label.toLowerCase();
+  if (/capital|invest|cash|fund|money|flow|bank|credit|equity/.test(l)) return 'capital';
+  if (/rival|compet|conflict|friction|tension|war|oppose|versus|vs/.test(l)) return 'conflict';
+  if (/synergy|partner|collab|team|cowork|alliance|joint|cooperat|merge|integrat/.test(l)) return 'synergy';
+  if (/logistic|supply|freight|ship|deliver|transport|cargo|truck|distribut/.test(l)) return 'logistics';
+  return 'default';
+}
+
 export default function RelationshipLayer({
   entities,
   relationships,
@@ -151,7 +162,43 @@ export default function RelationshipLayer({
             .em-supply-chain { animation: emphasisCashFlow 1.0s linear infinite; }
             .em-ownership { stroke-opacity: 1; filter: drop-shadow(0 0 6px var(--em-color, #8b5cf6)); }
             .em-dimmed { opacity: 0.15 !important; }
+            @keyframes relDash { to { stroke-dashoffset: -90; } }
+            .rel-dash-fwd { animation: relDash 1.5s linear infinite; }
+            .rel-dash-rev { animation: relDash 1.5s linear infinite reverse; }
           `}</style>
+
+          {/* === Animated connection symbols === */}
+          {/* Green coin (capital flow) */}
+          <g id="rel-coin">
+            <circle cx="0" cy="0" r="6" fill="#10b981" stroke="#064e3b" strokeWidth="1.2" />
+            <circle cx="0" cy="0" r="4" fill="none" stroke="#34d399" strokeWidth="0.5" />
+            <text x="0" y="2.5" fontSize="7" textAnchor="middle" fill="#022c22" fontWeight="bold">$</text>
+          </g>
+          {/* Purple truck (logistics) */}
+          <g id="rel-truck" stroke="#a855f7" fill="rgba(11,20,38,0.8)" strokeWidth="1.2">
+            <rect x="-10" y="-5" width="13" height="9" rx="1.5" fill="#a855f7" fillOpacity="0.1" />
+            <path d="M3 -5 L7 -5 L10 0 L10 4 L3 4 Z" fill="#a855f7" fillOpacity="0.2" />
+            <line x1="3" y1="-5" x2="3" y2="4" />
+            <circle cx="-4" cy="5" r="2" fill="rgba(11,20,38,0.8)" />
+            <circle cx="6" cy="5" r="2" fill="rgba(11,20,38,0.8)" />
+            <circle cx="-4" cy="5" r="0.8" fill="#a855f7" />
+            <circle cx="6" cy="5" r="0.8" fill="#a855f7" />
+          </g>
+          {/* Gear (synergy) */}
+          <g id="rel-gear" stroke="currentColor" fill="none">
+            <circle r="7" strokeWidth="3" strokeDasharray="2.75 2.75" />
+            <circle r="5.5" strokeWidth="1.5" fill="rgba(11,20,38,0.85)" />
+            <circle r="1.5" strokeWidth="1" />
+          </g>
+          {/* Glow filters */}
+          <filter id="rel-glow-lg" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="4" result="b" />
+            <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+          <filter id="rel-glow-sm" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="2" result="b" />
+            <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
 
           {relationships.map((rel) => (
             <marker
@@ -311,6 +358,135 @@ export default function RelationshipLayer({
                   </text>
                 </g>
               )}
+
+              {/* === Rich animated overlays (animated style only) === */}
+              {isAnimated && (() => {
+                const flavor = getAnimFlavor(rel.label);
+                const pid = `path-rel-${rel.id}`;
+
+                if (flavor === 'capital') {
+                  // Green coins flowing along the path
+                  return (
+                    <g style={{ pointerEvents: 'none' }} filter="url(#rel-glow-sm)">
+                      <path id={pid} d={pathD} fill="none" stroke="none" />
+                      {[0, 1, 2].map((i) => (
+                        <use key={i} href="#rel-coin">
+                          <animateMotion dur="2.5s" begin={`${i * 0.83}s`} repeatCount="indefinite" rotate="auto">
+                            <mpath href={`#${pid}`} />
+                          </animateMotion>
+                        </use>
+                      ))}
+                    </g>
+                  );
+                }
+
+                if (flavor === 'conflict') {
+                  // Electric signals flying at each other + spark burst at midpoint
+                  const pidA = `${pid}-A`;
+                  const pidB = `${pid}-B`;
+                  // Reverse path for signal B
+                  const x1 = from!.position.x, y1 = from!.position.y;
+                  const x2 = to!.position.x, y2 = to!.position.y;
+                  const cp = getControlPoint(x1, y1, x2, y2);
+                  const pathDRev = `M ${x2} ${y2} Q ${cp.x} ${cp.y} ${x1} ${y1}`;
+                  return (
+                    <g style={{ pointerEvents: 'none' }} filter="url(#rel-glow-sm)">
+                      <path id={pidA} d={pathD} fill="none" stroke="none" />
+                      <path id={pidB} d={pathDRev} fill="none" stroke="none" />
+                      {/* Signal from → to */}
+                      <g>
+                        <circle r={3 / zf} fill="#fff" />
+                        <path d={`M${-6/zf},0 L0,${2.5/zf} L${3/zf},${-2.5/zf} L${6/zf},0`} fill="none" stroke="#fb7185" strokeWidth={1.2 / zf} />
+                        <animateMotion dur="1.8s" repeatCount="indefinite" keyPoints="0;0.5;0.5" keyTimes="0;0.5;1" calcMode="linear" rotate="auto">
+                          <mpath href={`#${pidA}`} />
+                        </animateMotion>
+                        <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;0.49;0.5;1" dur="1.8s" repeatCount="indefinite" />
+                      </g>
+                      {/* Signal to → from */}
+                      <g>
+                        <circle r={3 / zf} fill="#fff" />
+                        <path d={`M${-6/zf},0 L0,${2.5/zf} L${3/zf},${-2.5/zf} L${6/zf},0`} fill="none" stroke="#fb7185" strokeWidth={1.2 / zf} />
+                        <animateMotion dur="1.8s" repeatCount="indefinite" keyPoints="0;0.5;0.5" keyTimes="0;0.5;1" calcMode="linear" rotate="auto">
+                          <mpath href={`#${pidB}`} />
+                        </animateMotion>
+                        <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;0.49;0.5;1" dur="1.8s" repeatCount="indefinite" />
+                      </g>
+                      {/* Spark burst at midpoint */}
+                      <g transform={`translate(${mid.x}, ${mid.y})`} filter="url(#rel-glow-sm)">
+                        {[
+                          `M0,0 l${-10/zf},${-14/zf} l${6/zf},${-2/zf} l${-8/zf},${-10/zf}`,
+                          `M0,0 l${12/zf},${-10/zf} l${-5/zf},${-5/zf} l${11/zf},${-11/zf}`,
+                          `M0,0 l${-8/zf},${12/zf} l${10/zf},${3/zf} l${-6/zf},${13/zf}`,
+                          `M0,0 l${12/zf},${8/zf} l${-3/zf},${6/zf} l${13/zf},${10/zf}`,
+                        ].map((d, i) => (
+                          <path key={i} d={d} fill="none" stroke={i % 2 === 0 ? '#fb7185' : '#f43f5e'} strokeWidth={2 / zf} strokeLinecap="round" strokeLinejoin="round">
+                            <animate attributeName="opacity" values="0;0;1;0;0" keyTimes="0;0.48;0.5;0.55;1" dur="1.8s" repeatCount="indefinite" />
+                          </path>
+                        ))}
+                        <circle r={0} fill="#fff">
+                          <animate attributeName="opacity" values="0;0;1;0;0" keyTimes="0;0.48;0.5;0.55;1" dur="1.8s" repeatCount="indefinite" />
+                          <animate attributeName="r" values={`0;0;${10/zf};0;0`} keyTimes="0;0.48;0.5;0.55;1" dur="1.8s" repeatCount="indefinite" />
+                        </circle>
+                      </g>
+                    </g>
+                  );
+                }
+
+                if (flavor === 'synergy') {
+                  // Two interlocking gears at midpoint
+                  const gearColor = rel.color || '#8b5cf6';
+                  const gs = 1 / zf;
+                  return (
+                    <g transform={`translate(${mid.x}, ${mid.y})`} style={{ pointerEvents: 'none' }} filter="url(#rel-glow-sm)">
+                      {/* Dashed partner lines */}
+                      <path d={`M${-30/zf},${-8/zf} Q${-15/zf},${0} ${-12/zf},${0}`} fill="none" stroke={gearColor} strokeWidth={1.5/zf} strokeDasharray={`${4/zf} ${3/zf}`} strokeOpacity={0.5} className="rel-dash-fwd" />
+                      <path d={`M${30/zf},${-8/zf} Q${15/zf},${0} ${12/zf},${0}`} fill="none" stroke="#3b82f6" strokeWidth={1.5/zf} strokeDasharray={`${4/zf} ${3/zf}`} strokeOpacity={0.5} className="rel-dash-rev" />
+                      {/* Left gear */}
+                      <g transform={`translate(${-12/zf}, 0) scale(${gs})`} stroke={gearColor} fill="none">
+                        <g><circle r="10" strokeWidth="4" strokeDasharray="3.92 3.92" />
+                          <circle r="8" strokeWidth="2" fill="rgba(11,20,38,0.9)" />
+                          <circle r="2" strokeWidth="1.5" />
+                          <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="4s" repeatCount="indefinite" />
+                        </g>
+                      </g>
+                      {/* Right gear — counter-rotates */}
+                      <g transform={`translate(${12/zf}, 0) scale(${gs})`} stroke="#3b82f6" fill="none">
+                        <g><circle r="10" strokeWidth="4" strokeDasharray="3.92 3.92" />
+                          <circle r="8" strokeWidth="2" fill="rgba(11,20,38,0.9)" />
+                          <circle r="2" strokeWidth="1.5" />
+                          <animateTransform attributeName="transform" type="rotate" from="22.5" to="-337.5" dur="4s" repeatCount="indefinite" />
+                        </g>
+                      </g>
+                    </g>
+                  );
+                }
+
+                if (flavor === 'logistics') {
+                  // Truck moving along path
+                  return (
+                    <g style={{ pointerEvents: 'none' }} filter="url(#rel-glow-sm)">
+                      <path id={pid} d={pathD} fill="none" stroke="none" />
+                      <use href="#rel-truck">
+                        <animateMotion dur="4s" repeatCount="indefinite" rotate="auto">
+                          <mpath href={`#${pid}`} />
+                        </animateMotion>
+                      </use>
+                    </g>
+                  );
+                }
+
+                // Default: flowing dot along path
+                return (
+                  <g style={{ pointerEvents: 'none' }}>
+                    <path id={pid} d={pathD} fill="none" stroke="none" />
+                    <circle r={4 / zf} fill={rel.color} opacity={0.9} filter="url(#rel-glow-sm)">
+                      <animateMotion dur="2s" repeatCount="indefinite">
+                        <mpath href={`#${pid}`} />
+                      </animateMotion>
+                    </circle>
+                  </g>
+                );
+              })()}
             </g>
           );
         })}

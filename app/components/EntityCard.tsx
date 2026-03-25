@@ -642,96 +642,63 @@ export default function EntityCard({
             </div>
           )}
 
-          {/* Node card */}
+          {/* Label badge */}
           <div
             style={{
-              background: '#111b2d',
-              border: `1px solid ${cardHovered ? entity.color : entity.color + '55'}`,
-              borderRadius: 14,
-              padding: '12px 14px',
+              background: 'linear-gradient(135deg, rgba(15,23,42,0.97), rgba(20,30,55,0.92))',
+              border: `2px solid ${entity.color}`,
+              borderRadius: 10,
+              padding: '5px 10px',
               display: 'flex',
-              flexDirection: 'column',
               alignItems: 'center',
-              gap: 8,
-              width: 130,
+              gap: 7,
               boxShadow: cardHovered
-                ? `0 8px 24px rgba(0,0,0,0.55), 0 0 18px ${entity.color}44`
-                : `0 4px 16px rgba(0,0,0,0.45), 0 0 8px ${entity.color}22`,
+                ? `0 6px 20px rgba(0,0,0,0.65), 0 0 0 1px ${entity.color}55, 0 0 14px ${entity.color}33`
+                : `0 3px 14px rgba(0,0,0,0.55), 0 0 0 1px ${entity.color}33`,
               backdropFilter: 'blur(10px)',
-              transition: 'box-shadow 0.18s ease, border-color 0.18s ease',
-              position: 'relative',
+              maxWidth: 170,
+              transition: 'box-shadow 0.18s ease',
             }}
           >
-            {/* Connection dots left/right */}
-            <div style={{
-              position: 'absolute', top: '50%', left: -5,
-              width: 10, height: 10, borderRadius: '50%',
-              background: '#1e293b', border: `2px solid ${entity.color}66`,
-              transform: 'translateY(-50%)',
-            }} />
-            <div style={{
-              position: 'absolute', top: '50%', right: -5,
-              width: 10, height: 10, borderRadius: '50%',
-              background: '#1e293b', border: `2px solid ${entity.color}66`,
-              transform: 'translateY(-50%)',
-            }} />
-
-            {/* Icon circle */}
-            <div style={{
-              width: 52, height: 52, borderRadius: '50%',
-              background: entity.color + '18',
-              border: `1px solid ${entity.color}33`,
-              boxShadow: `0 0 16px ${entity.color}30`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 24, lineHeight: 1,
-              flexShrink: 0,
-            }}>
-              {entity.icon}
-            </div>
-
-            {/* Name + type */}
-            <div style={{ textAlign: 'center' }}>
-              <div style={{
-                color: '#f1f5f9', fontWeight: 700, fontSize: 12,
-                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                maxWidth: 110,
-              }}>
-                {entity.name}
-              </div>
-              <div style={{
-                fontSize: 9, color: '#64748b', textTransform: 'uppercase',
-                letterSpacing: '0.08em', fontWeight: 600, marginTop: 2,
-              }}>
-                {entity.subtitle || entity.sector || (entity.entityKind === 'stock' ? 'Stock' : 'Entity')}
-              </div>
-            </div>
-
-            {/* Live price row (if available) */}
-            {entity.livePrice != null && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: -2 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#e2e8f0' }}>${entity.livePrice.toFixed(2)}</span>
-                {entity.priceChangePct != null && (
-                  <span style={{
-                    fontSize: 9, fontWeight: 700, padding: '1px 4px', borderRadius: 4,
-                    color: entity.priceChangePct >= 0 ? '#22c55e' : '#ef4444',
-                    background: entity.priceChangePct >= 0 ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)',
-                  }}>
-                    {entity.priceChangePct >= 0 ? '▲' : '▼'}{Math.abs(entity.priceChangePct).toFixed(1)}%
-                  </span>
+            <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>{entity.icon}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', maxWidth: 120 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{
+                  color: entity.color, fontWeight: 700, fontSize: 12,
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                }}>
+                  {entity.name}
+                </span>
+                {entity.conviction != null && entity.conviction > 0 && (
+                  <div style={{ display: 'flex', gap: 1, flexShrink: 0 }}>
+                    {[1,2,3,4,5].map(n => (
+                      <div key={n} style={{
+                        width: 4, height: 4, borderRadius: '50%',
+                        background: n <= entity.conviction! ? entity.color : 'rgba(148,163,184,0.25)',
+                      }} />
+                    ))}
+                  </div>
                 )}
               </div>
-            )}
-
-            {/* Conviction dots */}
-            {entity.conviction != null && entity.conviction > 0 && (
-              <div style={{ display: 'flex', gap: 2 }}>
-                {[1,2,3,4,5].map(n => (
-                  <div key={n} style={{
-                    width: 5, height: 5, borderRadius: '50%',
-                    background: n <= entity.conviction! ? entity.color : 'rgba(148,163,184,0.2)',
-                  }} />
-                ))}
-              </div>
+              {entity.livePrice != null ? (
+                <span style={{ fontSize: 10, color: 'rgba(148,163,184,0.85)', marginTop: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ fontWeight: 600, color: '#e2e8f0' }}>${entity.livePrice.toFixed(2)}</span>
+                  {entity.priceChangePct != null && (
+                    <span style={{ color: entity.priceChangePct >= 0 ? '#22c55e' : '#ef4444', fontWeight: 600 }}>
+                      {entity.priceChangePct >= 0 ? '▲' : '▼'}{Math.abs(entity.priceChangePct).toFixed(1)}%
+                    </span>
+                  )}
+                </span>
+              ) : entity.ticker ? (
+                <span style={{ fontSize: 9, color: 'rgba(148,163,184,0.5)', marginTop: 1 }}>{entity.ticker}</span>
+              ) : null}
+            </div>
+            {entity.entityKind === 'stock' && (
+              <div style={{
+                fontSize: 8, fontWeight: 700, color: '#06b6d4',
+                background: 'rgba(6,182,212,0.12)', border: '1px solid rgba(6,182,212,0.3)',
+                borderRadius: 4, padding: '1px 4px', flexShrink: 0, alignSelf: 'flex-start',
+              }}>STOCK</div>
             )}
           </div>
 

@@ -151,10 +151,10 @@ function WorldMapBackground({
                 isHighlighted
                   ? 'rgba(251, 191, 36, 0.45)'
                   : isHovered
-                    ? 'rgba(59, 130, 246, 0.22)'
-                    : 'rgba(30, 58, 95, 0.7)'
+                    ? 'rgba(34, 197, 94, 0.28)'
+                    : 'rgba(22, 83, 45, 0.62)'
               }
-              stroke={isHighlighted ? 'rgba(251, 191, 36, 0.8)' : 'rgba(59, 130, 246, 0.35)'}
+              stroke={isHighlighted ? 'rgba(251, 191, 36, 0.8)' : 'rgba(34, 197, 94, 0.22)'}
               strokeWidth={isHighlighted ? 1.2 : 0.5}
               filter={isHighlighted ? `url(#hlGlow${svgIdSuffix})` : undefined}
               onClick={interactive ? (e) => onCountryClick?.(name, e.clientX, e.clientY) : undefined}
