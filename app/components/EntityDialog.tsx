@@ -1217,10 +1217,13 @@ export default function EntityDialog({
             const qualColor = insightQuality >= 70 ? '#10b981' : insightQuality >= 40 ? '#f59e0b' : '#f43f5e';
             const riskColor = insightRisk < 30 ? '#10b981' : insightRisk <= 60 ? '#f59e0b' : '#f43f5e';
 
-            const ScoreBar = ({ label, value, barColor }: { label: string; value: number; barColor: string }) => (
+            const ScoreBar = ({ label, value, barColor, icon }: { label: string; value: number; barColor: string; icon: React.ReactNode }) => (
               <div style={{ marginBottom: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span style={{ fontSize: 12, color: '#94a3b8', fontWeight: 500 }}>{label}</span>
+                  <span style={{ fontSize: 12, color: '#94a3b8', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ color: barColor, display: 'flex', alignItems: 'center' }}>{icon}</span>
+                    {label}
+                  </span>
                   <span style={{ fontSize: 13, fontWeight: 700, color: barColor }}>{value}</span>
                 </div>
                 <div style={{ height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
@@ -1280,7 +1283,8 @@ export default function EntityDialog({
 
                 {/* Price section */}
                 <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(59,130,246,0.1)' }}>
-                  <div style={{ fontSize: 10, color: '#475569', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                  <div style={{ fontSize: 10, color: '#475569', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                     Price / Value
                   </div>
                   {flashcardEditing ? (
@@ -1300,9 +1304,15 @@ export default function EntityDialog({
 
                 {/* Scores section */}
                 <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(59,130,246,0.1)' }}>
-                  <ScoreBar label="Valuation Score" value={insightValuation} barColor={valColor} />
-                  <ScoreBar label="Quality Score" value={insightQuality} barColor={qualColor} />
-                  <ScoreBar label="Risk Factor" value={insightRisk} barColor={riskColor} />
+                  <ScoreBar label="Valuation Score" value={insightValuation} barColor={valColor}
+                    icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>}
+                  />
+                  <ScoreBar label="Quality Score" value={insightQuality} barColor={qualColor}
+                    icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>}
+                  />
+                  <ScoreBar label="Risk Factor" value={insightRisk} barColor={riskColor}
+                    icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
+                  />
                 </div>
 
                 {/* Footer */}
