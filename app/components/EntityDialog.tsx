@@ -1213,114 +1213,123 @@ export default function EntityDialog({
 
           {/* === FLASHCARD TAB === */}
           {activeTab === 'flashcard' && (() => {
-            const valColor = insightValuation >= 70 ? '#10b981' : insightValuation >= 40 ? '#f59e0b' : '#f43f5e';
-            const qualColor = insightQuality >= 70 ? '#10b981' : insightQuality >= 40 ? '#f59e0b' : '#f43f5e';
-            const riskColor = insightRisk < 30 ? '#10b981' : insightRisk <= 60 ? '#f59e0b' : '#f43f5e';
+            const valColor   = insightValuation >= 70 ? '#10b981' : insightValuation >= 40 ? '#f59e0b' : '#f43f5e';
+            const qualColor  = insightQuality  >= 70 ? '#10b981' : insightQuality  >= 40 ? '#f59e0b' : '#f43f5e';
+            const riskColor  = insightRisk     <  30 ? '#10b981' : insightRisk     <= 60 ? '#f59e0b' : '#f43f5e';
+            const valBg      = insightValuation >= 70 ? 'rgba(16,185,129,0.1)'  : insightValuation >= 40 ? 'rgba(245,158,11,0.1)'  : 'rgba(244,63,94,0.1)';
+            const qualBg     = insightQuality  >= 70 ? 'rgba(16,185,129,0.1)'  : insightQuality  >= 40 ? 'rgba(245,158,11,0.1)'  : 'rgba(244,63,94,0.1)';
+            const riskBg     = insightRisk     <  30 ? 'rgba(16,185,129,0.1)'  : insightRisk     <= 60 ? 'rgba(245,158,11,0.1)'  : 'rgba(244,63,94,0.1)';
+            const valGlow    = insightValuation >= 70 ? 'rgba(16,185,129,0.5)' : insightValuation >= 40 ? 'rgba(245,158,11,0.5)' : 'rgba(244,63,94,0.5)';
+            const qualGlow   = insightQuality  >= 70 ? 'rgba(16,185,129,0.5)' : insightQuality  >= 40 ? 'rgba(245,158,11,0.5)' : 'rgba(244,63,94,0.5)';
+            const riskGlow   = insightRisk     <  30 ? 'rgba(16,185,129,0.5)' : insightRisk     <= 60 ? 'rgba(245,158,11,0.5)' : 'rgba(244,63,94,0.5)';
 
-            const ScoreBar = ({ label, value, barColor, icon }: { label: string; value: number; barColor: string; icon: React.ReactNode }) => (
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span style={{ fontSize: 12, color: '#94a3b8', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ color: barColor, display: 'flex', alignItems: 'center' }}>{icon}</span>
-                    {label}
-                  </span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: barColor }}>{value}</span>
+            const ScoreRow = ({
+              label, value, barColor, barBg, glow, icon, setter,
+            }: {
+              label: string; value: number; barColor: string; barBg: string; glow: string;
+              icon: React.ReactNode; setter: (v: number) => void;
+            }) => (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, color: '#94a3b8' }}>
+                    <span style={{ color: '#60a5fa', display: 'flex', alignItems: 'center' }}>{icon}</span>
+                    <span style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</span>
+                  </div>
+                  <span style={{
+                    padding: '2px 8px', borderRadius: 5, fontSize: 11, fontWeight: 700,
+                    color: barColor, background: barBg,
+                    border: `1px solid ${barColor}`,
+                  }}>{value}%</span>
                 </div>
-                <div style={{ height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                <div style={{ height: 5, borderRadius: 9999, background: 'rgba(30,41,59,1)', overflow: 'hidden' }}>
                   <div style={{
-                    height: '100%', width: `${value}%`, borderRadius: 3,
-                    background: `linear-gradient(90deg, ${barColor}aa, ${barColor})`,
-                    transition: 'width 0.4s ease',
+                    height: '100%', width: `${value}%`, borderRadius: 9999,
+                    background: barColor,
+                    boxShadow: `0 0 8px ${glow}`,
+                    transition: 'width 0.7s ease',
                   }} />
                 </div>
                 {flashcardEditing && (
-                  <input
-                    type="range" min={0} max={100} value={value}
-                    onChange={(e) => {
-                      const v = Number(e.target.value);
-                      if (label === 'Valuation Score') setInsightValuation(v);
-                      else if (label === 'Quality Score') setInsightQuality(v);
-                      else setInsightRisk(v);
-                    }}
-                    style={{ width: '100%', marginTop: 6, accentColor: barColor, cursor: 'pointer' }}
+                  <input type="range" min={0} max={100} value={value}
+                    onChange={(e) => setter(Number(e.target.value))}
+                    style={{ width: '100%', accentColor: '#3b82f6', cursor: 'pointer', height: 4 }}
                   />
                 )}
               </div>
             );
 
             return (
-              <div style={{
-                background: '#111b2d', borderRadius: 14,
-                border: '1px solid rgba(59,130,246,0.15)',
-                overflow: 'hidden',
-              }}>
-                {/* Header */}
-                <div style={{
-                  padding: '18px 20px 14px',
-                  borderBottom: '1px solid rgba(59,130,246,0.1)',
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-                }}>
-                  <div>
-                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#475569', textTransform: 'uppercase', marginBottom: 4 }}>
-                      INSIGHT CARD
+              <div style={{ background: '#111b2d', borderRadius: 16, border: '1px solid #1e293b', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.4)' }}>
+                {/* Main content */}
+                <div style={{ padding: '20px 20px 20px' }}>
+                  {/* Name + price row + edit button */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {flashcardEditing ? (
+                        <input className="input-field"
+                          value={name} readOnly
+                          style={{ fontSize: 18, fontWeight: 700, color: '#f1f5f9', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 6, padding: '4px 8px', width: '100%', marginBottom: 8 }}
+                        />
+                      ) : (
+                        <div style={{ fontSize: 18, fontWeight: 700, color: '#f1f5f9', marginBottom: 6, lineHeight: 1.25 }}>
+                          {name || 'Entity Name'}
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ color: '#00e5ff', display: 'flex', alignItems: 'center' }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                        </span>
+                        {flashcardEditing ? (
+                          <input
+                            value={insightPrice}
+                            onChange={(e) => setInsightPrice(e.target.value)}
+                            placeholder="e.g. 182.50"
+                            style={{ fontSize: 18, fontWeight: 600, color: '#cbd5e1', background: 'transparent', border: 'none', borderBottom: '1px solid #334155', outline: 'none', width: 100 }}
+                          />
+                        ) : (
+                          <span style={{ fontSize: 18, fontWeight: 600, color: '#cbd5e1' }}>
+                            {insightPrice || '—'}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: '#e2e8f0' }}>{name || 'Entity Name'}</div>
-                    {subtitle && <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{subtitle}</div>}
+                    <button
+                      onClick={() => setFlashcardEditing((v) => !v)}
+                      style={{
+                        padding: '7px 10px', borderRadius: 8, cursor: 'pointer',
+                        background: 'rgba(30,41,59,1)', border: '1px solid #334155',
+                        color: '#cbd5e1', display: 'flex', alignItems: 'center', flexShrink: 0, marginLeft: 10,
+                        transition: 'background 0.15s',
+                      }}
+                    >
+                      {flashcardEditing
+                        ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      }
+                    </button>
                   </div>
-                  <button
-                    onClick={() => setFlashcardEditing((v) => !v)}
-                    style={{
-                      background: flashcardEditing ? 'rgba(16,185,129,0.12)' : 'rgba(59,130,246,0.1)',
-                      border: `1px solid ${flashcardEditing ? 'rgba(16,185,129,0.35)' : 'rgba(59,130,246,0.3)'}`,
-                      borderRadius: 8, padding: '5px 12px', cursor: 'pointer',
-                      color: flashcardEditing ? '#10b981' : '#93c5fd', fontSize: 12, fontWeight: 600,
-                      display: 'flex', alignItems: 'center', gap: 5,
-                    }}
-                  >
-                    {flashcardEditing ? '✓ Done' : '✎ Edit'}
-                  </button>
-                </div>
 
-                {/* Price section */}
-                <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(59,130,246,0.1)' }}>
-                  <div style={{ fontSize: 10, color: '#475569', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                    Price / Value
-                  </div>
-                  {flashcardEditing ? (
-                    <input
-                      className="input-field"
-                      value={insightPrice}
-                      onChange={(e) => setInsightPrice(e.target.value)}
-                      placeholder="e.g. $182.50"
-                      style={{ fontSize: 22, fontWeight: 700, color: '#e2e8f0', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: 8, padding: '8px 12px', width: '100%' }}
+                  {/* Score rows */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 20, paddingTop: 16, borderTop: '1px solid rgba(30,41,59,1)' }}>
+                    <ScoreRow label="Valuation" value={insightValuation} barColor={valColor} barBg={valBg} glow={valGlow} setter={setInsightValuation}
+                      icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>}
                     />
-                  ) : (
-                    <div style={{ fontSize: 28, fontWeight: 700, color: insightPrice ? '#e2e8f0' : '#334155' }}>
-                      {insightPrice || '—'}
-                    </div>
-                  )}
+                    <ScoreRow label="Quality" value={insightQuality} barColor={qualColor} barBg={qualBg} glow={qualGlow} setter={setInsightQuality}
+                      icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>}
+                    />
+                    <ScoreRow label="Risk Factor" value={insightRisk} barColor={riskColor} barBg={riskBg} glow={riskGlow} setter={setInsightRisk}
+                      icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
+                    />
+                  </div>
                 </div>
 
-                {/* Scores section */}
-                <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(59,130,246,0.1)' }}>
-                  <ScoreBar label="Valuation Score" value={insightValuation} barColor={valColor}
-                    icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>}
-                  />
-                  <ScoreBar label="Quality Score" value={insightQuality} barColor={qualColor}
-                    icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>}
-                  />
-                  <ScoreBar label="Risk Factor" value={insightRisk} barColor={riskColor}
-                    icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
-                  />
-                </div>
-
-                {/* Footer */}
-                <div style={{
-                  padding: '12px 20px',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <div style={{ fontSize: 11, color: '#334155', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                {/* Footer button */}
+                <div style={{ padding: '12px 20px', background: 'rgba(15,23,42,0.5)', borderTop: '1px solid #1e293b' }}>
+                  <div style={{
+                    width: '100%', padding: '10px 0', borderRadius: 8, textAlign: 'center',
+                    background: '#2563eb', color: '#fff', fontSize: 12, fontWeight: 700,
+                    letterSpacing: '0.06em', boxShadow: '0 4px 14px rgba(37,99,235,0.25)',
+                  }}>
                     VIEW FULL ANALYSIS
                   </div>
                 </div>
