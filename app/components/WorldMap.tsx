@@ -5,12 +5,18 @@ import * as d3 from 'd3-geo';
 
 const WORLD_SVG_URL = 'https://unpkg.com/world-atlas@2/countries-110m.json';
 
+export interface HighlightedCountry {
+  name: string;
+  fillColor: string;
+  strokeColor: string;
+}
+
 interface WorldMapProps {
   onCountryClick?: (country: string, x: number, y: number) => void;
   children?: React.ReactNode;
   width: number;
   height: number;
-  highlightedCountries?: string[];
+  highlightedCountries?: HighlightedCountry[];
 }
 
 // Country code to name mapping (ISO 3166-1 numeric)
@@ -65,7 +71,7 @@ function WorldMapBackground({
 }: {
   paths: CountryPath[];
   hoveredCountry: string | null;
-  highlightedCountries?: string[];
+  highlightedCountries?: HighlightedCountry[];
   width: number;
   height: number;
   offsetX: number;
@@ -89,9 +95,10 @@ function WorldMapBackground({
       }}
     >
       <defs>
-        <radialGradient id={gradId} cx="50%" cy="50%" r="70%">
-          <stop offset="0%" stopColor="#0c1f3d" />
-          <stop offset="100%" stopColor="#071224" />
+        <radialGradient id={gradId} cx="50%" cy="40%" r="70%">
+          <stop offset="0%" stopColor="#0e4d72" />
+          <stop offset="60%" stopColor="#093c5a" />
+          <stop offset="100%" stopColor="#061e30" />
         </radialGradient>
         <filter id={filterId}>
           <feGaussianBlur stdDeviation="1" result="coloredBlur" />
@@ -125,7 +132,7 @@ function WorldMapBackground({
           key={`lat-${i}`}
           x1={0} y1={height * (i / 18)}
           x2={width} y2={height * (i / 18)}
-          stroke="rgba(59, 130, 246, 0.04)" strokeWidth={1}
+          stroke="rgba(14, 116, 144, 0.07)" strokeWidth={1}
         />
       ))}
       {Array.from({ length: 36 }, (_, i) => (
@@ -133,30 +140,30 @@ function WorldMapBackground({
           key={`lon-${i}`}
           x1={width * (i / 36)} y1={0}
           x2={width * (i / 36)} y2={height}
-          stroke="rgba(59, 130, 246, 0.04)" strokeWidth={1}
+          stroke="rgba(14, 116, 144, 0.07)" strokeWidth={1}
         />
       ))}
 
       {/* Countries */}
       <g>
         {paths.map(({ path, name }, index) => {
-          const isHighlighted = highlightedCountries?.includes(name);
+          const hlEntry = highlightedCountries?.find((h) => h.name === name);
           const isHovered = interactive && hoveredCountry === name;
           return (
             <path
               key={`country-${index}`}
               d={path}
-              className={isHighlighted ? `country-path hl-country-${svgIdSuffix}` : 'country-path'}
+              className={hlEntry ? `country-path hl-country-${svgIdSuffix}` : 'country-path'}
               fill={
-                isHighlighted
-                  ? 'rgba(251, 191, 36, 0.45)'
+                hlEntry
+                  ? hlEntry.fillColor
                   : isHovered
-                    ? 'rgba(34, 197, 94, 0.28)'
-                    : 'rgba(22, 83, 45, 0.62)'
+                    ? 'rgba(74, 180, 100, 0.40)'
+                    : 'rgba(52, 140, 75, 0.72)'
               }
-              stroke={isHighlighted ? 'rgba(251, 191, 36, 0.8)' : 'rgba(34, 197, 94, 0.22)'}
-              strokeWidth={isHighlighted ? 1.2 : 0.5}
-              filter={isHighlighted ? `url(#hlGlow${svgIdSuffix})` : undefined}
+              stroke={hlEntry ? hlEntry.strokeColor : 'rgba(74, 180, 100, 0.28)'}
+              strokeWidth={hlEntry ? 1.2 : 0.5}
+              filter={hlEntry ? `url(#hlGlow${svgIdSuffix})` : undefined}
               onClick={interactive ? (e) => onCountryClick?.(name, e.clientX, e.clientY) : undefined}
               onMouseEnter={interactive ? () => onHoverEnter?.(name) : undefined}
               onMouseLeave={interactive ? () => onHoverLeave?.() : undefined}

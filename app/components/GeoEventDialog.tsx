@@ -39,6 +39,7 @@ export default function GeoEventDialog({
   const [size, setSize] = useState(1);
   const [countries, setCountries] = useState<string[]>([]);
   const [countrySearch, setCountrySearch] = useState('');
+  const [highlightColor, setHighlightColor] = useState<'yellow' | 'purple' | 'red' | 'blue'>('yellow');
 
   useEffect(() => {
     if (initialData) {
@@ -50,9 +51,11 @@ export default function GeoEventDialog({
       setDetails(initialData.details || '');
       setSize(initialData.size ?? 1);
       setCountries(initialData.countries || []);
+      setHighlightColor(initialData.highlightColor ?? 'yellow');
     } else {
       setName(''); setType('war'); setStartDate(''); setEndDate('');
       setHasEndDate(false); setDetails(''); setSize(1); setCountries([]);
+      setHighlightColor('yellow');
     }
     setCountrySearch('');
   }, [initialData, isOpen]);
@@ -72,6 +75,7 @@ export default function GeoEventDialog({
       details: details.trim(),
       size,
       countries: countries.length > 0 ? countries : undefined,
+      highlightColor: countries.length > 0 ? highlightColor : undefined,
       position: initialData?.position ?? defaultPosition ?? { x: 400, y: 300 },
     });
     onClose();
@@ -254,14 +258,38 @@ export default function GeoEventDialog({
 
           {/* Affected Countries */}
           <div style={{ marginBottom: 16 }}>
-            <label style={labelStyle}>
-              Affected Countries
-              {countries.length > 0 && (
-                <span style={{ marginLeft: 6, color: color, fontSize: 10, textTransform: 'none', letterSpacing: 0, fontWeight: 600 }}>
-                  — {countries.length} selected (highlighted on map)
-                </span>
-              )}
-            </label>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <label style={{ ...labelStyle, marginBottom: 0 }}>
+                Affected Countries
+                {countries.length > 0 && (
+                  <span style={{ marginLeft: 6, color, fontSize: 10, textTransform: 'none', letterSpacing: 0, fontWeight: 600 }}>
+                    — {countries.length} selected
+                  </span>
+                )}
+              </label>
+              {/* Highlight color swatches */}
+              <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+                <span style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: 2 }}>Glow</span>
+                {([
+                  { key: 'yellow', bg: '#fbbf24', ring: '#fbbf24' },
+                  { key: 'purple', bg: '#a855f7', ring: '#a855f7' },
+                  { key: 'red',    bg: '#ef4444', ring: '#ef4444' },
+                  { key: 'blue',   bg: '#3b82f6', ring: '#3b82f6' },
+                ] as const).map(({ key, bg }) => (
+                  <button key={key} onClick={() => setHighlightColor(key)}
+                    title={key.charAt(0).toUpperCase() + key.slice(1)}
+                    style={{
+                      width: 16, height: 16, borderRadius: '50%',
+                      background: bg, border: 'none', cursor: 'pointer', padding: 0,
+                      boxShadow: highlightColor === key
+                        ? `0 0 0 2px rgba(15,23,42,1), 0 0 0 4px ${bg}`
+                        : `0 0 0 1px rgba(255,255,255,0.15)`,
+                      transition: 'box-shadow 0.12s',
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
             {/* Selected chips */}
             {countries.length > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>

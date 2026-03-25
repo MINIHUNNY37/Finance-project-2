@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Plus, ZoomIn, ZoomOut, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
-import WorldMap from './WorldMap';
+import WorldMap, { type HighlightedCountry } from './WorldMap';
 import EntityCard from './EntityCard';
 import RelationshipLayer from './RelationshipLayer';
 import EntityDialog from './EntityDialog';
@@ -839,7 +839,17 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
               onCountryClick={handleCountryClick}
               width={dims.width}
               height={dims.height}
-              highlightedCountries={(currentMap.geoEvents ?? []).flatMap((ev) => ev.countries ?? [])}
+              highlightedCountries={(currentMap.geoEvents ?? []).flatMap((ev): HighlightedCountry[] => {
+                const c = ev.highlightColor ?? 'yellow';
+                const COLORS: Record<string, [string, string]> = {
+                  yellow: ['rgba(251,191,36,0.45)',  'rgba(251,191,36,0.85)'],
+                  purple: ['rgba(168,85,247,0.45)',  'rgba(168,85,247,0.85)'],
+                  red:    ['rgba(239,68,68,0.45)',   'rgba(239,68,68,0.85)'],
+                  blue:   ['rgba(59,130,246,0.45)',  'rgba(59,130,246,0.85)'],
+                };
+                const [fill, stroke] = COLORS[c] ?? COLORS.yellow;
+                return (ev.countries ?? []).map((name) => ({ name, fillColor: fill, strokeColor: stroke }));
+              })}
             >
               {/* Left ghost copy */}
               {renderRelationships(-dims.width)}

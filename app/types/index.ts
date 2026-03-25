@@ -218,6 +218,7 @@ export interface GeoEvent {
   hidden?: boolean;
   folderId?: string;
   countries?: string[]; // country names that glow on the world map
+  highlightColor?: 'yellow' | 'purple' | 'red' | 'blue'; // glow color for those countries
   createdAt: string;
 }
 
