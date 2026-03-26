@@ -194,3 +194,41 @@ body {
 .fade-in {
   animation: fadeIn 0.2s ease;
 }
+
+/* ── Entity Node Animations ─────────────────────────────────────────────── */
+
+/* Cash Flow — emerald green pulsing glow */
+@keyframes enCashFlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(16,185,129,0), 0 3px 14px rgba(0,0,0,0.55);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(16,185,129,0.18), 0 6px 20px rgba(0,0,0,0.65), 0 0 16px rgba(16,185,129,0.35);
+  }
+}
+.en-cash-flow { animation: enCashFlow 2s ease-in-out infinite; }
+
+/* Logistics — purple pulsing glow ring */
+@keyframes enLogistics {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(168,85,247,0), 0 3px 14px rgba(0,0,0,0.55);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(168,85,247,0.2), 0 6px 20px rgba(0,0,0,0.65), 0 0 18px rgba(168,85,247,0.4);
+  }
+}
+.en-logistics { animation: enLogistics 2.5s ease-in-out infinite; }
+
+/* Electric — rose/red flickering brightness */
+@keyframes enElectric {
+  0%, 85%, 100% { opacity: 1; filter: brightness(1); }
+  88%, 92%      { opacity: 0.6; filter: brightness(1.4) drop-shadow(0 0 6px rgba(244,63,94,0.8)); }
+  89%, 91%      { opacity: 1;   filter: brightness(2)   drop-shadow(0 0 10px rgba(244,63,94,1)); }
+}
+.en-electric { animation: enElectric 2s linear infinite; }
+
+/* Synergy — full rotation of the outer pin wrapper */
+@keyframes enSpin {
+  to { transform: translate(-50%, -100%) rotate(360deg); }
+}
+.en-synergy { animation: enSpin 3s linear infinite; }

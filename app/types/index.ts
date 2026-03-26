@@ -74,6 +74,8 @@ export interface Entity {
   links?: EntityLink[];
   // Flashcard insight
   insight?: { price?: string; valuation?: number; quality?: number; risk?: number };
+  // Node animation type
+  nodeAnimation?: 'cash-flow' | 'logistics' | 'electric' | 'synergy';
 }
 
 export type ArrowStyle = 'normal' | 'animated';

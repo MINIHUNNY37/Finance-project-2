@@ -609,12 +609,13 @@ export default function EntityCard({
            translate(-50%, -100%) puts the bottom-center of this stack
            exactly at (0,0) = entity.position, so the pin tip is on the map point. */
         <div
+          className={entity.nodeAnimation === 'synergy' ? 'en-synergy' : undefined}
           style={{
             position: 'absolute',
             left: 0,
             top: 0,
             transform: cardHovered ? 'translate(-50%, -100%) translateY(-4px)' : 'translate(-50%, -100%)',
-            transition: 'transform 0.18s ease',
+            transition: entity.nodeAnimation === 'synergy' ? undefined : 'transform 0.18s ease',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -644,6 +645,12 @@ export default function EntityCard({
 
           {/* Label badge */}
           <div
+            className={
+              entity.nodeAnimation === 'cash-flow' ? 'en-cash-flow' :
+              entity.nodeAnimation === 'logistics' ? 'en-logistics' :
+              entity.nodeAnimation === 'electric'  ? 'en-electric'  :
+              undefined
+            }
             style={{
               background: 'linear-gradient(135deg, rgba(15,23,42,0.97), rgba(20,30,55,0.92))',
               border: `2px solid ${entity.color}`,
@@ -657,7 +664,7 @@ export default function EntityCard({
                 : `0 3px 14px rgba(0,0,0,0.55), 0 0 0 1px ${entity.color}33`,
               backdropFilter: 'blur(10px)',
               maxWidth: 170,
-              transition: 'box-shadow 0.18s ease',
+              transition: entity.nodeAnimation ? undefined : 'box-shadow 0.18s ease',
             }}
           >
             <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>{entity.icon}</span>
