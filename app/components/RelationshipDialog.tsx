@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Zap, Minus } from 'lucide-react';
 import type { Relationship, ArrowStyle } from '../types';
 type AnimFlavor = NonNullable<Relationship['animFlavor']>;
+type LogisticsVehicle = NonNullable<Relationship['logisticsVehicle']>;
 import { RELATIONSHIP_COLORS } from '../types';
 
 interface RelationshipDialogProps {
@@ -19,6 +20,7 @@ export default function RelationshipDialog({ isOpen, onClose, onSave, initialDat
   const [color, setColor] = useState(RELATIONSHIP_COLORS[0]); // defaults to green
   const [arrowStyle, setArrowStyle] = useState<ArrowStyle>('normal');
   const [animFlavor, setAnimFlavor] = useState<AnimFlavor | undefined>(undefined);
+  const [logisticsVehicle, setLogisticsVehicle] = useState<LogisticsVehicle>('truck');
 
   useEffect(() => {
     if (initialData) {
@@ -27,13 +29,14 @@ export default function RelationshipDialog({ isOpen, onClose, onSave, initialDat
       setColor(initialData.color || RELATIONSHIP_COLORS[0]);
       setArrowStyle(initialData.arrowStyle || 'normal');
       setAnimFlavor(initialData.animFlavor ?? undefined);
+      setLogisticsVehicle(initialData.logisticsVehicle ?? 'truck');
     }
   }, [initialData, isOpen]);
 
   if (!isOpen) return null;
 
   const handleSave = () => {
-    onSave({ label: label.trim(), description: description.trim(), color, arrowStyle, animFlavor: animFlavor || undefined });
+    onSave({ label: label.trim(), description: description.trim(), color, arrowStyle, animFlavor: animFlavor || undefined, logisticsVehicle: (animFlavor === 'logistics' ? logisticsVehicle : undefined) });
     onClose();
   };
 
@@ -129,6 +132,38 @@ export default function RelationshipDialog({ isOpen, onClose, onSave, initialDat
                     <span style={{ fontSize: 16, color: active ? accent : '#9ca3af', lineHeight: 1 }}>{icon}</span>
                     <span style={{ fontSize: 11, color: active ? accent : '#94a3b8', fontWeight: 600 }}>{lbl}</span>
                     <span style={{ fontSize: 9, color: active ? `${accent}cc` : '#4b5563', whiteSpace: 'nowrap' }}>{desc}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Logistics Vehicle — only shown when logistics flavor is selected */}
+        {arrowStyle === 'animated' && animFlavor === 'logistics' && (
+          <div style={{ marginBottom: 16 }}>
+            <label style={labelStyle}>Vehicle</label>
+            <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+              {([
+                { key: 'truck', icon: '🚚', label: 'Truck' },
+                { key: 'plane', icon: '✈️', label: 'Plane' },
+                { key: 'ship',  icon: '🚢', label: 'Ship' },
+              ] as const).map(({ key, icon, label: lbl }) => {
+                const active = logisticsVehicle === key;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setLogisticsVehicle(key)}
+                    style={{
+                      flex: 1, padding: '10px 8px', borderRadius: 10, cursor: 'pointer',
+                      background: active ? 'rgba(168,85,247,0.15)' : 'rgba(15,23,42,0.5)',
+                      border: active ? '1.5px solid #a855f7' : '1.5px solid rgba(168,85,247,0.2)',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <span style={{ fontSize: 20 }}>{icon}</span>
+                    <span style={{ fontSize: 12, color: active ? '#c084fc' : '#94a3b8', fontWeight: active ? 600 : 400 }}>{lbl}</span>
                   </button>
                 );
               })}

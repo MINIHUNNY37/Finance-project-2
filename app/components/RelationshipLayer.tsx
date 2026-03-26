@@ -184,6 +184,30 @@ export default function RelationshipLayer({
             <circle cx="-4" cy="5" r="0.8" fill="#a855f7" />
             <circle cx="6" cy="5" r="0.8" fill="#a855f7" />
           </g>
+          {/* Purple plane (logistics — plane) */}
+          <g id="rel-plane" fill="#a855f7" stroke="none">
+            {/* Fuselage */}
+            <ellipse cx="0" cy="0" rx="9" ry="2" />
+            {/* Wings */}
+            <path d="M0,0 L5,-7 L8,-7 L4,0" fillOpacity="0.85" />
+            <path d="M0,0 L5,7 L8,7 L4,0" fillOpacity="0.85" />
+            {/* Tail fins */}
+            <path d="-8,0 L-5,-3 L-5,0" fillOpacity="0.7" />
+            <path d="-8,0 L-5,3 L-5,0" fillOpacity="0.7" />
+            {/* Nose */}
+            <ellipse cx="9" cy="0" rx="2.5" ry="1.5" fill="#c084fc" />
+          </g>
+          {/* Purple ship (logistics — ship) */}
+          <g id="rel-ship" fill="#a855f7" stroke="none">
+            {/* Hull */}
+            <path d="M-12,2 L-10,-2 L10,-2 L12,2 L10,5 L-10,5 Z" />
+            {/* Superstructure */}
+            <rect x="-5" y="-7" width="10" height="5" rx="1.5" fillOpacity="0.8" />
+            {/* Funnel/mast */}
+            <rect x="1" y="-11" width="3" height="4" rx="1" fillOpacity="0.9" />
+            {/* Bow highlight */}
+            <ellipse cx="11" cy="1.5" rx="2" ry="1.5" fill="#c084fc" fillOpacity="0.9" />
+          </g>
           {/* Gear (synergy) */}
           <g id="rel-gear" stroke="currentColor" fill="none">
             <circle r="7" strokeWidth="3" strokeDasharray="2.75 2.75" />
@@ -462,12 +486,14 @@ export default function RelationshipLayer({
                 }
 
                 if (flavor === 'logistics') {
-                  // Truck moving along path
+                  const vehicle = rel.logisticsVehicle ?? 'truck';
+                  const vehicleRef = vehicle === 'plane' ? '#rel-plane' : vehicle === 'ship' ? '#rel-ship' : '#rel-truck';
+                  const dur = vehicle === 'plane' ? '3s' : vehicle === 'ship' ? '6s' : '4s';
                   return (
                     <g style={{ pointerEvents: 'none' }} filter="url(#rel-glow-sm)">
                       <path id={pid} d={pathD} fill="none" stroke="none" />
-                      <use href="#rel-truck">
-                        <animateMotion dur="4s" repeatCount="indefinite" rotate="auto">
+                      <use href={vehicleRef}>
+                        <animateMotion dur={dur} repeatCount="indefinite" rotate="auto">
                           <mpath href={`#${pid}`} />
                         </animateMotion>
                       </use>

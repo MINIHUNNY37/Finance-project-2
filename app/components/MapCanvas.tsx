@@ -197,11 +197,14 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
       const startZoom = zoomRef.current;
       const startTime = performance.now();
 
+      // Read live container size — forces synchronous layout so we always get
+      // the correct width even when called before ResizeObserver fires (e.g. first
+      // presentation step while sidebar is still collapsing).
+      const liveCw = containerRef.current ? containerRef.current.offsetWidth : containerVisualDimsRef.current.width;
+      const liveCh = containerRef.current ? containerRef.current.offsetHeight : containerVisualDimsRef.current.height;
       const targetPan = {
-        x: (containerVisualDimsRef.current.width - dimsRef.current.width) / 2
-           + target.zoom * (dimsRef.current.width / 2 - target.x),
-        y: (containerVisualDimsRef.current.height - dimsRef.current.height) / 2
-           + target.zoom * (dimsRef.current.height / 2 - target.y),
+        x: (liveCw - dimsRef.current.width) / 2 + target.zoom * (dimsRef.current.width / 2 - target.x),
+        y: (liveCh - dimsRef.current.height) / 2 + target.zoom * (dimsRef.current.height / 2 - target.y),
       };
 
       const easeInOutCubic = (t: number) =>

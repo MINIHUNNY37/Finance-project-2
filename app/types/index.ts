@@ -87,6 +87,7 @@ export interface Relationship {
   color: string;
   arrowStyle: ArrowStyle;
   animFlavor?: 'capital' | 'conflict' | 'synergy' | 'logistics'; // manual override for animated type
+  logisticsVehicle?: 'truck' | 'plane' | 'ship'; // logistics animation vehicle
   createdBy: string;
   createdAt: string;
   drawnPath?: { x: number; y: number }[]; // freehand path from draw mode
