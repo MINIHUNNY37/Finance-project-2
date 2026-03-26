@@ -188,25 +188,25 @@ export default function RelationshipLayer({
           <g id="rel-plane" fill="#a855f7" stroke="none">
             {/* Fuselage */}
             <ellipse cx="0" cy="0" rx="9" ry="2" />
-            {/* Wings */}
-            <path d="M0,0 L5,-7 L8,-7 L4,0" fillOpacity="0.85" />
-            <path d="M0,0 L5,7 L8,7 L4,0" fillOpacity="0.85" />
+            {/* Wings — swept back, mid-body */}
+            <path d="M-1,0 L5,-7 L8,-7 L3,0" fillOpacity="0.85" />
+            <path d="M-1,0 L5,7 L8,7 L3,0" fillOpacity="0.85" />
             {/* Tail fins */}
-            <path d="-8,0 L-5,-3 L-5,0" fillOpacity="0.7" />
-            <path d="-8,0 L-5,3 L-5,0" fillOpacity="0.7" />
-            {/* Nose */}
+            <path d="M-8,0 L-5,-3 L-5,0 Z" fillOpacity="0.7" />
+            <path d="M-8,0 L-5,3 L-5,0 Z" fillOpacity="0.7" />
+            {/* Nose highlight */}
             <ellipse cx="9" cy="0" rx="2.5" ry="1.5" fill="#c084fc" />
           </g>
           {/* Purple ship (logistics — ship) */}
           <g id="rel-ship" fill="#a855f7" stroke="none">
-            {/* Hull */}
-            <path d="M-12,2 L-10,-2 L10,-2 L12,2 L10,5 L-10,5 Z" />
+            {/* Hull — pointed bow on right (+X) */}
+            <path d="M-12,2 L-10,-2 L8,-2 L13,1 L8,5 L-10,5 Z" />
             {/* Superstructure */}
-            <rect x="-5" y="-7" width="10" height="5" rx="1.5" fillOpacity="0.8" />
-            {/* Funnel/mast */}
-            <rect x="1" y="-11" width="3" height="4" rx="1" fillOpacity="0.9" />
+            <rect x="-6" y="-7" width="11" height="5" rx="1.5" fillOpacity="0.8" />
+            {/* Funnel */}
+            <rect x="-1" y="-11" width="3" height="4" rx="1" fillOpacity="0.9" />
             {/* Bow highlight */}
-            <ellipse cx="11" cy="1.5" rx="2" ry="1.5" fill="#c084fc" fillOpacity="0.9" />
+            <ellipse cx="12" cy="1.5" rx="2" ry="1.5" fill="#c084fc" fillOpacity="0.9" />
           </g>
           {/* Gear (synergy) */}
           <g id="rel-gear" stroke="currentColor" fill="none">
@@ -488,7 +488,7 @@ export default function RelationshipLayer({
                 if (flavor === 'logistics') {
                   const vehicle = rel.logisticsVehicle ?? 'truck';
                   const vehicleRef = vehicle === 'plane' ? '#rel-plane' : vehicle === 'ship' ? '#rel-ship' : '#rel-truck';
-                  const dur = vehicle === 'plane' ? '3s' : vehicle === 'ship' ? '6s' : '4s';
+                  const dur = vehicle === 'plane' ? '6s' : vehicle === 'ship' ? '14s' : '10s';
                   return (
                     <g style={{ pointerEvents: 'none' }} filter="url(#rel-glow-sm)">
                       <path id={pid} d={pathD} fill="none" stroke="none" />

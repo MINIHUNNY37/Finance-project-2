@@ -161,8 +161,8 @@ function WorldMapBackground({
                     ? 'rgba(74, 180, 100, 0.40)'
                     : 'rgba(52, 140, 75, 0.72)'
               }
-              stroke={hlEntry ? hlEntry.strokeColor : 'rgba(74, 180, 100, 0.28)'}
-              strokeWidth={hlEntry ? 1.2 : 0.5}
+              stroke={hlEntry ? hlEntry.strokeColor : 'rgba(28, 70, 38, 0.65)'}
+              strokeWidth={hlEntry ? 1.2 : 0.7}
               filter={hlEntry ? `url(#hlGlow${svgIdSuffix})` : undefined}
               onClick={interactive ? (e) => onCountryClick?.(name, e.clientX, e.clientY) : undefined}
               onMouseEnter={interactive ? () => onHoverEnter?.(name) : undefined}

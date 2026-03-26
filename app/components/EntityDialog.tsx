@@ -1224,12 +1224,12 @@ export default function EntityDialog({
             const riskGlow   = insightRisk     <  30 ? 'rgba(16,185,129,0.5)' : insightRisk     <= 60 ? 'rgba(245,158,11,0.5)' : 'rgba(244,63,94,0.5)';
 
             const ScoreRow = ({
-              label, value, barColor, barBg, glow, icon, setter,
+              label, value, barColor, barBg, glow, icon, setter, description,
             }: {
               label: string; value: number; barColor: string; barBg: string; glow: string;
-              icon: React.ReactNode; setter: (v: number) => void;
+              icon: React.ReactNode; setter: (v: number) => void; description?: string;
             }) => (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7, color: '#94a3b8' }}>
                     <span style={{ color: '#60a5fa', display: 'flex', alignItems: 'center' }}>{icon}</span>
@@ -1241,6 +1241,9 @@ export default function EntityDialog({
                     border: `1px solid ${barColor}`,
                   }}>{value}%</span>
                 </div>
+                {description && (
+                  <div style={{ fontSize: 10, color: '#475569', lineHeight: 1.45, paddingLeft: 21 }}>{description}</div>
+                )}
                 <div style={{ height: 5, borderRadius: 9999, background: 'rgba(30,41,59,1)', overflow: 'hidden' }}>
                   <div style={{
                     height: '100%', width: `${value}%`, borderRadius: 9999,
@@ -1312,12 +1315,15 @@ export default function EntityDialog({
                   {/* Score rows */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 20, paddingTop: 16, borderTop: '1px solid rgba(30,41,59,1)' }}>
                     <ScoreRow label="Valuation" value={insightValuation} barColor={valColor} barBg={valBg} glow={valGlow} setter={setInsightValuation}
+                      description="Am I buying this business at a cheap or expensive price today? (higher score means undervalued)"
                       icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>}
                     />
-                    <ScoreRow label="Quality" value={insightQuality} barColor={qualColor} barBg={qualBg} glow={qualGlow} setter={setInsightQuality}
+                    <ScoreRow label="Earnings Quality" value={insightQuality} barColor={qualColor} barBg={qualBg} glow={qualGlow} setter={setInsightQuality}
+                      description="Is this company actually strong, profitable, and turning its profits into real cash?"
                       icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>}
                     />
-                    <ScoreRow label="Risk Factor" value={insightRisk} barColor={riskColor} barBg={riskBg} glow={riskGlow} setter={setInsightRisk}
+                    <ScoreRow label="Risk" value={insightRisk} barColor={riskColor} barBg={riskBg} glow={riskGlow} setter={setInsightRisk}
+                      description="Can this company stay safe and survive tough times without running into debt or cash problems?"
                       icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
                     />
                   </div>
