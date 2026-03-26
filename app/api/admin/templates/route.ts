@@ -2,7 +2,7 @@
  * Admin-only CRUD for TemplateMap entries.
  *
  * GET    /api/admin/templates          — list all templates (incl. inactive)
- * POST   /api/admin/templates          — create new template from pasted JSON
+ * POST   /api/admin/templates          — create template from pasted JSON OR from a saved mapId
  * PATCH  /api/admin/templates?id=<id>  — update name/description/category/isActive
  * DELETE /api/admin/templates?id=<id>  — delete template
  */
@@ -37,12 +37,21 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { name, description, category, data } = body as {
-    name: string;
-    description: string;
-    category: string;
-    data: string; // raw JSON string pasted by admin
+  let { name, description, category, data, mapId } = body as {
+    name?: string;
+    description?: string;
+    category?: string;
+    data?: string;   // raw JSON string pasted by admin
+    mapId?: string;  // shortcut: promote an existing saved map directly
   };
+
+  // If mapId provided, pull data from the SavedMap table — no JSON paste needed
+  if (mapId) {
+    const saved = await prisma.savedMap.findFirst({ where: { mapId } });
+    if (!saved) return NextResponse.json({ error: 'Map not found' }, { status: 404 });
+    data = saved.data;
+    if (!name?.trim()) name = saved.name;
+  }
 
   if (!name?.trim() || !data?.trim()) {
     return NextResponse.json({ error: 'name and data are required' }, { status: 400 });

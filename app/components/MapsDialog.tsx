@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, Plus, Trash2, Map, Clock, Globe, Square, LogIn, Upload, AlertCircle, LayoutTemplate, Download, CheckCircle, Pencil, Check } from 'lucide-react';
+import { X, Plus, Trash2, Map, Clock, Globe, Square, LogIn, Upload, AlertCircle, LayoutTemplate, Download, CheckCircle, Pencil, Check, Send } from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
 
 interface TemplateMetadata {
@@ -43,6 +43,17 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
   const [templatesLoading, setTemplatesLoading] = useState(false);
   const [cloningId, setCloningId] = useState<string | null>(null);
   const [clonedId, setClonedId] = useState<string | null>(null);
+
+  // Publish as template (admin only)
+  const ADMIN_EMAILS = ['minjune043010@gmail.com'];
+  const isAdmin = !!(session?.user?.email && ADMIN_EMAILS.includes(session.user.email));
+  const [publishingMapId, setPublishingMapId] = useState<string | null>(null);
+  const [publishName, setPublishName] = useState('');
+  const [publishDescription, setPublishDescription] = useState('');
+  const [publishCategory, setPublishCategory] = useState('markets');
+  const [publishError, setPublishError] = useState('');
+  const [publishingSubmit, setPublishingSubmit] = useState(false);
+  const [publishedMapId, setPublishedMapId] = useState<string | null>(null);
 
   const fetchTemplates = useCallback(async () => {
     if (!session?.user) return;
@@ -89,6 +100,32 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
       }
     } catch { /* ignore */ }
     finally { setCloningId(null); }
+  };
+
+  const handlePublish = async (mapId: string) => {
+    setPublishError('');
+    setPublishingSubmit(true);
+    try {
+      const res = await fetch('/api/admin/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mapId,
+          name: publishName.trim(),
+          description: publishDescription.trim(),
+          category: publishCategory.trim() || 'markets',
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) { setPublishError(json.error || 'Failed to publish'); return; }
+      setPublishedMapId(mapId);
+      setPublishingMapId(null);
+      setTimeout(() => setPublishedMapId(null), 3000);
+    } catch {
+      setPublishError('Network error');
+    } finally {
+      setPublishingSubmit(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -503,9 +540,11 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
               {allMaps.map((map) => {
                 const isCurrent = map.id === currentMap.id;
                 const isEditing = editingMapId === map.id;
+                const isPublishing = publishingMapId === map.id;
+                const justPublished = publishedMapId === map.id;
                 return (
+                  <React.Fragment key={map.id}>
                   <div
-                    key={map.id}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -609,6 +648,32 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
                         <Pencil size={13} />
                       </button>
                     )}
+                    {/* Publish as template (admin only) */}
+                    {!isEditing && isAdmin && (
+                      justPublished ? (
+                        <span style={{ fontSize: 10, color: '#4ade80', padding: '2px 6px', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 3 }}>
+                          <Check size={11} /> Published!
+                        </span>
+                      ) : (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (isPublishing) { setPublishingMapId(null); return; }
+                            setPublishingMapId(map.id);
+                            setPublishName(map.name);
+                            setPublishDescription((map as { description?: string }).description ?? '');
+                            setPublishCategory('markets');
+                            setPublishError('');
+                          }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: isPublishing ? '#06b6d4' : '#94a3b8', padding: 4, flexShrink: 0 }}
+                          title="Publish as template"
+                          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = '#06b6d4')}
+                          onMouseLeave={(e) => { if (!isPublishing) (e.currentTarget as HTMLElement).style.color = '#94a3b8'; }}
+                        >
+                          <Send size={13} />
+                        </button>
+                      )
+                    )}
                     {/* Delete button */}
                     {!isEditing && (
                       <button
@@ -634,6 +699,61 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
                       </button>
                     )}
                   </div>
+                  {/* Inline publish form */}
+                  {isPublishing && (
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      style={{ background: 'rgba(6,182,212,0.04)', border: '1px solid rgba(6,182,212,0.2)', borderRadius: 8, padding: '12px 14px', marginBottom: 6, marginTop: -2 }}
+                    >
+                      <div style={{ fontSize: 11, color: '#06b6d4', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+                        Publish as Template
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+                        <div>
+                          <div style={{ fontSize: 10, color: '#475569', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Title</div>
+                          <input
+                            value={publishName}
+                            onChange={(e) => setPublishName(e.target.value)}
+                            style={{ width: '100%', background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(6,182,212,0.25)', borderRadius: 6, padding: '5px 8px', color: '#e2e8f0', fontSize: 12, outline: 'none', boxSizing: 'border-box' }}
+                          />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 10, color: '#475569', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Category</div>
+                          <input
+                            value={publishCategory}
+                            onChange={(e) => setPublishCategory(e.target.value)}
+                            placeholder="markets"
+                            style={{ width: '100%', background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(6,182,212,0.25)', borderRadius: 6, padding: '5px 8px', color: '#e2e8f0', fontSize: 12, outline: 'none', boxSizing: 'border-box' }}
+                          />
+                        </div>
+                      </div>
+                      <div style={{ marginBottom: 10 }}>
+                        <div style={{ fontSize: 10, color: '#475569', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Description</div>
+                        <input
+                          value={publishDescription}
+                          onChange={(e) => setPublishDescription(e.target.value)}
+                          placeholder="Short description shown on the template card…"
+                          style={{ width: '100%', background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(6,182,212,0.25)', borderRadius: 6, padding: '5px 8px', color: '#e2e8f0', fontSize: 12, outline: 'none', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      {publishError && (
+                        <div style={{ color: '#fca5a5', fontSize: 11, marginBottom: 8 }}>{publishError}</div>
+                      )}
+                      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                        <button onClick={() => setPublishingMapId(null)} style={{ padding: '4px 10px', fontSize: 11, borderRadius: 6, cursor: 'pointer', background: 'none', border: '1px solid rgba(100,116,139,0.3)', color: '#64748b' }}>
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => handlePublish(map.id)}
+                          disabled={publishingSubmit}
+                          style={{ padding: '4px 12px', fontSize: 11, borderRadius: 6, cursor: 'pointer', background: 'rgba(6,182,212,0.15)', border: '1px solid rgba(6,182,212,0.4)', color: '#06b6d4', display: 'flex', alignItems: 'center', gap: 4 }}
+                        >
+                          {publishingSubmit ? 'Publishing…' : <><Send size={10} /> Publish</>}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  </React.Fragment>
                 );
               })}
 
