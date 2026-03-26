@@ -515,12 +515,12 @@ export default function MapsDialog({ isOpen, onClose, required = false, loading 
                       marginBottom: 6,
                       background: isCurrent ? 'rgba(59,130,246,0.12)' : 'rgba(15,23,42,0.5)',
                       border: `1px solid ${isCurrent ? 'rgba(59,130,246,0.4)' : 'rgba(59,130,246,0.1)'}`,
-                      cursor: isCurrent ? 'default' : 'pointer',
+                      cursor: isEditing ? 'default' : 'pointer',
                       transition: 'all 0.15s ease',
                     }}
-                    onClick={() => !isCurrent && !isEditing && handleLoad(map.id)}
-                    onMouseEnter={(e) => { if (!isCurrent) (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.08)'; }}
-                    onMouseLeave={(e) => { if (!isCurrent) (e.currentTarget as HTMLElement).style.background = 'rgba(15,23,42,0.5)'; }}
+                    onClick={() => !isEditing && handleLoad(map.id)}
+                    onMouseEnter={(e) => { if (!isEditing) (e.currentTarget as HTMLElement).style.background = isCurrent ? 'rgba(59,130,246,0.18)' : 'rgba(59,130,246,0.08)'; }}
+                    onMouseLeave={(e) => { if (!isEditing) (e.currentTarget as HTMLElement).style.background = isCurrent ? 'rgba(59,130,246,0.12)' : 'rgba(15,23,42,0.5)'; }}
                   >
                     {map.mapType === 'plain'
                       ? <Square size={18} style={{ color: isCurrent ? '#06b6d4' : '#3b82f6', flexShrink: 0 }} />
