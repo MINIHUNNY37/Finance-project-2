@@ -184,6 +184,8 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
   // Keep refs in sync with state
   useEffect(() => { zoomRef.current = zoom; }, [zoom]);
   useEffect(() => { panRef.current = panOffset; }, [panOffset]);
+  const containerVisualDimsRef = useRef({ width: 1200, height: 800 });
+  useEffect(() => { containerVisualDimsRef.current = containerVisualDims; }, [containerVisualDims]);
 
   // Smooth camera animation (used by PresentationMode)
   const animationRef = useRef<number | null>(null);
@@ -196,8 +198,10 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
       const startTime = performance.now();
 
       const targetPan = {
-        x: target.zoom * (dimsRef.current.width / 2 - target.x),
-        y: target.zoom * (dimsRef.current.height / 2 - target.y),
+        x: (containerVisualDimsRef.current.width - dimsRef.current.width) / 2
+           + target.zoom * (dimsRef.current.width / 2 - target.x),
+        y: (containerVisualDimsRef.current.height - dimsRef.current.height) / 2
+           + target.zoom * (dimsRef.current.height / 2 - target.y),
       };
 
       const easeInOutCubic = (t: number) =>
@@ -603,14 +607,16 @@ export default function MapCanvas({ session, onSignIn, onSignOut }: MapCanvasPro
 
   const handleFocusEntity = useCallback(
     (pos: { x: number; y: number }) => {
+      const cx = (containerVisualDims.width - dims.width) / 2;
+      const cy = (containerVisualDims.height - dims.height) / 2;
       const newPan = {
-        x: zoom * (dims.width / 2 - pos.x),
-        y: zoom * (dims.height / 2 - pos.y),
+        x: cx + zoom * (dims.width / 2 - pos.x),
+        y: cy + zoom * (dims.height / 2 - pos.y),
       };
       panRef.current = newPan;
       setPanOffset(newPan);
     },
-    [zoom, dims]
+    [zoom, dims, containerVisualDims]
   );
 
   // Handle world map toggle — switching world→plain is irreversible (show warning)

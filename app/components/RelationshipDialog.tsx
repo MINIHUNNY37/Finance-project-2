@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Zap, Minus } from 'lucide-react';
 import type { Relationship, ArrowStyle } from '../types';
+type AnimFlavor = NonNullable<Relationship['animFlavor']>;
 import { RELATIONSHIP_COLORS } from '../types';
 
 interface RelationshipDialogProps {
@@ -17,6 +18,7 @@ export default function RelationshipDialog({ isOpen, onClose, onSave, initialDat
   const [description, setDescription] = useState('');
   const [color, setColor] = useState(RELATIONSHIP_COLORS[0]); // defaults to green
   const [arrowStyle, setArrowStyle] = useState<ArrowStyle>('normal');
+  const [animFlavor, setAnimFlavor] = useState<AnimFlavor | undefined>(undefined);
 
   useEffect(() => {
     if (initialData) {
@@ -24,13 +26,14 @@ export default function RelationshipDialog({ isOpen, onClose, onSave, initialDat
       setDescription(initialData.description || '');
       setColor(initialData.color || RELATIONSHIP_COLORS[0]);
       setArrowStyle(initialData.arrowStyle || 'normal');
+      setAnimFlavor(initialData.animFlavor ?? undefined);
     }
   }, [initialData, isOpen]);
 
   if (!isOpen) return null;
 
   const handleSave = () => {
-    onSave({ label: label.trim(), description: description.trim(), color, arrowStyle });
+    onSave({ label: label.trim(), description: description.trim(), color, arrowStyle, animFlavor: animFlavor || undefined });
     onClose();
   };
 
@@ -97,6 +100,41 @@ export default function RelationshipDialog({ isOpen, onClose, onSave, initialDat
             />
           </div>
         </div>
+
+        {/* Animation Type — only shown when Animated is selected */}
+        {arrowStyle === 'animated' && (
+          <div style={{ marginBottom: 16 }}>
+            <label style={labelStyle}>Animation Type</label>
+            <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+              {([
+                { key: undefined,    label: 'Auto',     icon: '⚡', desc: 'Detect from label', accent: '#94a3b8' },
+                { key: 'capital',    label: 'Cash Flow', icon: '$', desc: 'Green coins flow',   accent: '#10b981' },
+                { key: 'logistics',  label: 'Logistics', icon: '⬡', desc: 'Purple truck',       accent: '#a855f7' },
+                { key: 'conflict',   label: 'Electric',  icon: '⚡', desc: 'Spark friction',    accent: '#f43f5e' },
+                { key: 'synergy',    label: 'Synergy',   icon: '⚙', desc: 'Gear interlock',     accent: '#6366f1' },
+              ] as const).map(({ key, label: lbl, icon, desc, accent }) => {
+                const active = animFlavor === key;
+                return (
+                  <button
+                    key={lbl}
+                    onClick={() => setAnimFlavor(key as AnimFlavor | undefined)}
+                    style={{
+                      flex: 1, minWidth: 0, padding: '10px 6px', borderRadius: 10, cursor: 'pointer',
+                      background: active ? `${accent}18` : 'rgba(15,23,42,0.5)',
+                      border: active ? `1.5px solid ${accent}` : `1.5px solid ${accent}33`,
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <span style={{ fontSize: 16, color: active ? accent : '#9ca3af', lineHeight: 1 }}>{icon}</span>
+                    <span style={{ fontSize: 11, color: active ? accent : '#94a3b8', fontWeight: 600 }}>{lbl}</span>
+                    <span style={{ fontSize: 9, color: active ? `${accent}cc` : '#4b5563', whiteSpace: 'nowrap' }}>{desc}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Arrow Color */}
         <div style={{ marginBottom: 22 }}>

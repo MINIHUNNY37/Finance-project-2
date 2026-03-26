@@ -74,8 +74,6 @@ export interface Entity {
   links?: EntityLink[];
   // Flashcard insight
   insight?: { price?: string; valuation?: number; quality?: number; risk?: number };
-  // Node animation type
-  nodeAnimation?: 'cash-flow' | 'logistics' | 'electric' | 'synergy';
 }
 
 export type ArrowStyle = 'normal' | 'animated';
@@ -88,6 +86,7 @@ export interface Relationship {
   description: string; // shown as a note box on the connection
   color: string;
   arrowStyle: ArrowStyle;
+  animFlavor?: 'capital' | 'conflict' | 'synergy' | 'logistics'; // manual override for animated type
   createdBy: string;
   createdAt: string;
   drawnPath?: { x: number; y: number }[]; // freehand path from draw mode

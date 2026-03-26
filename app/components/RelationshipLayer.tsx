@@ -361,7 +361,7 @@ export default function RelationshipLayer({
 
               {/* === Rich animated overlays (animated style only) === */}
               {isAnimated && (() => {
-                const flavor = getAnimFlavor(rel.label);
+                const flavor = rel.animFlavor ?? getAnimFlavor(rel.label);
                 const pid = `path-rel-${rel.id}`;
 
                 if (flavor === 'capital') {

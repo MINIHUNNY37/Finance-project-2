@@ -185,8 +185,6 @@ export default function EntityDialog({
   const [insightQuality, setInsightQuality] = useState<number>(50);
   const [insightRisk, setInsightRisk] = useState<number>(50);
   const [flashcardEditing, setFlashcardEditing] = useState(false);
-  // Node animation
-  const [nodeAnimation, setNodeAnimation] = useState<Entity['nodeAnimation']>(undefined);
 
   useEffect(() => {
     if (initialData) {
@@ -220,7 +218,6 @@ export default function EntityDialog({
       setInsightValuation(initialData.insight?.valuation ?? 50);
       setInsightQuality(initialData.insight?.quality ?? 50);
       setInsightRisk(initialData.insight?.risk ?? 50);
-      setNodeAnimation(initialData.nodeAnimation);
     } else {
       // Empty icon forces the user to explicitly pick one before saving
       setName(''); setIcon(''); setSubtitle(''); setDescription('');
@@ -234,7 +231,6 @@ export default function EntityDialog({
       setCatalysts([]); setSector(''); setTags([]);
       setLinks([]); setLinkUrl(''); setLinkTitle('');
       setInsightPrice(''); setInsightValuation(50); setInsightQuality(50); setInsightRisk(50);
-      setNodeAnimation(undefined);
     }
     setFlashcardEditing(false);
     setTickerError('');
@@ -310,7 +306,6 @@ export default function EntityDialog({
       tags: tags.length > 0 ? tags : undefined,
       links: links.length > 0 ? links : undefined,
       insight: { price: insightPrice || undefined, valuation: insightValuation, quality: insightQuality, risk: insightRisk },
-      nodeAnimation: nodeAnimation || undefined,
     });
     onClose();
   };
@@ -433,45 +428,6 @@ export default function EntityDialog({
                       transition: 'all 0.15s ease',
                     }} />
                   ))}
-                </div>
-              </div>
-
-              {/* Node Animation */}
-              <div style={{ marginBottom: 14 }}>
-                <label style={labelStyle}>Node Animation</label>
-                <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-                  {([
-                    { key: undefined,     label: 'None',       icon: '—',  accent: '#6b7280' },
-                    { key: 'cash-flow',   label: 'Cash Flow',  icon: '$',  accent: '#10b981' },
-                    { key: 'logistics',   label: 'Logistics',  icon: '⬡',  accent: '#a855f7' },
-                    { key: 'electric',    label: 'Electric',   icon: '⚡', accent: '#f43f5e' },
-                    { key: 'synergy',     label: 'Synergy',    icon: '⚙',  accent: '#6366f1' },
-                  ] as const).map(({ key, label, icon, accent }) => {
-                    const active = nodeAnimation === key;
-                    return (
-                      <button
-                        key={label}
-                        onClick={() => setNodeAnimation(key as Entity['nodeAnimation'])}
-                        style={{
-                          flex: 1,
-                          minWidth: 0,
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          gap: 4,
-                          padding: '8px 4px',
-                          borderRadius: 8,
-                          border: active ? `1.5px solid ${accent}` : '1.5px solid rgba(255,255,255,0.08)',
-                          background: active ? `${accent}18` : 'rgba(255,255,255,0.03)',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s ease',
-                        }}
-                      >
-                        <span style={{ fontSize: 16, color: active ? accent : '#9ca3af', lineHeight: 1 }}>{icon}</span>
-                        <span style={{ fontSize: 10, color: active ? accent : '#6b7280', fontWeight: active ? 600 : 400, whiteSpace: 'nowrap' }}>{label}</span>
-                      </button>
-                    );
-                  })}
                 </div>
               </div>
 
