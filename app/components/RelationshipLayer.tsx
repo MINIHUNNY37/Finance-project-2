@@ -184,29 +184,31 @@ export default function RelationshipLayer({
             <circle cx="-4" cy="5" r="0.8" fill="#a855f7" />
             <circle cx="6" cy="5" r="0.8" fill="#a855f7" />
           </g>
-          {/* Purple plane (logistics — plane) */}
+          {/* Purple plane (logistics — plane) — nose on RIGHT (+X) */}
           <g id="rel-plane" fill="#a855f7" stroke="none">
-            {/* Fuselage */}
-            <ellipse cx="0" cy="0" rx="9" ry="2" />
-            {/* Wings — swept back, mid-body */}
-            <path d="M-1,0 L5,-7 L8,-7 L3,0" fillOpacity="0.85" />
-            <path d="M-1,0 L5,7 L8,7 L3,0" fillOpacity="0.85" />
-            {/* Tail fins */}
-            <path d="M-8,0 L-5,-3 L-5,0 Z" fillOpacity="0.7" />
-            <path d="M-8,0 L-5,3 L-5,0 Z" fillOpacity="0.7" />
+            {/* Fuselage — tapers to a point on the right (nose) */}
+            <path d="M-10,1.2 L7,1.8 L11,0 L7,-1.8 L-10,-1.2 Z" />
+            {/* Wings — root at center, sweep BACKWARD toward -X (correct aviation orientation) */}
+            <path d="M1,-1.5 L-5,-11 L-8,-10 L-1,0 Z" fillOpacity="0.85" />
+            <path d="M1,1.5 L-5,11 L-8,10 L-1,0 Z" fillOpacity="0.85" />
+            {/* Tail fins — small, at rear (-X) */}
+            <path d="M-8,-1.2 L-12,-5 L-10,-1.2 Z" fillOpacity="0.7" />
+            <path d="M-8,1.2 L-12,5 L-10,1.2 Z" fillOpacity="0.7" />
             {/* Nose highlight */}
-            <ellipse cx="9" cy="0" rx="2.5" ry="1.5" fill="#c084fc" />
+            <ellipse cx="10" cy="0" rx="1.5" ry="1" fill="#c084fc" />
           </g>
-          {/* Purple ship (logistics — ship) */}
+          {/* Purple ship (logistics — ship) — bow on RIGHT (+X) */}
           <g id="rel-ship" fill="#a855f7" stroke="none">
-            {/* Hull — pointed bow on right (+X) */}
-            <path d="M-12,2 L-10,-2 L8,-2 L13,1 L8,5 L-10,5 Z" />
-            {/* Superstructure */}
-            <rect x="-6" y="-7" width="11" height="5" rx="1.5" fillOpacity="0.8" />
-            {/* Funnel */}
-            <rect x="-1" y="-11" width="3" height="4" rx="1" fillOpacity="0.9" />
+            {/* Hull — clearly boat-shaped, pointed bow on right */}
+            <path d="M-13,5 L-13,1 L-10,-1 L8,-1 L13,2.5 L8,5 Z" />
+            {/* Main cabin — wide base */}
+            <rect x="-9" y="-5" width="15" height="6" rx="1.5" fillOpacity="0.85" />
+            {/* Bridge — upper tier (stepped profile = ship, not tank) */}
+            <rect x="-3" y="-9" width="8" height="4" rx="1" fillOpacity="0.75" />
+            {/* Funnel — wide + short so it doesn't look like a gun barrel */}
+            <rect x="-0.5" y="-12" width="5" height="3" rx="2" fill="#c084fc" fillOpacity="0.9" />
             {/* Bow highlight */}
-            <ellipse cx="12" cy="1.5" rx="2" ry="1.5" fill="#c084fc" fillOpacity="0.9" />
+            <ellipse cx="12" cy="2.5" rx="1.8" ry="1.2" fill="#c084fc" fillOpacity="0.8" />
           </g>
           {/* Gear (synergy) */}
           <g id="rel-gear" stroke="currentColor" fill="none">

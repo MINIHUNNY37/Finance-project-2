@@ -1231,18 +1231,18 @@ export default function EntityDialog({
             }) => (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, color: '#94a3b8' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, color: '#e2e8f0' }}>
                     <span style={{ color: '#60a5fa', display: 'flex', alignItems: 'center' }}>{icon}</span>
-                    <span style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
                   </div>
                   <span style={{
-                    padding: '2px 8px', borderRadius: 5, fontSize: 11, fontWeight: 700,
+                    padding: '3px 10px', borderRadius: 5, fontSize: 12, fontWeight: 700,
                     color: barColor, background: barBg,
                     border: `1px solid ${barColor}`,
                   }}>{value}%</span>
                 </div>
                 {description && (
-                  <div style={{ fontSize: 10, color: '#475569', lineHeight: 1.45, paddingLeft: 21 }}>{description}</div>
+                  <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.5, paddingLeft: 21 }}>{description}</div>
                 )}
                 <div style={{ height: 5, borderRadius: 9999, background: 'rgba(30,41,59,1)', overflow: 'hidden' }}>
                   <div style={{
