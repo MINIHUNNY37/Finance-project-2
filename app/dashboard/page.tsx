@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import {
   Shield, Users, RefreshCw, LogIn, ChevronDown, Check,
-  Database, User, LayoutTemplate, Plus, Trash2, Eye, EyeOff, X,
+  Database, User, LayoutTemplate, Plus, Trash2, Eye, EyeOff, X, GitMerge,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -31,7 +31,7 @@ interface AdminTemplate {
   updatedAt: string;
 }
 
-type DashTab = 'users' | 'templates';
+type DashTab = 'users' | 'templates' | 'migration';
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
@@ -56,6 +56,12 @@ export default function DashboardPage() {
   const [uploading, setUploading] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // ── Migration state ──
+  type MigrationStatus = { label: string; source?: number; migrated?: number; periods?: number; metricValues?: number } | null;
+  const [migrationStatus, setMigrationStatus] = useState<Record<string, MigrationStatus>>({});
+  const [migrationLog, setMigrationLog] = useState<string[]>([]);
+  const [migrating, setMigrating] = useState(false);
 
   const isAdmin = session?.user?.email && ADMIN_EMAILS.includes(session.user.email);
 
@@ -102,6 +108,73 @@ export default function DashboardPage() {
   useEffect(() => {
     if (isAdmin && dashTab === 'templates') fetchTemplates();
   }, [isAdmin, dashTab, fetchTemplates]);
+
+  useEffect(() => {
+    if (isAdmin && dashTab === 'migration') fetchMigrationStatus();
+  }, [isAdmin, dashTab]);
+
+  const fetchMigrationStatus = async () => {
+    try {
+      const [schemaRes, companyRes] = await Promise.all([
+        fetch('/api/admin/seed-company-schema'),
+        fetch('/api/admin/migrate-companies'),
+      ]);
+      if (schemaRes.ok) {
+        const d = await schemaRes.json();
+        setMigrationStatus((prev) => ({ ...prev, schema: d }));
+      }
+      if (companyRes.ok) {
+        const d = await companyRes.json();
+        setMigrationStatus((prev) => ({ ...prev, ...d }));
+      }
+    } catch { /* ignore */ }
+  };
+
+  const log = (msg: string) => setMigrationLog((prev) => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
+
+  const runStep = async (url: string, label: string) => {
+    log(`Starting: ${label}…`);
+    const res = await fetch(url, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) { log(`ERROR: ${data.error}`); return false; }
+    log(`Done: ${label} — ${JSON.stringify(data)}`);
+    return data;
+  };
+
+  const runBatchedStep = async (baseUrl: string, label: string, batchSize = 50) => {
+    let offset = 0;
+    let total = 0;
+    while (true) {
+      const url = `${baseUrl}&offset=${offset}&limit=${batchSize}`;
+      log(`${label} — offset ${offset}…`);
+      const res = await fetch(url, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) { log(`ERROR: ${data.error}`); break; }
+      total += data.processed ?? 0;
+      log(`  ✓ ${data.progress ?? ''} (${JSON.stringify({ rowsCreated: data.rowsCreated, periodsCreated: data.periodsCreated, metricValuesCreated: data.metricValuesCreated })})`);
+      if (data.done) break;
+      offset = data.nextOffset;
+    }
+    log(`${label} complete — ${total} tickers processed`);
+  };
+
+  const handleRunFullMigration = async () => {
+    if (!confirm('Run full migration? This may take several minutes.')) return;
+    setMigrating(true);
+    setMigrationLog([]);
+    try {
+      await runStep('/api/admin/seed-company-schema?step=1', 'Seed metric definitions');
+      await runStep('/api/admin/seed-company-schema?step=2', 'Seed library slugs');
+      await runStep('/api/admin/migrate-companies?step=1', 'Migrate companies');
+      await runStep('/api/admin/migrate-companies?step=2', 'Assign library memberships');
+      await runBatchedStep('/api/admin/migrate-companies?step=3', 'Migrate daily prices', 50);
+      await runBatchedStep('/api/admin/migrate-companies?step=4', 'Migrate periods + metrics', 50);
+      log('All steps complete!');
+    } finally {
+      setMigrating(false);
+      fetchMigrationStatus();
+    }
+  };
 
   const handleRoleChange = async (userId: string, role: string) => {
     setUpdatingId(userId);
@@ -259,6 +332,7 @@ export default function DashboardPage() {
           {([
             { id: 'users', label: 'Users', icon: <Users size={14} /> },
             { id: 'templates', label: 'Templates', icon: <LayoutTemplate size={14} /> },
+            { id: 'migration', label: 'Migration', icon: <GitMerge size={14} /> },
           ] as { id: DashTab; label: string; icon: React.ReactNode }[]).map((tab) => (
             <button
               key={tab.id}
@@ -559,6 +633,104 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
+          </>
+        )}
+
+        {/* ── MIGRATION TAB ── */}
+        {dashTab === 'migration' && (
+          <>
+            {/* Status cards */}
+            {migrationStatus.schema && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
+                {[
+                  { label: 'Metric Definitions', value: ((migrationStatus.schema as unknown) as Record<string, number>).metricCount ?? 0, target: 15 },
+                  { label: 'Libraries',           value: ((migrationStatus.schema as unknown) as Record<string, number>).libraryCount ?? 0, target: 5 },
+                  { label: 'Companies',           value: ((migrationStatus.schema as unknown) as Record<string, number>).companyCount ?? 0 },
+                ].map(({ label, value, target }) => (
+                  <div key={label} style={{ background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 12, padding: '14px 18px' }}>
+                    <div style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{label}</div>
+                    <div style={{ fontSize: 24, fontWeight: 700, color: target && value >= target ? '#4ade80' : '#93c5fd' }}>
+                      {value}{target ? ` / ${target}` : ''}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Step status table */}
+            <div style={{ background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: 14, overflow: 'hidden', marginBottom: 20 }}>
+              <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(59,130,246,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <GitMerge size={16} style={{ color: '#3b82f6' }} />
+                  <span style={{ color: '#93c5fd', fontWeight: 600, fontSize: 14 }}>Migration Steps</span>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={fetchMigrationStatus} style={{ ...btnStyle, padding: '5px 12px', fontSize: 12 }}>
+                    <RefreshCw size={11} /> Refresh
+                  </button>
+                  <button
+                    onClick={handleRunFullMigration}
+                    disabled={migrating}
+                    style={{ ...btnStyle, padding: '5px 14px', fontSize: 12, background: 'rgba(6,182,212,0.12)', border: '1px solid rgba(6,182,212,0.4)', color: '#06b6d4' }}
+                  >
+                    {migrating ? <RefreshCw size={11} style={{ animation: 'spin 1s linear infinite' }} /> : <GitMerge size={11} />}
+                    {migrating ? 'Running…' : 'Run Full Migration'}
+                  </button>
+                </div>
+              </div>
+
+              {[
+                { key: 'step1', label: 'StockUniverse → Company', endpoint: '/api/admin/migrate-companies?step=1', batched: false },
+                { key: 'step2', label: 'Assign library memberships', endpoint: '/api/admin/migrate-companies?step=2', batched: false },
+                { key: 'step3', label: 'StockDailyOHLC → CompanyDailyPrice', endpoint: '/api/admin/migrate-companies?step=3', batched: true },
+                { key: 'step4', label: 'StockQuarterlyStats → Periods + Metrics', endpoint: '/api/admin/migrate-companies?step=4', batched: true },
+              ].map((step) => {
+                const s = migrationStatus[step.key] as Record<string, number | string> | null;
+                return (
+                  <div key={step.key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px', borderBottom: '1px solid rgba(59,130,246,0.07)' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, color: '#e2e8f0', fontWeight: 500 }}>{step.label}</div>
+                      {s && (
+                        <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
+                          {s.source != null ? `source: ${s.source}  →  ` : ''}
+                          {s.migrated != null ? `migrated: ${s.migrated}` : ''}
+                          {s.periods != null ? `periods: ${s.periods}` : ''}
+                          {s.metricValues != null ? `  metric values: ${s.metricValues}` : ''}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={async () => {
+                        setMigrating(true);
+                        setMigrationLog([]);
+                        if (step.batched) {
+                          await runBatchedStep(`${step.endpoint}`, step.label, 50);
+                        } else {
+                          await runStep(step.endpoint, step.label);
+                        }
+                        setMigrating(false);
+                        fetchMigrationStatus();
+                      }}
+                      disabled={migrating}
+                      style={{ padding: '4px 12px', fontSize: 11, borderRadius: 7, cursor: 'pointer', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', color: '#93c5fd', flexShrink: 0 }}
+                    >
+                      Run
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Log output */}
+            {migrationLog.length > 0 && (
+              <div style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: 10, padding: 16, fontFamily: 'monospace', fontSize: 11, color: '#94a3b8', maxHeight: 300, overflowY: 'auto' }}>
+                {migrationLog.map((line, i) => (
+                  <div key={i} style={{ marginBottom: 2, color: line.includes('ERROR') ? '#fca5a5' : line.includes('complete') || line.includes('Done') ? '#4ade80' : '#94a3b8' }}>
+                    {line}
+                  </div>
+                ))}
+              </div>
+            )}
           </>
         )}
 
