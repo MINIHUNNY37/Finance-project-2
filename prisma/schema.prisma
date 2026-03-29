@@ -209,3 +209,140 @@ model TemplateMap {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+// ── Company library system ──────────────────────────────────────────────────
+// Replaces the single-list StockUniverse with flexible, admin-curated libraries.
+// A company can belong to multiple libraries.
+
+model Company {
+  id          String   @id @default(cuid())
+  ticker      String   @unique
+  name        String
+  exchange    String?
+  sector      String?
+  industry    String?
+  country     String   @default("US")
+  currency    String   @default("USD")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  memberships CompanyLibraryMembership[]
+  periods     CompanyPeriod[]
+  dailyPrices CompanyDailyPrice[]
+}
+
+model CompanyLibrary {
+  id          String   @id @default(cuid())
+  slug        String   @unique  // e.g. "nasdaq100", "us-big-tech"
+  title       String
+  description String   @default("")
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  memberships CompanyLibraryMembership[]
+}
+
+model CompanyLibraryMembership {
+  id        String   @id @default(cuid())
+  libraryId String
+  companyId String
+  sortOrder Int      @default(0)
+  addedAt   DateTime @default(now())
+
+  library CompanyLibrary @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+  company Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([libraryId, companyId])
+  @@index([libraryId, sortOrder])
+}
+
+// ── Time-period axis ────────────────────────────────────────────────────────
+// periodKey is the uniqueness anchor — avoids nullable compound unique constraint.
+// Application layer generates it deterministically:
+//   quarterly:  "Q-{year}-{quarter}"   e.g. "Q-2025-4"
+//   annual:     "A-{year}"             e.g. "A-2024"
+//   ttm:        "TTM-{YYYY-MM}"        e.g. "TTM-2025-03"
+//   snapshot:   "SNAP-{YYYY-MM-DD}"    e.g. "SNAP-2025-03-29"
+
+model CompanyPeriod {
+  id            String    @id @default(cuid())
+  companyId     String
+  periodKey     String                    // computed discriminator (see above)
+  periodType    String                    // 'quarterly'|'annual'|'ttm'|'snapshot'
+  fiscalYear    Int?
+  fiscalQuarter Int?                      // 1–4; null for non-quarterly types
+  periodLabel   String                    // display string e.g. "2025 Q4", "FY2024"
+  startDate     DateTime? @db.Date
+  endDate       DateTime? @db.Date
+  reportedAt    DateTime?
+  isLatest      Boolean   @default(false) // exactly one true per (companyId, periodType)
+  createdAt     DateTime  @default(now())
+
+  company Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  metrics CompanyMetricValue[]
+
+  @@unique([companyId, periodKey])
+  @@index([companyId, periodType, isLatest])
+}
+
+// ── Metric catalogue ────────────────────────────────────────────────────────
+// One row per metric type. Seeded once via /api/admin/seed-company-schema?step=1.
+
+model CompanyMetricDefinition {
+  id                     String @id @default(cuid())
+  code                   String @unique   // e.g. "valuation_pe", "quality_roe"
+  label                  String           // e.g. "PER", "ROE"
+  category               String           // "valuation"|"quality"|"risk"
+  unitType               String           // "ratio"|"percent"|"currency"|"number"
+  formula                String @default("")  // human-readable formula documentation
+  description            String @default("")
+  availableInPeriodTypes String @default("[]") // JSON array e.g. '["snapshot","ttm"]'
+  sortOrder              Int    @default(0)
+
+  values CompanyMetricValue[]
+}
+
+// ── Metric values ───────────────────────────────────────────────────────────
+// companyId intentionally omitted — join via period → company to avoid
+// the consistency risk of duplicating the foreign key.
+// numericValue is null when the formula result is undefined (e.g. zero denominator).
+// textValue is used for special sentinel strings e.g. "N/D" (no debt).
+
+model CompanyMetricValue {
+  id                 String   @id @default(cuid())
+  periodId           String
+  metricDefinitionId String
+  numericValue       Float?
+  textValue          String?
+  currency           String?  // only populated for unitType = 'currency'
+  source             String   @default("system")
+  createdAt          DateTime @default(now())
+
+  period     CompanyPeriod           @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  definition CompanyMetricDefinition @relation(fields: [metricDefinitionId], references: [id])
+
+  @@unique([periodId, metricDefinitionId])
+  @@index([periodId])
+}
+
+// ── Daily price candles ──────────────────────────────────────────────────────
+// Replaces StockDailyOHLC once migration is complete (Phase 3).
+
+model CompanyDailyPrice {
+  companyId     String
+  date          DateTime @db.Date
+  open          Float?
+  high          Float?
+  low           Float?
+  close         Float?
+  adjustedClose Float?
+  volume        BigInt?
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@id([companyId, date])
+  @@index([companyId, date(sort: Desc)])
+}
