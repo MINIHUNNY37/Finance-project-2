@@ -323,9 +323,11 @@ export default function StockFlashcard({ ticker, entityName, entitySector, onClo
           {error && (
             <div className="text-red-400 text-sm text-center py-10">
               <p className="text-2xl mb-2">⚠️</p>
-              <p>Could not load data for {ticker}</p>
-              <p className="text-xs text-gray-500 mt-1">{error}</p>
-              <p className="text-xs text-gray-500 mt-2">Run the company migration in the admin dashboard first.</p>
+              <p>No data found for <span className="font-bold">{ticker}</span></p>
+              <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+                This stock may not be in the market library yet, or stats haven't been fetched.<br />
+                Go to <span className="text-gray-400">/dashboard → Migration tab</span> and run all steps.
+              </p>
             </div>
           )}
 

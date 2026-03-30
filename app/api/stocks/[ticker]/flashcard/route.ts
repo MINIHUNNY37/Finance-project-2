@@ -212,6 +212,10 @@ async function handleLegacy(ticker: string): Promise<FlashcardResponse | null> {
   if (!stock) return null;
 
   const allStats   = stock.quarterlyStats;
+  // If this stock has literally zero stats rows, return null so the caller
+  // can surface a meaningful "no data" message rather than all-dashes.
+  if (allStats.length === 0) return null;
+
   const snapshot   = allStats.find(r => r.reportType === 'snapshot') ?? null;
   const quarterlies = allStats.filter(r => ['Q1','Q2','Q3','Q4','Annual'].includes(r.reportType));
   const latest     = quarterlies[0] ?? snapshot;
