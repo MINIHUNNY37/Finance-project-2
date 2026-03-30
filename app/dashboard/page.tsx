@@ -169,6 +169,7 @@ export default function DashboardPage() {
       await runStep('/api/admin/migrate-companies?step=2', 'Assign library memberships');
       await runBatchedStep('/api/admin/migrate-companies?step=3', 'Migrate daily prices', 50);
       await runBatchedStep('/api/admin/migrate-companies?step=4', 'Migrate periods + metrics', 50);
+      await runBatchedStep('/api/admin/fetch-company-metrics?step=fetch', 'Fetch Yahoo metrics (8 new metrics)', 20);
       log('All steps complete!');
     } finally {
       setMigrating(false);
@@ -684,6 +685,7 @@ export default function DashboardPage() {
                 { key: 'step2', label: 'Assign library memberships', endpoint: '/api/admin/migrate-companies?step=2', batched: false },
                 { key: 'step3', label: 'StockDailyOHLC → CompanyDailyPrice', endpoint: '/api/admin/migrate-companies?step=3', batched: true },
                 { key: 'step4', label: 'StockQuarterlyStats → Periods + Metrics', endpoint: '/api/admin/migrate-companies?step=4', batched: true },
+                { key: 'step5', label: 'Fetch Yahoo Finance Metrics (8 new metrics)', endpoint: '/api/admin/fetch-company-metrics?step=fetch', batched: true },
               ].map((step) => {
                 const s = migrationStatus[step.key] as Record<string, number | string> | null;
                 return (
