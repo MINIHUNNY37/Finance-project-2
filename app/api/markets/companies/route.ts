@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
-import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 
 function parseOptionalNumber(value: string | null) {
@@ -9,11 +8,6 @@ function parseOptionalNumber(value: string | null) {
 }
 
 export async function GET(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   const { searchParams } = new URL(req.url);
   const search = searchParams.get('search')?.trim() ?? '';
   const library = searchParams.get('library')?.trim().toLowerCase() ?? 'all';

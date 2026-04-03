@@ -11,7 +11,6 @@
  * The response shape preserves a `stats` field for Sidebar compatibility.
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 
 function formatMarketCap(v: number): string {
@@ -31,11 +30,6 @@ function formatFinancialVal(v: number): string {
 }
 
 export async function GET(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   const { searchParams } = new URL(req.url);
   const search = searchParams.get('search')?.trim() ?? '';
   const index  = searchParams.get('index')  ?? 'all';

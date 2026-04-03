@@ -6,6 +6,7 @@ export const ADMIN_EMAILS = ['minjune043010@gmail.com'];
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   secret: process.env.NEXTAUTH_SECRET || 'dev-secret-please-set-NEXTAUTH_SECRET-in-env',
+  trustHost: true,
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
