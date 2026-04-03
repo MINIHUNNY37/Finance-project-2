@@ -318,8 +318,14 @@ export async function POST(req: NextRequest) {
 
         // Upsert the period row
         const period = await prisma.companyPeriod.upsert({
-          where:  { companyId_periodKey: { companyId: company.id, periodKey } },
-          update: { isLatest, reportedAt: s.reportedAt ?? undefined },
+          where:  {
+            companyId_periodKey_restatementVersion: {
+              companyId: company.id,
+              periodKey,
+              restatementVersion: 1,
+            },
+          },
+          update: { isLatest, reportedAt: s.reportedAt ?? undefined, restatementVersion: 1 },
           create: {
             companyId:    company.id,
             periodKey,
@@ -329,6 +335,7 @@ export async function POST(req: NextRequest) {
             periodLabel:  makePeriodLabel(s.reportType, s.periodEnd),
             endDate:      s.periodEnd,
             reportedAt:   s.reportedAt ?? undefined,
+            restatementVersion: 1,
             isLatest,
           },
         });
@@ -340,9 +347,22 @@ export async function POST(req: NextRequest) {
           if (!defId) return;
           if (numericValue == null && !textValue) return; // nothing to store
           await prisma.companyMetricValue.upsert({
-            where:  { periodId_metricDefinitionId: { periodId: period.id, metricDefinitionId: defId } },
-            update: { numericValue: numericValue ?? undefined, textValue, currency },
-            create: { periodId: period.id, metricDefinitionId: defId, numericValue: numericValue ?? undefined, textValue, currency },
+            where:  {
+              periodId_metricDefinitionId_formulaVersion: {
+                periodId: period.id,
+                metricDefinitionId: defId,
+                formulaVersion: 'v1',
+              },
+            },
+            update: { numericValue: numericValue ?? undefined, textValue, currency, formulaVersion: 'v1' },
+            create: {
+              periodId: period.id,
+              metricDefinitionId: defId,
+              numericValue: numericValue ?? undefined,
+              textValue,
+              currency,
+              formulaVersion: 'v1',
+            },
           });
           metricValuesCreated++;
         };
