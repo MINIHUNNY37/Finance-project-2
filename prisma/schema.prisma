@@ -12,7 +12,7 @@ model SavedMap {
   userId    String
   mapId     String
   name      String
-  data      String   // JSON blob of the full ScenarioMap
+  data      String // JSON blob of the full ScenarioMap
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -20,13 +20,13 @@ model SavedMap {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
+  id        String    @id @default(cuid())
+  email     String    @unique
   name      String?
   image     String?
-  role      String   @default("user") // "user" | "admin"
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  role      String    @default("user") // "user" | "admin"
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   lastLogin DateTime?
 }
 
@@ -36,7 +36,7 @@ model StockUniverse {
   id          String   @id @default(cuid())
   ticker      String   @unique
   name        String
-  exchange    String   // "NASDAQ" | "NYSE" | "NYSE ARCA"
+  exchange    String // "NASDAQ" | "NYSE" | "NYSE ARCA"
   sector      String?
   industry    String?
   country     String   @default("US")
@@ -45,10 +45,10 @@ model StockUniverse {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  ohlc          StockDailyOHLC[]
+  ohlc           StockDailyOHLC[]
   quarterlyStats StockQuarterlyStats[]
-  dividends     StockDividend[]
-  splits        StockSplit[]
+  dividends      StockDividend[]
+  splits         StockSplit[]
 }
 
 // ── Daily OHLC (2024-2026, expandable) ──────────────────────────────────────
@@ -77,9 +77,9 @@ model StockDailyOHLC {
 // Quarterly rows are written by seed-history step.
 
 model StockQuarterlyStats {
-  ticker         String
-  periodEnd      DateTime @db.Date   // quarter-end date (or today for snapshots)
-  reportType     String              // "Q1"|"Q2"|"Q3"|"Q4"|"Annual"|"snapshot"
+  ticker     String
+  periodEnd  DateTime @db.Date // quarter-end date (or today for snapshots)
+  reportType String // "Q1"|"Q2"|"Q3"|"Q4"|"Annual"|"snapshot"
 
   // ── Price snapshot ──────────────────────────────────────────────────────
   price          Float?
@@ -89,33 +89,33 @@ model StockQuarterlyStats {
   week52Low      Float?
 
   // ── Valuation ───────────────────────────────────────────────────────────
-  marketCap      Float?              // raw value in USD
-  marketCapFmt   String?             // formatted, e.g. "$2.50T"
-  peRatio        Float?
-  priceToBook    Float?
+  marketCap    Float? // raw value in USD
+  marketCapFmt String? // formatted, e.g. "$2.50T"
+  peRatio      Float?
+  priceToBook  Float?
 
   // ── Income statement ────────────────────────────────────────────────────
   revenue        Float?
   netIncome      Float?
-  eps            Float?              // actual EPS
+  eps            Float? // actual EPS
   epsEstimate    Float?
   epsSurprisePct Float?
 
   // ── Balance sheet ───────────────────────────────────────────────────────
-  bookValue      Float?
-  debtToEquity   Float?
-  currentRatio   Float?
+  bookValue    Float?
+  debtToEquity Float?
+  currentRatio Float?
 
   // ── Cash flow ───────────────────────────────────────────────────────────
-  freeCashFlow       Float?
-  operatingCashFlow  Float?
+  freeCashFlow      Float?
+  operatingCashFlow Float?
 
   // ── Returns / yield ─────────────────────────────────────────────────────
   operatingMargin Float?
-  dividendYield   Float?             // decimal, e.g. 0.0052 for 0.52%
+  dividendYield   Float? // decimal, e.g. 0.0052 for 0.52%
 
-  reportedAt  DateTime?              // when earnings were officially published
-  fetchedAt   DateTime @default(now())
+  reportedAt DateTime? // when earnings were officially published
+  fetchedAt  DateTime  @default(now())
 
   stock StockUniverse @relation(fields: [ticker], references: [ticker], onDelete: Cascade)
 
@@ -129,8 +129,8 @@ model StockDividend {
   ticker    String
   exDate    DateTime  @db.Date
   payDate   DateTime? @db.Date
-  amount    Float                 // dividend per share in USD
-  frequency String?              // "quarterly" | "monthly" | "annual" | "special"
+  amount    Float // dividend per share in USD
+  frequency String? // "quarterly" | "monthly" | "annual" | "special"
 
   stock StockUniverse @relation(fields: [ticker], references: [ticker], onDelete: Cascade)
 
@@ -143,7 +143,7 @@ model StockDividend {
 model StockSplit {
   ticker String
   date   DateTime @db.Date
-  ratio  Float                   // e.g. 4.0 for a 4-for-1 split
+  ratio  Float // e.g. 4.0 for a 4-for-1 split
 
   stock StockUniverse @relation(fields: [ticker], references: [ticker], onDelete: Cascade)
 
@@ -156,7 +156,7 @@ model StockSplit {
 
 model StockFetchProgress {
   ticker        String
-  dataType      String    // "ohlc" | "quarterly"
+  dataType      String // "ohlc" | "quarterly"
   status        String    @default("pending") // "pending" | "done" | "failed"
   lastFetchedAt DateTime?
   errorMessage  String?
@@ -170,28 +170,28 @@ model StockFetchProgress {
 // Actual fin_* tables are created separately via the /sync endpoint.
 
 model DbTableSchema {
-  id          String          @id @default(cuid())
-  tableName   String          @unique  // SQL name, e.g. "fin_stock_info"
-  displayName String                   // UI label, e.g. "Stock Info"
+  id          String           @id @default(cuid())
+  tableName   String           @unique // SQL name, e.g. "fin_stock_info"
+  displayName String // UI label, e.g. "Stock Info"
   description String?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
   columns     DbColumnSchema[]
 }
 
 model DbColumnSchema {
-  id           String        @id @default(cuid())
+  id           String   @id @default(cuid())
   tableId      String
-  columnName   String                  // SQL column name, e.g. "ticker"
-  displayName  String                  // UI label, e.g. "Ticker"
-  dataType     String        @default("TEXT") // TEXT | NUMERIC | INTEGER | BOOLEAN | TIMESTAMPTZ
-  isPrimaryKey Boolean       @default(false)
-  isForeignKey Boolean       @default(false)
-  foreignTable String?                 // SQL table name of referenced table
-  isNullable   Boolean       @default(true)
-  position     Int           @default(0)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  columnName   String // SQL column name, e.g. "ticker"
+  displayName  String // UI label, e.g. "Ticker"
+  dataType     String   @default("TEXT") // TEXT | NUMERIC | INTEGER | BOOLEAN | TIMESTAMPTZ
+  isPrimaryKey Boolean  @default(false)
+  isForeignKey Boolean  @default(false)
+  foreignTable String? // SQL table name of referenced table
+  isNullable   Boolean  @default(true)
+  position     Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   table DbTableSchema @relation(fields: [tableId], references: [id], onDelete: Cascade)
 
@@ -203,8 +203,8 @@ model TemplateMap {
   id          String   @id @default(cuid())
   name        String
   description String
-  category    String   // "markets" | "geopolitics" etc.
-  data        String   // JSON blob: ScenarioMap
+  category    String // "markets" | "geopolitics" etc.
+  data        String // JSON blob: ScenarioMap
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -215,26 +215,29 @@ model TemplateMap {
 // A company can belong to multiple libraries.
 
 model Company {
-  id          String   @id @default(cuid())
-  ticker      String   @unique
-  name        String
-  exchange    String?
-  sector      String?
-  industry    String?
-  country     String   @default("US")
-  currency    String   @default("USD")
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  ticker    String   @unique
+  name      String
+  exchange  String?
+  sector    String?
+  industry  String?
+  country   String   @default("US")
+  currency  String   @default("USD")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  memberships CompanyLibraryMembership[]
-  periods     CompanyPeriod[]
-  dailyPrices CompanyDailyPrice[]
+  memberships        CompanyLibraryMembership[]
+  periods            CompanyPeriod[]
+  dailyPrices        CompanyDailyPrice[]
+  corporateActions   CompanyCorporateAction[]
+  ingestionRuns      CompanyIngestionRun[]
+  screeningSnapshots CompanyScreeningSnapshot[]
 }
 
 model CompanyLibrary {
   id          String   @id @default(cuid())
-  slug        String   @unique  // e.g. "nasdaq100", "us-big-tech"
+  slug        String   @unique // e.g. "nasdaq100", "us-big-tech"
   title       String
   description String   @default("")
   isActive    Boolean  @default(true)
@@ -268,24 +271,35 @@ model CompanyLibraryMembership {
 //   snapshot:   "SNAP-{YYYY-MM-DD}"    e.g. "SNAP-2025-03-29"
 
 model CompanyPeriod {
-  id            String    @id @default(cuid())
-  companyId     String
-  periodKey     String                    // computed discriminator (see above)
-  periodType    String                    // 'quarterly'|'annual'|'ttm'|'snapshot'
-  fiscalYear    Int?
-  fiscalQuarter Int?                      // 1–4; null for non-quarterly types
-  periodLabel   String                    // display string e.g. "2025 Q4", "FY2024"
-  startDate     DateTime? @db.Date
-  endDate       DateTime? @db.Date
-  reportedAt    DateTime?
-  isLatest      Boolean   @default(false) // exactly one true per (companyId, periodType)
-  createdAt     DateTime  @default(now())
+  id                 String    @id @default(cuid())
+  companyId          String
+  periodKey          String // computed discriminator (see above)
+  periodType         String // 'quarterly'|'annual'|'ttm'|'snapshot'
+  fiscalYear         Int?
+  fiscalQuarter      Int? // 1–4; null for non-quarterly types
+  periodLabel        String // display string e.g. "2025 Q4", "FY2024"
+  startDate          DateTime? @db.Date
+  endDate            DateTime? @db.Date
+  periodEndDate      DateTime? @db.Date
+  reportedAt         DateTime?
+  filingDate         DateTime?
+  asOfDate           DateTime? @db.Date
+  sourceProvider     String    @default("yahoo")
+  restatementVersion Int       @default(1)
+  isLatest           Boolean   @default(false) // exactly one true per (companyId, periodType)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  ingestionRunId     String?
 
-  company Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  metrics CompanyMetricValue[]
+  company            Company                    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  metrics            CompanyMetricValue[]
+  facts              CompanyFactValue[]
+  screeningSnapshots CompanyScreeningSnapshot[]
+  ingestionRun       CompanyIngestionRun?       @relation(fields: [ingestionRunId], references: [id], onDelete: SetNull)
 
-  @@unique([companyId, periodKey])
+  @@unique([companyId, periodKey, restatementVersion])
   @@index([companyId, periodType, isLatest])
+  @@index([companyId, periodType, periodEndDate(sort: Desc)])
 }
 
 // ── Metric catalogue ────────────────────────────────────────────────────────
@@ -293,16 +307,30 @@ model CompanyPeriod {
 
 model CompanyMetricDefinition {
   id                     String @id @default(cuid())
-  code                   String @unique   // e.g. "valuation_pe", "quality_roe"
-  label                  String           // e.g. "PER", "ROE"
-  category               String           // "valuation"|"quality"|"risk"
-  unitType               String           // "ratio"|"percent"|"currency"|"number"
-  formula                String @default("")  // human-readable formula documentation
+  code                   String @unique // e.g. "valuation_pe", "quality_roe"
+  label                  String // e.g. "PER", "ROE"
+  category               String // "valuation"|"quality"|"risk"
+  unitType               String // "ratio"|"percent"|"currency"|"number"
+  formula                String @default("") // human-readable formula documentation
   description            String @default("")
   availableInPeriodTypes String @default("[]") // JSON array e.g. '["snapshot","ttm"]'
   sortOrder              Int    @default(0)
 
   values CompanyMetricValue[]
+}
+
+model CompanyFactDefinition {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  label       String
+  category    String
+  unitType    String
+  description String   @default("")
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  values CompanyFactValue[]
 }
 
 // ── Metric values ───────────────────────────────────────────────────────────
@@ -317,29 +345,138 @@ model CompanyMetricValue {
   metricDefinitionId String
   numericValue       Float?
   textValue          String?
-  currency           String?  // only populated for unitType = 'currency'
+  currency           String? // only populated for unitType = 'currency'
   source             String   @default("system")
   createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  formulaVersion     String   @default("v1")
 
   period     CompanyPeriod           @relation(fields: [periodId], references: [id], onDelete: Cascade)
   definition CompanyMetricDefinition @relation(fields: [metricDefinitionId], references: [id])
 
-  @@unique([periodId, metricDefinitionId])
+  @@unique([periodId, metricDefinitionId, formulaVersion])
   @@index([periodId])
+}
+
+model CompanyFactValue {
+  id               String   @id @default(cuid())
+  periodId         String
+  factDefinitionId String
+  numericValue     Float?
+  textValue        String?
+  currency         String?
+  sourceProvider   String   @default("yahoo")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  ingestionRunId   String?
+
+  period       CompanyPeriod         @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  definition   CompanyFactDefinition @relation(fields: [factDefinitionId], references: [id])
+  ingestionRun CompanyIngestionRun?  @relation(fields: [ingestionRunId], references: [id], onDelete: SetNull)
+
+  @@unique([periodId, factDefinitionId])
+  @@index([periodId])
+  @@index([factDefinitionId])
+}
+
+model CompanyCorporateAction {
+  id             String   @id @default(cuid())
+  companyId      String
+  actionDate     DateTime @db.Date
+  actionType     String
+  amount         Float?
+  ratio          Float?
+  sharesDelta    Float?
+  sourceProvider String   @default("yahoo")
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, actionDate, actionType])
+  @@index([companyId, actionDate(sort: Desc)])
+}
+
+model CompanyIngestionRun {
+  id           String    @id @default(cuid())
+  companyId    String?
+  provider     String
+  universeKey  String?
+  jobType      String
+  status       String    @default("pending")
+  payloadHash  String?
+  errorMessage String?
+  startedAt    DateTime  @default(now())
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  company            Company?                   @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  periods            CompanyPeriod[]
+  facts              CompanyFactValue[]
+  screeningSnapshots CompanyScreeningSnapshot[]
+
+  @@index([provider, jobType, status])
+  @@index([companyId, startedAt(sort: Desc)])
+  @@index([universeKey, startedAt(sort: Desc)])
+}
+
+model CompanyScreeningSnapshot {
+  id                     String    @id @default(cuid())
+  companyId              String
+  sourcePeriodId         String?
+  ingestionRunId         String?
+  asOfDate               DateTime  @db.Date
+  priceDate              DateTime? @db.Date
+  snapshotType           String
+  formulaVersion         String    @default("v1")
+  sourceProvider         String    @default("system")
+  per                    Float?
+  pbr                    Float?
+  evEbit                 Float?
+  fcfYield               Float?
+  valuationPercentile    Float?
+  revenueGrowth          Float?
+  operatingMargin        Float?
+  roe                    Float?
+  roic                   Float?
+  cfoNetIncomeRatio      Float?
+  fcf                    Float?
+  netDebtEbitda          Float?
+  interestCoverage       Float?
+  cashShortTermDebtRatio Float?
+  shareholderYield       Float?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  company      Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  sourcePeriod CompanyPeriod?       @relation(fields: [sourcePeriodId], references: [id], onDelete: SetNull)
+  ingestionRun CompanyIngestionRun? @relation(fields: [ingestionRunId], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, asOfDate, snapshotType, formulaVersion])
+  @@index([snapshotType, asOfDate(sort: Desc)])
+  @@index([companyId, snapshotType, asOfDate(sort: Desc)])
+  @@index([per])
+  @@index([roic])
+  @@index([netDebtEbitda])
 }
 
 // ── Daily price candles ──────────────────────────────────────────────────────
 // Replaces StockDailyOHLC once migration is complete (Phase 3).
 
 model CompanyDailyPrice {
-  companyId     String
-  date          DateTime @db.Date
-  open          Float?
-  high          Float?
-  low           Float?
-  close         Float?
-  adjustedClose Float?
-  volume        BigInt?
+  companyId      String
+  date           DateTime @db.Date
+  open           Float?
+  high           Float?
+  low            Float?
+  close          Float?
+  adjustedClose  Float?
+  volume         BigInt?
+  sourceProvider String   @default("yahoo")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
