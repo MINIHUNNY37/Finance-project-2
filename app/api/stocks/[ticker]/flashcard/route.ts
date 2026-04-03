@@ -66,6 +66,64 @@ type FactValueLike = {
   textValue?: string | null;
 };
 
+type LegacyMetricRow = {
+  reportType: string;
+  periodEnd: Date;
+  price: number | null;
+  priceChange: number | null;
+  priceChangePct: number | null;
+  week52High: number | null;
+  week52Low: number | null;
+  marketCap: number | null;
+  peRatio: number | null;
+  priceToBook: number | null;
+  revenue: number | null;
+  netIncome: number | null;
+  eps: number | null;
+  bookValue: number | null;
+  debtToEquity: number | null;
+  currentRatio: number | null;
+  freeCashFlow: number | null;
+  operatingCashFlow: number | null;
+  operatingMargin: number | null;
+  dividendYield: number | null;
+  sharesOutstanding?: number | null;
+  totalEquity?: number | null;
+  totalDebt?: number | null;
+  shortTermDebt?: number | null;
+  cashAndEquivalents?: number | null;
+  interestExpense?: number | null;
+  ebitda?: number | null;
+  previousRevenue?: number | null;
+};
+
+type LiveQuote = Omit<LegacyMetricRow, 'reportType' | 'periodEnd'>;
+
+type FundamentalSeriesRecord = {
+  asOfDate?: string;
+  reportedValue?: {
+    raw?: number;
+  };
+};
+
+const FUNDAMENTAL_TYPES = [
+  'annualTotalRevenue',
+  'annualNetIncome',
+  'annualOperatingIncome',
+  'annualEBITDA',
+  'annualBasicEPS',
+  'annualOperatingCashFlow',
+  'annualCapitalExpenditure',
+  'annualFreeCashFlow',
+  'annualStockholdersEquity',
+  'annualLongTermDebtAndCapitalLeaseObligation',
+  'annualCurrentDebtAndCapitalLeaseObligation',
+  'annualCashCashEquivalentsAndShortTermInvestments',
+  'annualInterestExpense',
+  'annualDilutedAverageShares',
+  'annualBasicAverageShares',
+] as const;
+
 const METRIC_GROUPS: Record<MetricGroupKey, string[]> = {
   valuation: [
     'valuation_pe',
@@ -246,6 +304,228 @@ function formatMetricDisplay(code: string, unitType: string, numericValue: numbe
   }
 
   return formatNumber(numericValue);
+}
+
+function createEmptyLiveQuote(): LiveQuote {
+  return {
+    price: null,
+    priceChange: null,
+    priceChangePct: null,
+    week52High: null,
+    week52Low: null,
+    marketCap: null,
+    peRatio: null,
+    priceToBook: null,
+    revenue: null,
+    netIncome: null,
+    eps: null,
+    bookValue: null,
+    debtToEquity: null,
+    currentRatio: null,
+    freeCashFlow: null,
+    operatingCashFlow: null,
+    operatingMargin: null,
+    dividendYield: null,
+    sharesOutstanding: null,
+    totalEquity: null,
+    totalDebt: null,
+    shortTermDebt: null,
+    cashAndEquivalents: null,
+    interestExpense: null,
+    ebitda: null,
+    previousRevenue: null,
+  };
+}
+
+function isLegacySnapshotSparse(row: LegacyMetricRow | null) {
+  if (!row) return true;
+
+  const signals = [
+    row.marketCap,
+    row.peRatio,
+    row.priceToBook,
+    row.revenue,
+    row.netIncome,
+    row.freeCashFlow,
+    row.operatingCashFlow,
+    row.debtToEquity,
+    row.currentRatio,
+    row.bookValue,
+    row.operatingMargin,
+  ].filter((value) => value != null && Number.isFinite(value));
+
+  return signals.length < 4;
+}
+
+async function fetchLiveQuote(ticker: string): Promise<LiveQuote | null> {
+  const safe = encodeURIComponent(ticker);
+  const periodFrom = Math.floor(Date.UTC(2017, 0, 1) / 1000);
+  const periodTo = Math.floor(Date.now() / 1000);
+  const chartUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${safe}?interval=1d&range=1mo`;
+  const fundamentalsUrl =
+    `https://query2.finance.yahoo.com/ws/fundamentals-timeseries/v1/finance/timeseries/${safe}`
+    + `?type=${FUNDAMENTAL_TYPES.join(',')}&merge=false&padTimeSeries=false&period1=${periodFrom}&period2=${periodTo}`;
+
+  const [chartRes, fundamentalsRes] = await Promise.all([
+    fetch(chartUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' },
+      signal: AbortSignal.timeout(10_000),
+    }),
+    fetch(fundamentalsUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' },
+      signal: AbortSignal.timeout(10_000),
+    }),
+  ]);
+
+  if (!chartRes.ok) return null;
+
+  const chartData = await chartRes.json();
+  const meta = chartData?.chart?.result?.[0]?.meta;
+  if (!meta) return null;
+
+  const regularPrice = validNumber(meta.regularMarketPrice);
+  const previousClose = validNumber(meta.previousClose ?? meta.chartPreviousClose);
+
+  const fundamentalsData = fundamentalsRes.ok ? await fundamentalsRes.json() : null;
+  const seriesMap = new Map<string, FundamentalSeriesRecord[]>();
+  for (const entry of fundamentalsData?.timeseries?.result ?? []) {
+    const type = entry?.meta?.type?.[0];
+    if (!type) continue;
+    const series = Array.isArray(entry[type]) ? entry[type] : [];
+    seriesMap.set(type, series);
+  }
+
+  const latestValue = (type: string) => {
+    const series = seriesMap.get(type) ?? [];
+    const latest = [...series]
+      .sort((a, b) => (a.asOfDate ?? '').localeCompare(b.asOfDate ?? ''))
+      .at(-1);
+    return validNumber(latest?.reportedValue?.raw);
+  };
+
+  const previousValue = (type: string) => {
+    const series = [...(seriesMap.get(type) ?? [])]
+      .sort((a, b) => (a.asOfDate ?? '').localeCompare(b.asOfDate ?? ''));
+    const previous = series.length >= 2 ? series[series.length - 2] : null;
+    return validNumber(previous?.reportedValue?.raw);
+  };
+
+  const revenue = latestValue('annualTotalRevenue');
+  const previousRevenue = previousValue('annualTotalRevenue');
+  const netIncome = latestValue('annualNetIncome');
+  const operatingIncome = latestValue('annualOperatingIncome');
+  const ebitda = latestValue('annualEBITDA');
+  const eps = latestValue('annualBasicEPS');
+  const operatingCashFlow = latestValue('annualOperatingCashFlow');
+  const freeCashFlow = latestValue('annualFreeCashFlow');
+  const totalEquity = latestValue('annualStockholdersEquity');
+  const longTermDebt = latestValue('annualLongTermDebtAndCapitalLeaseObligation');
+  const shortTermDebt = latestValue('annualCurrentDebtAndCapitalLeaseObligation');
+  const cashAndEquivalents = latestValue('annualCashCashEquivalentsAndShortTermInvestments');
+  const interestExpense = latestValue('annualInterestExpense');
+  const sharesOutstanding = latestValue('annualDilutedAverageShares') ?? latestValue('annualBasicAverageShares');
+  const totalDebt =
+    longTermDebt != null || shortTermDebt != null
+      ? (longTermDebt ?? 0) + (shortTermDebt ?? 0)
+      : null;
+  const marketCap =
+    regularPrice != null && sharesOutstanding != null
+      ? regularPrice * sharesOutstanding
+      : null;
+  const bookValue =
+    totalEquity != null && sharesOutstanding != null && sharesOutstanding > 0
+      ? totalEquity / sharesOutstanding
+      : null;
+  const debtToEquity =
+    totalDebt != null && totalEquity != null && totalEquity > 0
+      ? totalDebt / totalEquity
+      : null;
+  const operatingMargin =
+    operatingIncome != null && revenue != null && revenue > 0
+      ? operatingIncome / revenue
+      : null;
+  const peRatio =
+    regularPrice != null && eps != null && eps > 0
+      ? regularPrice / eps
+      : null;
+  const priceToBook =
+    marketCap != null && totalEquity != null && totalEquity > 0
+      ? marketCap / totalEquity
+      : null;
+  const priceChange =
+    regularPrice != null && previousClose != null
+      ? regularPrice - previousClose
+      : null;
+  const priceChangePct =
+    priceChange != null && previousClose != null && previousClose !== 0
+      ? (priceChange / previousClose) * 100
+      : null;
+
+  return {
+    price: regularPrice,
+    priceChange,
+    priceChangePct,
+    week52High: validNumber(meta.fiftyTwoWeekHigh),
+    week52Low: validNumber(meta.fiftyTwoWeekLow),
+    marketCap,
+    peRatio,
+    priceToBook,
+    revenue,
+    netIncome,
+    eps,
+    bookValue,
+    debtToEquity,
+    currentRatio: null,
+    freeCashFlow,
+    operatingCashFlow,
+    operatingMargin,
+    dividendYield: null,
+    sharesOutstanding,
+    totalEquity,
+    totalDebt,
+    shortTermDebt,
+    cashAndEquivalents,
+    interestExpense,
+    ebitda,
+    previousRevenue,
+  };
+}
+
+function mergeLegacySnapshot(row: LegacyMetricRow | null, liveQuote: LiveQuote | null, fallbackPeriodEnd: Date) {
+  if (!row && !liveQuote) return null;
+
+  const fallback = liveQuote ?? createEmptyLiveQuote();
+
+  return {
+    reportType: row?.reportType ?? 'snapshot',
+    periodEnd: row?.periodEnd ?? fallbackPeriodEnd,
+    price: row?.price ?? fallback.price,
+    priceChange: row?.priceChange ?? fallback.priceChange,
+    priceChangePct: row?.priceChangePct ?? fallback.priceChangePct,
+    week52High: row?.week52High ?? fallback.week52High,
+    week52Low: row?.week52Low ?? fallback.week52Low,
+    marketCap: row?.marketCap ?? fallback.marketCap,
+    peRatio: row?.peRatio ?? fallback.peRatio,
+    priceToBook: row?.priceToBook ?? fallback.priceToBook,
+    revenue: row?.revenue ?? fallback.revenue,
+    netIncome: row?.netIncome ?? fallback.netIncome,
+    eps: row?.eps ?? fallback.eps,
+    bookValue: row?.bookValue ?? fallback.bookValue,
+    debtToEquity: row?.debtToEquity ?? fallback.debtToEquity,
+    currentRatio: row?.currentRatio ?? fallback.currentRatio,
+    freeCashFlow: row?.freeCashFlow ?? fallback.freeCashFlow,
+    operatingCashFlow: row?.operatingCashFlow ?? fallback.operatingCashFlow,
+    operatingMargin: row?.operatingMargin ?? fallback.operatingMargin,
+    dividendYield: row?.dividendYield ?? fallback.dividendYield,
+    sharesOutstanding: row?.sharesOutstanding ?? fallback.sharesOutstanding,
+    totalEquity: row?.totalEquity ?? fallback.totalEquity,
+    totalDebt: row?.totalDebt ?? fallback.totalDebt,
+    shortTermDebt: row?.shortTermDebt ?? fallback.shortTermDebt,
+    cashAndEquivalents: row?.cashAndEquivalents ?? fallback.cashAndEquivalents,
+    interestExpense: row?.interestExpense ?? fallback.interestExpense,
+    ebitda: row?.ebitda ?? fallback.ebitda,
+    previousRevenue: row?.previousRevenue ?? fallback.previousRevenue,
+  } satisfies LegacyMetricRow;
 }
 
 function metricEvaluation(code: string, value: number | null): SummaryCardTone {
@@ -452,6 +732,14 @@ function buildLegacyMetricValues(
     freeCashFlow: number | null;
     operatingMargin: number | null;
     dividendYield: number | null;
+    sharesOutstanding?: number | null;
+    totalEquity?: number | null;
+    totalDebt?: number | null;
+    shortTermDebt?: number | null;
+    cashAndEquivalents?: number | null;
+    interestExpense?: number | null;
+    ebitda?: number | null;
+    previousRevenue?: number | null;
   },
   latestSnapshot: {
     price: number | null;
@@ -466,10 +754,12 @@ function buildLegacyMetricValues(
 ) {
   const sharePrice = validNumber(latestSnapshot?.price ?? selectedRow.price);
   const marketCap = validNumber(latestSnapshot?.marketCap ?? selectedRow.marketCap);
-  const sharesOutstanding = positiveRatio(marketCap, sharePrice);
+  const sharesOutstanding = validNumber(selectedRow.sharesOutstanding) ?? positiveRatio(marketCap, sharePrice);
   const bookValuePerShare = validNumber(selectedRow.bookValue);
-  const totalEquity = bookValuePerShare != null && sharesOutstanding != null ? bookValuePerShare * sharesOutstanding : null;
-  const totalDebt = selectedRow.debtToEquity != null && totalEquity != null ? selectedRow.debtToEquity * totalEquity : null;
+  const totalEquity = validNumber(selectedRow.totalEquity)
+    ?? (bookValuePerShare != null && sharesOutstanding != null ? bookValuePerShare * sharesOutstanding : null);
+  const totalDebt = validNumber(selectedRow.totalDebt)
+    ?? (selectedRow.debtToEquity != null && totalEquity != null ? selectedRow.debtToEquity * totalEquity : null);
   const operatingMarginRatio = normalizeRatioValue(selectedRow.operatingMargin);
   const operatingIncome = selectedRow.revenue != null && operatingMarginRatio != null ? selectedRow.revenue * operatingMarginRatio : null;
   const investedCapital = totalEquity != null || totalDebt != null ? (totalEquity ?? 0) + (totalDebt ?? 0) : null;
@@ -478,9 +768,10 @@ function buildLegacyMetricValues(
     currentPe != null && peHistory.length >= 2
       ? (peHistory.filter((value) => value <= currentPe).length / peHistory.length) * 100
       : null;
+  const priorRevenue = validNumber(selectedRow.previousRevenue) ?? comparableRow?.revenue ?? null;
   const revenueGrowth =
-    selectedRow.revenue != null && comparableRow?.revenue != null && comparableRow.revenue !== 0
-      ? ((selectedRow.revenue - comparableRow.revenue) / Math.abs(comparableRow.revenue)) * 100
+    selectedRow.revenue != null && priorRevenue != null && priorRevenue !== 0
+      ? ((selectedRow.revenue - priorRevenue) / Math.abs(priorRevenue)) * 100
       : null;
   const roe =
     selectedRow.netIncome != null && totalEquity != null && totalEquity > 0
@@ -496,6 +787,20 @@ function buildLegacyMetricValues(
       : null;
   const fcfYield = positivePercent(validNumber(selectedRow.freeCashFlow), marketCap);
   const dividendYield = normalizeStoredPercent(latestSnapshot?.dividendYield ?? selectedRow.dividendYield ?? null);
+  const cashAndEquivalents = validNumber(selectedRow.cashAndEquivalents);
+  const shortTermDebt = validNumber(selectedRow.shortTermDebt);
+  const ebitda = validNumber(selectedRow.ebitda);
+  const interestExpense = validNumber(selectedRow.interestExpense);
+  const netDebtEbitda =
+    totalDebt != null && ebitda != null && ebitda > 0
+      ? ((totalDebt - (cashAndEquivalents ?? 0)) / ebitda)
+      : null;
+  const interestCoverageText = interestExpense === 0 && operatingIncome != null && operatingIncome > 0 ? 'N/D' : null;
+  const interestCoverage =
+    interestExpense != null && interestExpense > 0 && operatingIncome != null
+      ? operatingIncome / interestExpense
+      : null;
+  const cashShortDebt = positiveRatio(cashAndEquivalents, shortTermDebt);
 
   const metricValues = new Map<string, MetricValueLike>([
     ['valuation_pe', { numericValue: currentPe }],
@@ -516,9 +821,9 @@ function buildLegacyMetricValues(
     ['quality_roic', { numericValue: roic }],
     ['quality_cfo_net_income', { numericValue: cfoNetIncome }],
     ['risk_fcf', { numericValue: validNumber(selectedRow.freeCashFlow) }],
-    ['risk_net_debt_ebitda', { numericValue: null }],
-    ['risk_interest_coverage', { numericValue: null }],
-    ['risk_cash_short_debt', { numericValue: null }],
+    ['risk_net_debt_ebitda', { numericValue: netDebtEbitda }],
+    ['risk_interest_coverage', { numericValue: interestCoverage, textValue: interestCoverageText }],
+    ['risk_cash_short_debt', { numericValue: cashShortDebt }],
     ['risk_shareholder_yield', { numericValue: dividendYield }],
   ]);
 
@@ -756,9 +1061,13 @@ async function handleLegacy(ticker: string, requestedPeriodId: string | null): P
       },
     },
   });
-  if (!stock || stock.quarterlyStats.length === 0) return null;
+  if (!stock) return null;
 
-  const snapshot = stock.quarterlyStats.find((row) => row.reportType === 'snapshot') ?? null;
+  const storedSnapshot = stock.quarterlyStats.find((row) => row.reportType === 'snapshot') ?? null;
+  const liveQuote = isLegacySnapshotSparse(storedSnapshot)
+    ? await fetchLiveQuote(ticker)
+    : null;
+  const snapshot = mergeLegacySnapshot(storedSnapshot, liveQuote, new Date());
   const historicalRows = stock.quarterlyStats.filter((row) => row.reportType !== 'snapshot');
 
   const availableRows = [
@@ -772,6 +1081,15 @@ async function handleLegacy(ticker: string, requestedPeriodId: string | null): P
     ?? snapshot
     ?? availableRows[0];
 
+  const selectedHistoricalIndex =
+    selectedRow.reportType === 'snapshot'
+      ? -1
+      : historicalRows.findIndex(
+          (row) =>
+            row.reportType === selectedRow.reportType &&
+            row.periodEnd.getTime() === selectedRow.periodEnd.getTime(),
+        );
+
   const selectedPeriodInfo: PeriodInfo = {
     id: buildLegacyPeriodId(selectedRow.reportType, selectedRow.periodEnd),
     label: legacyPeriodLabel(selectedRow.reportType, selectedRow.periodEnd),
@@ -783,7 +1101,7 @@ async function handleLegacy(ticker: string, requestedPeriodId: string | null): P
     selectedRow.reportType === 'snapshot'
       ? historicalRows[Math.min(3, historicalRows.length - 1)] ?? null
       : historicalRows.find((row) => row.reportType === selectedRow.reportType && row.periodEnd.getUTCFullYear() === selectedRow.periodEnd.getUTCFullYear() - 1)
-        ?? historicalRows[historicalRows.indexOf(selectedRow) + 4]
+        ?? historicalRows[selectedHistoricalIndex >= 0 ? selectedHistoricalIndex + 4 : -1]
         ?? null;
 
   const peHistory = historicalRows
