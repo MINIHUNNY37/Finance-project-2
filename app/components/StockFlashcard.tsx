@@ -117,7 +117,7 @@ function Tabs({ activeTab, onChange }: { activeTab: FlashcardTab; onChange: (tab
             key={id}
             type="button"
             onClick={() => onChange(id)}
-            className="flex items-center justify-center gap-2 rounded-full border px-3 py-3 text-sm font-semibold transition"
+            className="flex min-h-[44px] items-center justify-center gap-2 rounded-full border px-3 py-2.5 text-xs font-semibold transition sm:text-sm"
             style={{ background: active ? '#001a38' : '#ffffff', borderColor: active ? '#001a38' : 'rgba(196,198,209,0.7)', color: active ? '#ffffff' : '#515f74' }}
           >
             <Icon size={16} />
@@ -133,15 +133,15 @@ function ScoreCard({ card }: { card: SummaryCard }) {
   const score = scoreForCard(card);
   const styles = toneStyles(card.tone);
   return (
-    <div className="flex flex-col items-center rounded-lg border border-[#c4c6d1]/25 bg-white p-6 shadow-[0_16px_64px_-12px_rgba(19,27,46,0.10)]">
-      <div className="relative mb-4 h-20 w-20">
+    <div className="flex flex-col items-center rounded-lg border border-[#c4c6d1]/25 bg-white px-4 py-5 shadow-[0_16px_64px_-12px_rgba(19,27,46,0.10)]">
+      <div className="relative mb-3 h-18 w-18 sm:h-20 sm:w-20">
         <svg className="h-full w-full -rotate-90" viewBox="0 0 36 36">
           <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#d2d9f4" strokeWidth="3" />
           <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={styles.stroke} strokeWidth="3" strokeLinecap="round" strokeDasharray={`${Math.max(0, Math.min(100, score * 10))}, 100`} />
         </svg>
-        <div className="absolute inset-0 flex items-center justify-center text-xl font-bold text-[#001a38]" style={DISPLAY_FONT}>{score.toFixed(1)}</div>
+        <div className="absolute inset-0 flex items-center justify-center text-lg font-bold text-[#001a38] sm:text-xl" style={DISPLAY_FONT}>{score.toFixed(1)}</div>
       </div>
-      <span className="text-[10px] font-black uppercase tracking-[0.22em] text-[#43474f]">{card.title}</span>
+      <span className="text-center text-[10px] font-black uppercase tracking-[0.2em] text-[#43474f]">{card.title}</span>
     </div>
   );
 }
@@ -150,15 +150,15 @@ function MetricCard({ metric }: { metric: MetricItem }) {
   const tone = metricTone(metric.code, metric.numericValue);
   const styles = toneStyles(tone);
   return (
-    <div className="rounded-lg border border-[#c4c6d1]/18 bg-white p-4 shadow-[0_16px_64px_-12px_rgba(19,27,46,0.08)]">
-      <div className="flex items-start justify-between gap-4">
+    <div className="rounded-lg border border-[#c4c6d1]/18 bg-white px-4 py-4 shadow-[0_16px_64px_-12px_rgba(19,27,46,0.08)] sm:px-5">
+      <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#43474f]">{metric.label}</p>
-          <p className="mt-2 text-2xl font-extrabold tracking-tight text-[#001a38]" style={DISPLAY_FONT}>{metric.displayValue}</p>
+          <p className="mt-1.5 text-xl font-extrabold tracking-tight text-[#001a38] sm:text-2xl" style={DISPLAY_FONT}>{metric.displayValue}</p>
         </div>
         <span className="rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: styles.badgeText, background: styles.badgeBg, borderColor: styles.border }}>{tone}</span>
       </div>
-      <p className="mt-3 text-sm leading-6 text-[#515f74]">{metric.description || 'No additional context available for this measure yet.'}</p>
+      <p className="mt-2.5 text-sm leading-6 text-[#515f74]">{metric.description || 'No additional context available for this measure yet.'}</p>
     </div>
   );
 }
@@ -220,14 +220,14 @@ export default function StockFlashcard({ ticker, entityName, entitySector, onClo
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(15,24,35,0.62)] p-4" style={{ backdropFilter: 'blur(8px)' }} onClick={onClose}>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(0,45,98,0.18),transparent_36%)]" />
-      <article className="relative z-10 flex max-h-[92vh] min-h-[600px] w-full max-w-6xl flex-col overflow-hidden rounded-xl bg-[#f2f3ff] shadow-[0_32px_90px_-26px_rgba(19,27,46,0.55)] xl:flex-row" onClick={(event) => event.stopPropagation()}>
+      <article className="relative z-10 flex max-h-[92vh] min-h-[600px] w-full max-w-[1180px] flex-col overflow-hidden rounded-xl bg-[#f2f3ff] shadow-[0_32px_90px_-26px_rgba(19,27,46,0.55)] xl:flex-row" onClick={(event) => event.stopPropagation()}>
         <button type="button" onClick={onClose} className="absolute right-5 top-5 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-white/35 bg-[#001a38]/12 text-[#001a38] backdrop-blur-md transition hover:bg-[#001a38]/18">
           <X size={18} />
         </button>
 
-        <aside className="flex w-full shrink-0 flex-col justify-between gap-8 border-b border-[#c4c6d1]/45 bg-[linear-gradient(180deg,#e2e7ff_0%,#dae2fd_100%)] p-6 text-[#131b2e] xl:w-[340px] xl:border-b-0 xl:border-r xl:p-8">
+        <aside className="flex w-full shrink-0 flex-col justify-between gap-6 border-b border-[#c4c6d1]/45 bg-[linear-gradient(180deg,#e2e7ff_0%,#dae2fd_100%)] p-5 text-[#131b2e] sm:p-6 xl:w-[320px] xl:border-b-0 xl:border-r xl:p-7">
           <div>
-            <div className="mb-8 flex items-center gap-4">
+            <div className="mb-6 flex items-center gap-3.5">
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[#002d62] text-white shadow-[0_12px_32px_-16px_rgba(0,45,98,0.7)]">
                 <Cpu size={26} />
               </div>
@@ -237,7 +237,7 @@ export default function StockFlashcard({ ticker, entityName, entitySector, onClo
               </div>
             </div>
 
-            <div className="mb-8">
+            <div className="mb-6">
               <p className="mb-1 text-xs text-[#43474f]">Current Price</p>
               <div className="flex items-baseline gap-3">
                 <span className="text-4xl font-extrabold tracking-tight text-[#001a38]" style={DISPLAY_FONT}>{data?.price != null ? `$${data.price.toFixed(2)}` : 'N/A'}</span>
@@ -247,7 +247,7 @@ export default function StockFlashcard({ ticker, entityName, entitySector, onClo
             </div>
 
             {data?.availablePeriods.length && selectedPeriodId ? (
-              <label className="mb-6 block">
+              <label className="mb-5 block">
                 <span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.22em] text-[#43474f]">Selected Period</span>
                 <select value={selectedPeriodId} onChange={(event) => handlePeriodChange(event.target.value)} className="w-full rounded-xl border border-[#c4c6d1]/55 bg-white/72 px-4 py-3 text-sm font-medium text-[#131b2e] outline-none transition focus:border-[#1f477b] focus:ring-2 focus:ring-[#a7c8ff]/35">
                   {data.availablePeriods.map((period: PeriodInfo) => <option key={period.id} value={period.id}>{period.label}{period.endDate ? ` (${period.endDate})` : ''}</option>)}
@@ -255,7 +255,7 @@ export default function StockFlashcard({ ticker, entityName, entitySector, onClo
               </label>
             ) : null}
 
-            <div className="space-y-4">
+            <div className="space-y-3.5">
               <div className="rounded-xl border border-white/80 bg-white/72 p-4 shadow-[0_12px_36px_-18px_rgba(19,27,46,0.18)]">
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#43474f]">Institutional Quality</p>
                 <div className="mt-2 flex items-center justify-between gap-3">
@@ -285,13 +285,13 @@ export default function StockFlashcard({ ticker, entityName, entitySector, onClo
             </div>
           </div>
 
-          <button type="button" onClick={() => setActiveTab((current) => (current === 'summary' ? 'valuation' : 'summary'))} className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#001a38_0%,#002e5d_100%)] px-4 py-4 text-sm font-bold text-white shadow-[0_18px_40px_-20px_rgba(0,26,56,0.65)] transition-transform active:scale-[0.99]" style={DISPLAY_FONT}>
+          <button type="button" onClick={() => setActiveTab((current) => (current === 'summary' ? 'valuation' : 'summary'))} className="mt-1 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#001a38_0%,#002e5d_100%)] px-4 py-3.5 text-sm font-bold text-white shadow-[0_18px_40px_-20px_rgba(0,26,56,0.65)] transition-transform active:scale-[0.99]" style={DISPLAY_FONT}>
             {activeTab === 'summary' ? 'Full Analysis' : 'Back to Summary'}
             <ArrowRight size={16} />
           </button>
         </aside>
 
-        <section className="flex-1 overflow-y-auto bg-[#f2f3ff] p-6 md:p-8 lg:p-10">
+        <section className="flex-1 overflow-y-auto bg-[#f2f3ff] p-5 md:p-6 lg:p-7">
           {loading && !data ? <div className="flex min-h-[420px] items-center justify-center"><div className="flex flex-col items-center gap-4"><div className="h-12 w-12 animate-spin rounded-full border-2 border-[#dae2fd] border-t-[#002d62]" /><p className="text-sm text-[#515f74]">Loading flashcard...</p></div></div> : null}
 
           {error && !data ? (
@@ -305,8 +305,8 @@ export default function StockFlashcard({ ticker, entityName, entitySector, onClo
           ) : null}
 
           {data ? (
-            <div className="space-y-8">
-              <div className="space-y-4">
+            <div className="space-y-6">
+              <div className="space-y-3">
                 <Tabs activeTab={activeTab} onChange={setActiveTab} />
                 <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#515f74]">
                   <span className="rounded-full border border-[#c4c6d1]/65 bg-white px-3 py-1.5">{data.selectedPeriod.label}</span>
@@ -315,7 +315,7 @@ export default function StockFlashcard({ ticker, entityName, entitySector, onClo
               </div>
 
               <div>
-                <div className="mb-6">
+                <div className="mb-5">
                   <div className="flex items-center gap-2">
                     {(() => {
                       const Icon = activeConfig.icon;
@@ -323,12 +323,12 @@ export default function StockFlashcard({ ticker, entityName, entitySector, onClo
                     })()}
                     <h2 className="text-sm font-extrabold uppercase tracking-[0.22em] text-[#002d62]" style={DISPLAY_FONT}>{activeConfig.title}</h2>
                   </div>
-                  <p className="mt-3 max-w-3xl text-sm leading-6 text-[#515f74]">{activeConfig.subtitle}</p>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-[#515f74]">{activeConfig.subtitle}</p>
                 </div>
 
                 {activeTab === 'summary' ? (
-                  <div className="space-y-10">
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">{data.summary.cards.map((card) => <ScoreCard key={card.id} card={card} />)}</div>
+                  <div className="space-y-7">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">{data.summary.cards.map((card) => <ScoreCard key={card.id} card={card} />)}</div>
                     <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
                       {data.summary.cards.map((card) => {
                         const styles = toneStyles(card.tone);
@@ -337,25 +337,25 @@ export default function StockFlashcard({ ticker, entityName, entitySector, onClo
                             <div className="flex items-start justify-between gap-3">
                               <div>
                                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#43474f]">{card.title}</p>
-                                <p className="mt-2 text-lg font-bold text-[#001a38]" style={DISPLAY_FONT}>{card.statusLabel}</p>
+                                <p className="mt-1.5 text-lg font-bold text-[#001a38]" style={DISPLAY_FONT}>{card.statusLabel}</p>
                               </div>
                               <span className="rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: styles.badgeText, background: styles.badgeBg, borderColor: styles.border }}>{card.tone}</span>
                             </div>
-                            <div className="mt-4 space-y-3">
-                              {card.metrics.map((metric) => <div key={metric.code} className="rounded-lg border border-[#c4c6d1]/18 bg-[#faf8ff] px-3 py-3"><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#747781]">{metric.label}</p><p className="mt-2 text-xl font-bold text-[#001a38]" style={DISPLAY_FONT}>{metric.displayValue}</p></div>)}
+                            <div className="mt-3.5 space-y-2.5">
+                              {card.metrics.map((metric) => <div key={metric.code} className="rounded-lg border border-[#c4c6d1]/18 bg-[#faf8ff] px-3 py-3"><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#747781]">{metric.label}</p><p className="mt-1.5 text-lg font-bold text-[#001a38] sm:text-xl" style={DISPLAY_FONT}>{metric.displayValue}</p></div>)}
                             </div>
                           </div>
                         );
                       })}
                     </div>
 
-                    <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                       {data.summary.highlights.map((item) => <div key={item.label} className="rounded-lg border border-[#c4c6d1]/20 bg-[#faf8ff] px-4 py-4"><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#43474f]">{item.label}</p><p className="mt-2 text-xl font-bold text-[#001a38]" style={DISPLAY_FONT}>{item.value}</p></div>)}
                     </div>
 
                     {riskTags.length ? (
                       <div>
-                        <div className="mb-4 flex items-center gap-2"><ShieldAlert className="text-[#ba1a1a]" size={18} /><h3 className="text-sm font-extrabold uppercase tracking-[0.22em] text-[#002d62]" style={DISPLAY_FONT}>Risk Exposure</h3></div>
+                        <div className="mb-3 flex items-center gap-2"><ShieldAlert className="text-[#ba1a1a]" size={18} /><h3 className="text-sm font-extrabold uppercase tracking-[0.22em] text-[#002d62]" style={DISPLAY_FONT}>Risk Exposure</h3></div>
                         <div className="flex flex-wrap gap-2">
                           {riskTags.map((tag, index) => {
                             const styles = toneStyles(tag.tone);
@@ -367,13 +367,13 @@ export default function StockFlashcard({ ticker, entityName, entitySector, onClo
                     ) : null}
                   </div>
                 ) : (
-                  <div className="grid gap-4 lg:grid-cols-2">
+                  <div className="grid gap-3 lg:grid-cols-2">
                     {(activeTab === 'valuation' ? data.metrics.valuation : activeTab === 'quality' ? data.metrics.quality : data.metrics.risk).map((metric) => <MetricCard key={metric.code} metric={metric} />)}
                   </div>
                 )}
               </div>
 
-              <div className="rounded-lg border-l-4 border-[#001a38] bg-[#002e5d]/5 p-6">
+              <div className="rounded-lg border-l-4 border-[#001a38] bg-[#002e5d]/5 p-5">
                 <h3 className="mb-2 text-[11px] font-black uppercase tracking-[0.24em] text-[#001a38]" style={DISPLAY_FONT}>Architect&apos;s View</h3>
                 <p className="text-sm italic leading-7 text-[#515f74]">&quot;{buildArchitectView(data, activeTab)}&quot;</p>
               </div>
