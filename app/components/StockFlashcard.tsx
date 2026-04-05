@@ -1,239 +1,100 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { BarChart3, Layers3, ShieldAlert, TrendingUp, X } from 'lucide-react';
-import type {
-  FlashcardResponse,
-  MetricItem,
-  PeriodInfo,
-  SummaryCard,
-  SummaryCardTone,
-} from '@/app/api/stocks/[ticker]/flashcard/route';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ArrowRight,
+  BarChart3,
+  CheckCircle2,
+  CircleAlert,
+  Cpu,
+  Factory,
+  Globe2,
+  Layers3,
+  ShieldAlert,
+  TrendingUp,
+  X,
+} from 'lucide-react';
+import type { FlashcardResponse, MetricItem, PeriodInfo, SummaryCard, SummaryCardTone } from '@/app/api/stocks/[ticker]/flashcard/route';
 
 type FlashcardTab = 'summary' | 'valuation' | 'quality' | 'risk';
 
-const SECTOR_COLORS: Record<string, string> = {
-  Technology: '#3B82F6',
-  'Communication Services': '#06B6D4',
-  'Consumer Discretionary': '#F59E0B',
-  'Consumer Staples': '#10B981',
-  Healthcare: '#EC4899',
-  Financials: '#F97316',
-  Industrials: '#8B5CF6',
-  Energy: '#EF4444',
-  Materials: '#6366F1',
-  'Real Estate': '#14B8A6',
-  Utilities: '#84CC16',
-};
-
-const TAB_CONFIG: Array<{ id: FlashcardTab; label: string; icon: typeof Layers3 }> = [
-  { id: 'summary', label: 'Summary', icon: Layers3 },
-  { id: 'valuation', label: 'Valuation', icon: BarChart3 },
-  { id: 'quality', label: 'Quality', icon: TrendingUp },
-  { id: 'risk', label: 'Risk', icon: ShieldAlert },
+const DISPLAY_FONT = { fontFamily: 'Manrope, Inter, system-ui, sans-serif' } as const;
+const TAB_CONFIG = [
+  { id: 'summary' as const, label: 'Summary', icon: Layers3, title: 'Primary Performance Scores', subtitle: 'A compact institutional view across valuation, quality, and risk.' },
+  { id: 'valuation' as const, label: 'Valuation', icon: BarChart3, title: 'Valuation Detail', subtitle: 'Price multiple and cash-yield measures for the selected period.' },
+  { id: 'quality' as const, label: 'Quality', icon: TrendingUp, title: 'Quality Detail', subtitle: 'Growth, margin, return, and cash-conversion measures for the selected period.' },
+  { id: 'risk' as const, label: 'Risk', icon: ShieldAlert, title: 'Risk Detail', subtitle: 'Leverage, liquidity, coverage, and downside framing for the selected period.' },
 ];
 
-function sectorColor(sector: string | null) {
-  return SECTOR_COLORS[sector ?? ''] ?? '#64748B';
+function toneStyles(tone: SummaryCardTone) {
+  if (tone === 'good') return { stroke: '#4edea3', badgeBg: 'rgba(111,251,190,0.18)', badgeText: '#005236', border: 'rgba(0,171,118,0.18)' };
+  if (tone === 'weak') return { stroke: '#ba1a1a', badgeBg: 'rgba(255,218,214,0.82)', badgeText: '#93000a', border: 'rgba(186,26,26,0.12)' };
+  if (tone === 'fair') return { stroke: '#002d62', badgeBg: 'rgba(167,200,255,0.16)', badgeText: '#1f477b', border: 'rgba(31,71,123,0.14)' };
+  return { stroke: '#747781', badgeBg: 'rgba(218,226,253,0.55)', badgeText: '#43474f', border: 'rgba(116,119,129,0.14)' };
 }
 
 function metricTone(code: string, value: number | null): SummaryCardTone {
-  if (value == null || !Number.isFinite(value)) {
-    return 'neutral';
-  }
-
-  const higherBetter: Record<string, { good: number; fair: number }> = {
-    valuation_fcf_yield: { good: 5, fair: 2 },
-    quality_revenue_growth: { good: 10, fair: 0 },
-    quality_operating_margin: { good: 20, fair: 10 },
-    quality_roe: { good: 15, fair: 8 },
-    quality_roic: { good: 12, fair: 6 },
-    quality_cfo_net_income: { good: 1, fair: 0.7 },
-    risk_interest_coverage: { good: 5, fair: 2 },
-    risk_cash_short_debt: { good: 1.5, fair: 1 },
-    risk_shareholder_yield: { good: 4, fair: 1.5 },
+  if (value == null || !Number.isFinite(value)) return 'neutral';
+  const hi: Record<string, [number, number]> = {
+    valuation_fcf_yield: [5, 2],
+    quality_revenue_growth: [10, 0],
+    quality_operating_margin: [20, 10],
+    quality_roe: [15, 8],
+    quality_roic: [12, 6],
+    quality_cfo_net_income: [1, 0.7],
+    risk_interest_coverage: [5, 2],
+    risk_cash_short_debt: [1.5, 1],
+    risk_shareholder_yield: [4, 1.5],
   };
-
-  const lowerBetter: Record<string, { good: number; fair: number }> = {
-    valuation_pe: { good: 15, fair: 30 },
-    valuation_pb: { good: 3, fair: 6 },
-    valuation_ev_ebit: { good: 12, fair: 25 },
-    valuation_percentile: { good: 35, fair: 70 },
-    risk_net_debt_ebitda: { good: 2, fair: 4 },
+  const lo: Record<string, [number, number]> = {
+    valuation_pe: [15, 30],
+    valuation_pb: [3, 6],
+    valuation_ev_ebit: [12, 25],
+    valuation_percentile: [35, 70],
+    risk_net_debt_ebitda: [2, 4],
   };
-
-  if (higherBetter[code]) {
-    const { good, fair } = higherBetter[code];
-    if (value >= good) return 'good';
-    if (value >= fair) return 'fair';
-    return 'weak';
-  }
-
-  if (lowerBetter[code]) {
-    const { good, fair } = lowerBetter[code];
-    if (value <= good) return 'good';
-    if (value <= fair) return 'fair';
-    return 'weak';
-  }
-
-  if (code === 'risk_fcf') {
-    return value > 0 ? 'good' : 'weak';
-  }
-
+  if (hi[code]) return value >= hi[code][0] ? 'good' : value >= hi[code][1] ? 'fair' : 'weak';
+  if (lo[code]) return value <= lo[code][0] ? 'good' : value <= lo[code][1] ? 'fair' : 'weak';
+  if (code === 'risk_fcf') return value > 0 ? 'good' : 'weak';
   return 'neutral';
 }
 
-function toneStyles(tone: SummaryCardTone) {
-  if (tone === 'good') {
-    return {
-      border: 'rgba(16,185,129,0.35)',
-      background: 'rgba(16,185,129,0.10)',
-      text: '#6EE7B7',
-      value: '#A7F3D0',
-    };
-  }
-
-  if (tone === 'fair') {
-    return {
-      border: 'rgba(245,158,11,0.35)',
-      background: 'rgba(245,158,11,0.10)',
-      text: '#FCD34D',
-      value: '#FDE68A',
-    };
-  }
-
-  if (tone === 'weak') {
-    return {
-      border: 'rgba(239,68,68,0.35)',
-      background: 'rgba(239,68,68,0.10)',
-      text: '#FCA5A5',
-      value: '#FECACA',
-    };
-  }
-
-  return {
-    border: 'rgba(148,163,184,0.28)',
-    background: 'rgba(15,23,42,0.45)',
-    text: '#CBD5E1',
-    value: '#E2E8F0',
-  };
+function scoreForCard(card: SummaryCard) {
+  const map: Record<SummaryCardTone, number> = { good: 9.2, fair: 6.6, weak: 3.5, neutral: 5 };
+  const values = card.metrics.map((metric) => map[metricTone(metric.code, metric.numericValue)]);
+  return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : map[card.tone];
 }
 
 function formatSignedCurrency(value: number | null) {
   if (value == null || !Number.isFinite(value)) return null;
-  const sign = value >= 0 ? '+' : '-';
-  return `${sign}$${Math.abs(value).toFixed(2)}`;
+  return `${value >= 0 ? '+' : '-'}$${Math.abs(value).toFixed(2)}`;
 }
 
 function formatSignedPercent(value: number | null) {
   if (value == null || !Number.isFinite(value)) return null;
-  const sign = value >= 0 ? '+' : '';
-  return `${sign}${value.toFixed(2)}%`;
+  return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
 }
 
-function CompanyBanner({
-  name,
-  ticker,
-  sector,
-  exchange,
-  industry,
-  price,
-  priceChange,
-  priceChangePct,
-}: {
-  name: string;
-  ticker: string;
-  sector: string | null;
-  exchange: string | null;
-  industry: string | null;
-  price: number | null;
-  priceChange: number | null;
-  priceChangePct: number | null;
-}) {
-  const accent = sectorColor(sector);
-  const moveUp = (priceChangePct ?? 0) >= 0;
-
-  return (
-    <div
-      className="relative overflow-hidden rounded-t-[28px] border-b px-6 py-6 sm:px-7"
-      style={{
-        borderColor: `${accent}44`,
-        background: `linear-gradient(135deg, ${accent}30 0%, rgba(15,23,42,0.96) 52%, rgba(2,6,23,0.98) 100%)`,
-      }}
-    >
-      <div
-        className="absolute -right-12 -top-16 h-44 w-44 rounded-full blur-2xl"
-        style={{ background: `${accent}33` }}
-      />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.16),transparent_35%)]" />
-
-      <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <span
-                className="inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-100"
-                style={{ borderColor: `${accent}55`, background: `${accent}18` }}
-              >
-                {ticker}
-              </span>
-              {exchange ? (
-                <span className="rounded-full border border-slate-700/80 bg-slate-950/40 px-3 py-1 text-[11px] font-medium text-slate-300">
-                  {exchange}
-                </span>
-              ) : null}
-              {sector ? (
-                <span className="rounded-full border border-slate-700/80 bg-slate-950/40 px-3 py-1 text-[11px] font-medium text-slate-300">
-                  {sector}
-                </span>
-              ) : null}
-            </div>
-
-            <div>
-              <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-[2rem]">{name}</h2>
-              <p className="mt-1 text-sm text-slate-300">
-                {industry ?? 'Imported market company'}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-slate-700/70 bg-slate-950/55 px-5 py-4 shadow-lg shadow-slate-950/35">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">Live Price</p>
-          <div className="mt-2 flex items-end gap-3">
-            <p className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-              {price != null ? `$${price.toFixed(2)}` : 'N/A'}
-            </p>
-            {priceChangePct != null ? (
-              <p className={`pb-1 text-sm font-semibold ${moveUp ? 'text-emerald-300' : 'text-rose-300'}`}>
-                {moveUp ? '+' : ''}
-                {priceChangePct.toFixed(2)}%
-              </p>
-            ) : null}
-          </div>
-          {priceChange != null || priceChangePct != null ? (
-            <p className={`mt-2 text-sm ${moveUp ? 'text-emerald-300' : 'text-rose-300'}`}>
-              {formatSignedCurrency(priceChange)}
-              {priceChangePct != null ? ` (${formatSignedPercent(priceChangePct)})` : ''}
-            </p>
-          ) : (
-            <p className="mt-2 text-sm text-slate-500">Price move unavailable</p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+function buildArchitectView(data: FlashcardResponse | null, tab: FlashcardTab) {
+  if (!data) return 'This flashcard combines live market context with period-specific fundamentals.';
+  const valuation = data.summary.cards.find((card) => card.id === 'valuation');
+  const quality = data.summary.cards.find((card) => card.id === 'quality');
+  const risk = data.summary.cards.find((card) => card.id === 'risk');
+  if (tab === 'valuation') return `${valuation?.statusLabel ?? 'Valuation'} is being read through multiple price-to-fundamental lenses, not a single headline multiple.`;
+  if (tab === 'quality') return `${quality?.statusLabel ?? 'Quality'} reflects growth, margin, returns, and cash conversion together.`;
+  if (tab === 'risk') return `${risk?.statusLabel ?? 'Risk'} captures leverage, coverage, liquidity, and free cash flow in one view.`;
+  return `Valuation reads ${valuation?.statusLabel.toLowerCase() ?? 'mixed'}, quality looks ${quality?.statusLabel.toLowerCase() ?? 'balanced'}, and risk appears ${risk?.statusLabel.toLowerCase() ?? 'watchful'} for ${data.selectedPeriod.label}.`;
 }
 
-function FlashcardTabs({
-  activeTab,
-  onChange,
-  accent,
-}: {
-  activeTab: FlashcardTab;
-  onChange: (tab: FlashcardTab) => void;
-  accent: string;
-}) {
+function buildRiskTags(metrics: MetricItem[]) {
+  const rows = metrics
+    .map((metric) => ({ label: metric.label, tone: metricTone(metric.code, metric.numericValue) }))
+    .filter((row) => row.tone !== 'good')
+    .slice(0, 3);
+  return rows.length ? rows : metrics.slice(0, 3).map((metric) => ({ label: metric.label, tone: metricTone(metric.code, metric.numericValue) }));
+}
+
+function Tabs({ activeTab, onChange }: { activeTab: FlashcardTab; onChange: (tab: FlashcardTab) => void }) {
   return (
     <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
       {TAB_CONFIG.map(({ id, label, icon: Icon }) => {
@@ -243,12 +104,8 @@ function FlashcardTabs({
             key={id}
             type="button"
             onClick={() => onChange(id)}
-            className="flex items-center justify-center gap-2 rounded-2xl border px-3 py-3 text-sm font-semibold transition-colors"
-            style={{
-              borderColor: active ? `${accent}55` : 'rgba(51,65,85,0.88)',
-              background: active ? `${accent}18` : 'rgba(2,6,23,0.55)',
-              color: active ? '#F8FAFC' : '#94A3B8',
-            }}
+            className="flex items-center justify-center gap-2 rounded-full border px-3 py-3 text-sm font-semibold transition"
+            style={{ background: active ? '#001a38' : '#ffffff', borderColor: active ? '#001a38' : 'rgba(196,198,209,0.7)', color: active ? '#ffffff' : '#515f74' }}
           >
             <Icon size={16} />
             <span>{label}</span>
@@ -259,160 +116,36 @@ function FlashcardTabs({
   );
 }
 
-function PeriodPicker({
-  periods,
-  selectedId,
-  onChange,
-}: {
-  periods: PeriodInfo[];
-  selectedId: string;
-  onChange: (id: string) => void;
-}) {
-  if (periods.length <= 1) return null;
-
-  return (
-    <label className="block">
-      <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
-        Period
-      </span>
-      <select
-        value={selectedId}
-        onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-2xl border border-slate-700 bg-slate-950/65 px-4 py-3 text-sm font-medium text-slate-200 outline-none transition-colors focus:border-slate-500"
-      >
-        {periods.map((period) => (
-          <option key={period.id} value={period.id}>
-            {period.label}
-            {period.endDate ? ` (${period.endDate})` : ''}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-function SummaryCardPanel({ card }: { card: SummaryCard }) {
+function ScoreCard({ card }: { card: SummaryCard }) {
+  const score = scoreForCard(card);
   const styles = toneStyles(card.tone);
-
   return (
-    <div
-      className="rounded-3xl border p-5 shadow-lg shadow-slate-950/25"
-      style={{ borderColor: styles.border, background: styles.background }}
-    >
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">{card.title}</p>
-          <p className="mt-2 text-xl font-semibold text-white">{card.statusLabel}</p>
-        </div>
-        <span
-          className="rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
-          style={{ borderColor: styles.border, color: styles.text, background: styles.background }}
-        >
-          {card.tone}
-        </span>
+    <div className="flex flex-col items-center rounded-lg border border-[#c4c6d1]/25 bg-white p-6 shadow-[0_16px_64px_-12px_rgba(19,27,46,0.10)]">
+      <div className="relative mb-4 h-20 w-20">
+        <svg className="h-full w-full -rotate-90" viewBox="0 0 36 36">
+          <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#d2d9f4" strokeWidth="3" />
+          <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={styles.stroke} strokeWidth="3" strokeLinecap="round" strokeDasharray={`${Math.max(0, Math.min(100, score * 10))}, 100`} />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center text-xl font-bold text-[#001a38]" style={DISPLAY_FONT}>{score.toFixed(1)}</div>
       </div>
-
-      <div className="mt-5 grid gap-3">
-        {card.metrics.map((metric) => (
-          <div key={metric.code} className="rounded-2xl border border-white/8 bg-slate-950/35 px-4 py-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{metric.label}</p>
-            <p className="mt-2 text-2xl font-semibold tracking-tight" style={{ color: styles.value }}>
-              {metric.displayValue}
-            </p>
-            {metric.description ? (
-              <p className="mt-2 text-xs leading-5 text-slate-400">{metric.description}</p>
-            ) : null}
-          </div>
-        ))}
-      </div>
+      <span className="text-[10px] font-black uppercase tracking-[0.22em] text-[#43474f]">{card.title}</span>
     </div>
   );
 }
 
-function SummaryHighlights({ highlights }: { highlights: FlashcardResponse['summary']['highlights'] }) {
-  return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-      {highlights.map((highlight) => (
-        <div key={highlight.label} className="rounded-2xl border border-slate-800 bg-slate-950/50 px-4 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">{highlight.label}</p>
-          <p className="mt-2 text-lg font-semibold tracking-tight text-slate-100">{highlight.value}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function MetricLegend() {
-  const items: Array<{ label: string; tone: SummaryCardTone }> = [
-    { label: 'Good', tone: 'good' },
-    { label: 'Fair', tone: 'fair' },
-    { label: 'Weak', tone: 'weak' },
-  ];
-
-  return (
-    <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-slate-800 bg-slate-950/35 px-4 py-3">
-      {items.map((item) => {
-        const styles = toneStyles(item.tone);
-        return (
-          <div key={item.label} className="flex items-center gap-2 text-xs text-slate-400">
-            <span className="h-2.5 w-2.5 rounded-full" style={{ background: styles.text }} />
-            <span>{item.label}</span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function MetricTile({ metric }: { metric: MetricItem }) {
+function MetricCard({ metric }: { metric: MetricItem }) {
   const tone = metricTone(metric.code, metric.numericValue);
   const styles = toneStyles(tone);
-
   return (
-    <div className="rounded-3xl border border-slate-800 bg-slate-950/45 p-5 shadow-lg shadow-slate-950/20">
+    <div className="rounded-lg border border-[#c4c6d1]/18 bg-white p-4 shadow-[0_16px_64px_-12px_rgba(19,27,46,0.08)]">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">{metric.label}</p>
-          <p className="mt-3 text-3xl font-semibold tracking-tight" style={{ color: styles.value }}>
-            {metric.displayValue}
-          </p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#43474f]">{metric.label}</p>
+          <p className="mt-2 text-2xl font-extrabold tracking-tight text-[#001a38]" style={DISPLAY_FONT}>{metric.displayValue}</p>
         </div>
-        <span
-          className="rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
-          style={{ borderColor: styles.border, color: styles.text, background: styles.background }}
-        >
-          {tone}
-        </span>
+        <span className="rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: styles.badgeText, background: styles.badgeBg, borderColor: styles.border }}>{tone}</span>
       </div>
-
-      <p className="mt-4 text-sm leading-6 text-slate-400">
-        {metric.description || 'No additional context available for this measure yet.'}
-      </p>
-    </div>
-  );
-}
-
-function MetricPage({
-  title,
-  subtitle,
-  metrics,
-}: {
-  title: string;
-  subtitle: string;
-  metrics: MetricItem[];
-}) {
-  return (
-    <div className="space-y-5">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">{title}</p>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">{subtitle}</p>
-      </div>
-      <MetricLegend />
-      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-        {metrics.map((metric) => (
-          <MetricTile key={metric.code} metric={metric} />
-        ))}
-      </div>
+      <p className="mt-3 text-sm leading-6 text-[#515f74]">{metric.description || 'No additional context available for this measure yet.'}</p>
     </div>
   );
 }
@@ -431,34 +164,24 @@ export default function StockFlashcard({ ticker, entityName, entitySector, onClo
   const [selectedPeriodId, setSelectedPeriodId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<FlashcardTab>('summary');
 
-  const accent = sectorColor(data?.sector ?? entitySector);
-
-  const loadData = useCallback(
-    async (periodId?: string) => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const query = periodId ? `?periodId=${encodeURIComponent(periodId)}` : '';
-        const response = await fetch(`/api/stocks/${encodeURIComponent(ticker)}/flashcard${query}`);
-        const payload = await response.json().catch(() => null);
-
-        if (!response.ok) {
-          throw new Error(payload?.error ?? 'Unable to load stock flashcard');
-        }
-
-        const nextData = payload as FlashcardResponse;
-        setData(nextData);
-        setSelectedPeriodId(nextData.selectedPeriod.id);
-      } catch (err) {
-        setData(null);
-        setError(err instanceof Error ? err.message : 'Unable to load stock flashcard');
-      } finally {
-        setLoading(false);
-      }
-    },
-    [ticker],
-  );
+  const loadData = useCallback(async (periodId?: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const query = periodId ? `?periodId=${encodeURIComponent(periodId)}` : '';
+      const response = await fetch(`/api/stocks/${encodeURIComponent(ticker)}/flashcard${query}`);
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error ?? 'Unable to load stock flashcard');
+      const nextData = payload as FlashcardResponse;
+      setData(nextData);
+      setSelectedPeriodId(nextData.selectedPeriod.id);
+    } catch (err) {
+      setData(null);
+      setError(err instanceof Error ? err.message : 'Unable to load stock flashcard');
+    } finally {
+      setLoading(false);
+    }
+  }, [ticker]);
 
   useEffect(() => {
     setActiveTab('summary');
@@ -466,10 +189,7 @@ export default function StockFlashcard({ ticker, entityName, entitySector, onClo
   }, [loadData]);
 
   useEffect(() => {
-    const handleKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-
+    const handleKey = (event: KeyboardEvent) => event.key === 'Escape' && onClose();
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [onClose]);
@@ -480,127 +200,174 @@ export default function StockFlashcard({ ticker, entityName, entitySector, onClo
     void loadData(periodId);
   };
 
-  const renderActivePage = () => {
-    if (!data) return null;
-
-    if (activeTab === 'summary') {
-      return (
-        <div className="space-y-5">
-          <SummaryHighlights highlights={data.summary.highlights} />
-          <div className="grid gap-4 xl:grid-cols-3">
-            {data.summary.cards.map((card) => (
-              <SummaryCardPanel key={card.id} card={card} />
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    if (activeTab === 'valuation') {
-      return (
-        <MetricPage
-          title="Valuation"
-          subtitle="Price multiple, cash-yield, and relative valuation measures for the selected period."
-          metrics={data.metrics.valuation}
-        />
-      );
-    }
-
-    if (activeTab === 'quality') {
-      return (
-        <MetricPage
-          title="Quality"
-          subtitle="Profitability, growth, and cash-conversion measures that show how strong the business engine is."
-          metrics={data.metrics.quality}
-        />
-      );
-    }
-
-    return (
-      <MetricPage
-        title="Risk"
-        subtitle="Cash flow resilience, leverage, coverage, and capital return metrics that frame downside exposure."
-        metrics={data.metrics.risk}
-      />
-    );
-  };
+  const activeConfig = TAB_CONFIG.find((item) => item.id === activeTab)!;
+  const qualityCard = data?.summary.cards.find((card) => card.id === 'quality');
+  const riskTags = useMemo(() => (data ? buildRiskTags(data.metrics.risk) : []), [data]);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(2,6,23,0.74)', backdropFilter: 'blur(6px)' }}
-      onClick={onClose}
-    >
-      <div
-        className="relative flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-[28px] border bg-slate-950 shadow-2xl shadow-black/50"
-        style={{ borderColor: `${accent}33` }}
-        onClick={(event) => event.stopPropagation()}
-      >
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute right-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-slate-700 bg-slate-950/75 text-slate-400 transition-colors hover:text-white"
-        >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(15,24,35,0.62)] p-4" style={{ backdropFilter: 'blur(8px)' }} onClick={onClose}>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(0,45,98,0.18),transparent_36%)]" />
+      <article className="relative z-10 flex max-h-[92vh] min-h-[600px] w-full max-w-6xl flex-col overflow-hidden rounded-xl bg-[#f2f3ff] shadow-[0_32px_90px_-26px_rgba(19,27,46,0.55)] xl:flex-row" onClick={(event) => event.stopPropagation()}>
+        <button type="button" onClick={onClose} className="absolute right-5 top-5 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-white/35 bg-[#001a38]/12 text-[#001a38] backdrop-blur-md transition hover:bg-[#001a38]/18">
           <X size={18} />
         </button>
 
-        <CompanyBanner
-          name={data?.name ?? entityName}
-          ticker={ticker}
-          sector={data?.sector ?? entitySector}
-          exchange={data?.exchange ?? null}
-          industry={data?.industry ?? null}
-          price={data?.price ?? null}
-          priceChange={data?.priceChange ?? null}
-          priceChangePct={data?.priceChangePct ?? null}
-        />
-
-        <div className="flex-1 overflow-y-auto px-5 pb-5 pt-5 sm:px-6 sm:pb-6">
-          {loading && !data ? (
-            <div className="flex h-56 items-center justify-center">
-              <div
-                className="h-12 w-12 animate-spin rounded-full border-2 border-slate-700 border-t-transparent"
-                style={{ borderTopColor: accent }}
-              />
+        <aside className="flex w-full shrink-0 flex-col justify-between gap-8 border-b border-[#c4c6d1]/45 bg-[linear-gradient(180deg,#e2e7ff_0%,#dae2fd_100%)] p-6 text-[#131b2e] xl:w-[340px] xl:border-b-0 xl:border-r xl:p-8">
+          <div>
+            <div className="mb-8 flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[#002d62] text-white shadow-[0_12px_32px_-16px_rgba(0,45,98,0.7)]">
+                <Cpu size={26} />
+              </div>
+              <div>
+                <h1 className="text-2xl font-black tracking-tight text-[#002d62]" style={DISPLAY_FONT}>{data?.name ?? entityName}</h1>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#43474f]">{data?.exchange ?? 'MARKET'}: {ticker}</p>
+              </div>
             </div>
-          ) : null}
+
+            <div className="mb-8">
+              <p className="mb-1 text-xs text-[#43474f]">Current Price</p>
+              <div className="flex items-baseline gap-3">
+                <span className="text-4xl font-extrabold tracking-tight text-[#001a38]" style={DISPLAY_FONT}>{data?.price != null ? `$${data.price.toFixed(2)}` : 'N/A'}</span>
+                {data?.priceChangePct != null ? <span className={`flex items-center text-sm font-bold ${(data.priceChangePct ?? 0) >= 0 ? 'text-[#00ab76]' : 'text-[#ba1a1a]'}`}>{(data.priceChangePct ?? 0) >= 0 ? <TrendingUp size={14} className="mr-1" /> : <CircleAlert size={14} className="mr-1" />}{formatSignedPercent(data.priceChangePct)}</span> : null}
+              </div>
+              {data?.priceChange != null || data?.priceChangePct != null ? <p className={`mt-2 text-sm ${(data?.priceChangePct ?? 0) >= 0 ? 'text-[#00ab76]' : 'text-[#ba1a1a]'}`}>{formatSignedCurrency(data?.priceChange ?? null)}{data?.priceChangePct != null ? ` (${formatSignedPercent(data.priceChangePct)})` : ''}</p> : null}
+            </div>
+
+            {data?.availablePeriods.length && selectedPeriodId ? (
+              <label className="mb-6 block">
+                <span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.22em] text-[#43474f]">Selected Period</span>
+                <select value={selectedPeriodId} onChange={(event) => handlePeriodChange(event.target.value)} className="w-full rounded-xl border border-[#c4c6d1]/55 bg-white/72 px-4 py-3 text-sm font-medium text-[#131b2e] outline-none transition focus:border-[#1f477b] focus:ring-2 focus:ring-[#a7c8ff]/35">
+                  {data.availablePeriods.map((period: PeriodInfo) => <option key={period.id} value={period.id}>{period.label}{period.endDate ? ` (${period.endDate})` : ''}</option>)}
+                </select>
+              </label>
+            ) : null}
+
+            <div className="space-y-4">
+              <div className="rounded-xl border border-white/80 bg-white/72 p-4 shadow-[0_12px_36px_-18px_rgba(19,27,46,0.18)]">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#43474f]">Institutional Quality</p>
+                <div className="mt-2 flex items-center justify-between gap-3">
+                  <span className="text-lg font-bold text-[#001a38]" style={DISPLAY_FONT}>{qualityCard?.statusLabel ?? entitySector ?? 'Coverage pending'}</span>
+                  <CheckCircle2 className="text-[#00ab76]" size={16} />
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-white/80 bg-white/72 p-4 shadow-[0_12px_36px_-18px_rgba(19,27,46,0.18)]">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#43474f]">Profitability Score</p>
+                <div className="mt-2 flex items-center justify-between gap-4">
+                  <span className="text-2xl font-bold text-[#001a38]" style={DISPLAY_FONT}>{qualityCard ? scoreForCard(qualityCard).toFixed(1) : 'N/A'}<span className="ml-1 text-sm font-medium text-[#747781]">/10</span></span>
+                  <div className="h-1.5 w-14 overflow-hidden rounded-full bg-[#d5e3fc]">
+                    <div className="h-full rounded-full bg-[#4edea3]" style={{ width: `${Math.max(0, Math.min(100, (qualityCard ? scoreForCard(qualityCard) : 0) * 10))}%` }} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-white/80 bg-white/72 p-4 shadow-[0_12px_36px_-18px_rgba(19,27,46,0.18)]">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#43474f]">Data Source</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <span className="rounded-full border border-[#c4c6d1]/60 bg-[#faf8ff] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#43474f]">{data?.meta?.readMode ?? 'canonical'}</span>
+                  {data?.meta?.summarySource ? <span className="rounded-full border border-[#c4c6d1]/60 bg-[#faf8ff] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#43474f]">{data.meta.summarySource.replace('_', ' ')}</span> : null}
+                  {data?.meta?.warnings?.length ? <span className="rounded-full border border-[#ba1a1a]/12 bg-[#ffdad6] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#93000a]">{data.meta.warnings.length} warnings</span> : null}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button type="button" onClick={() => setActiveTab((current) => (current === 'summary' ? 'valuation' : 'summary'))} className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#001a38_0%,#002e5d_100%)] px-4 py-4 text-sm font-bold text-white shadow-[0_18px_40px_-20px_rgba(0,26,56,0.65)] transition-transform active:scale-[0.99]" style={DISPLAY_FONT}>
+            {activeTab === 'summary' ? 'Full Analysis' : 'Back to Summary'}
+            <ArrowRight size={16} />
+          </button>
+        </aside>
+
+        <section className="flex-1 overflow-y-auto bg-[#f2f3ff] p-6 md:p-8 lg:p-10">
+          {loading && !data ? <div className="flex min-h-[420px] items-center justify-center"><div className="flex flex-col items-center gap-4"><div className="h-12 w-12 animate-spin rounded-full border-2 border-[#dae2fd] border-t-[#002d62]" /><p className="text-sm text-[#515f74]">Loading flashcard...</p></div></div> : null}
 
           {error && !data ? (
-            <div className="rounded-3xl border border-rose-500/25 bg-rose-500/10 px-6 py-10 text-center">
-              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-rose-300">No stock flashcard data</p>
-              <p className="mt-4 text-2xl font-semibold text-white">{ticker}</p>
-              <p className="mt-3 text-sm leading-6 text-slate-300">{error}</p>
-              <p className="mt-4 text-sm text-slate-400">
-                If this stock was just imported, run the market sync so the flashcard can read the latest company metrics.
-              </p>
+            <div className="flex min-h-[420px] items-center justify-center">
+              <div className="w-full max-w-2xl rounded-xl border border-[#ffdad6] bg-white p-8 text-center shadow-[0_16px_64px_-12px_rgba(19,27,46,0.10)]">
+                <p className="text-[11px] font-black uppercase tracking-[0.26em] text-[#93000a]">No stock flashcard data</p>
+                <p className="mt-4 text-3xl font-black text-[#001a38]" style={DISPLAY_FONT}>{ticker}</p>
+                <p className="mt-4 text-sm leading-7 text-[#515f74]">{error}</p>
+              </div>
             </div>
           ) : null}
 
           {data ? (
-            <div className="space-y-6">
-              <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
-                <FlashcardTabs activeTab={activeTab} onChange={setActiveTab} accent={accent} />
-                {selectedPeriodId ? (
-                  <PeriodPicker
-                    periods={data.availablePeriods}
-                    selectedId={selectedPeriodId}
-                    onChange={handlePeriodChange}
-                  />
-                ) : null}
+            <div className="space-y-8">
+              <div className="space-y-4">
+                <Tabs activeTab={activeTab} onChange={setActiveTab} />
+                <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#515f74]">
+                  <span className="rounded-full border border-[#c4c6d1]/65 bg-white px-3 py-1.5">{data.selectedPeriod.label}</span>
+                  {data.selectedPeriod.endDate ? <span className="rounded-full border border-[#c4c6d1]/45 bg-[#faf8ff] px-3 py-1.5 text-[#747781]">{data.selectedPeriod.endDate}</span> : null}
+                </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/35 px-4 py-3 text-sm text-slate-400">
-                Showing <span className="font-semibold text-slate-100">{data.selectedPeriod.label}</span>
-                {data.selectedPeriod.endDate ? (
-                  <span className="text-slate-500"> | {data.selectedPeriod.endDate}</span>
-                ) : null}
+              <div>
+                <div className="mb-6">
+                  <div className="flex items-center gap-2">
+                    {(() => {
+                      const Icon = activeConfig.icon;
+                      return <Icon className="text-[#002d62]" size={18} />;
+                    })()}
+                    <h2 className="text-sm font-extrabold uppercase tracking-[0.22em] text-[#002d62]" style={DISPLAY_FONT}>{activeConfig.title}</h2>
+                  </div>
+                  <p className="mt-3 max-w-3xl text-sm leading-6 text-[#515f74]">{activeConfig.subtitle}</p>
+                </div>
+
+                {activeTab === 'summary' ? (
+                  <div className="space-y-10">
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">{data.summary.cards.map((card) => <ScoreCard key={card.id} card={card} />)}</div>
+                    <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+                      {data.summary.cards.map((card) => {
+                        const styles = toneStyles(card.tone);
+                        return (
+                          <div key={card.id} className="rounded-xl border border-[#c4c6d1]/25 bg-white p-4 shadow-[0_16px_64px_-12px_rgba(19,27,46,0.08)]">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#43474f]">{card.title}</p>
+                                <p className="mt-2 text-lg font-bold text-[#001a38]" style={DISPLAY_FONT}>{card.statusLabel}</p>
+                              </div>
+                              <span className="rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: styles.badgeText, background: styles.badgeBg, borderColor: styles.border }}>{card.tone}</span>
+                            </div>
+                            <div className="mt-4 space-y-3">
+                              {card.metrics.map((metric) => <div key={metric.code} className="rounded-lg border border-[#c4c6d1]/18 bg-[#faf8ff] px-3 py-3"><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#747781]">{metric.label}</p><p className="mt-2 text-xl font-bold text-[#001a38]" style={DISPLAY_FONT}>{metric.displayValue}</p></div>)}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {data.summary.highlights.map((item) => <div key={item.label} className="rounded-lg border border-[#c4c6d1]/20 bg-[#faf8ff] px-4 py-4"><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#43474f]">{item.label}</p><p className="mt-2 text-xl font-bold text-[#001a38]" style={DISPLAY_FONT}>{item.value}</p></div>)}
+                    </div>
+
+                    {riskTags.length ? (
+                      <div>
+                        <div className="mb-4 flex items-center gap-2"><ShieldAlert className="text-[#ba1a1a]" size={18} /><h3 className="text-sm font-extrabold uppercase tracking-[0.22em] text-[#002d62]" style={DISPLAY_FONT}>Risk Exposure</h3></div>
+                        <div className="flex flex-wrap gap-2">
+                          {riskTags.map((tag, index) => {
+                            const styles = toneStyles(tag.tone);
+                            const Icon = index === 0 ? CircleAlert : index === 1 ? Globe2 : Factory;
+                            return <span key={tag.label} className="inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: styles.badgeText, background: styles.badgeBg, borderColor: styles.border }}><Icon size={12} />{tag.label}</span>;
+                          })}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    {(activeTab === 'valuation' ? data.metrics.valuation : activeTab === 'quality' ? data.metrics.quality : data.metrics.risk).map((metric) => <MetricCard key={metric.code} metric={metric} />)}
+                  </div>
+                )}
               </div>
 
-              {renderActivePage()}
+              <div className="rounded-lg border-l-4 border-[#001a38] bg-[#002e5d]/5 p-6">
+                <h3 className="mb-2 text-[11px] font-black uppercase tracking-[0.24em] text-[#001a38]" style={DISPLAY_FONT}>Architect&apos;s View</h3>
+                <p className="text-sm italic leading-7 text-[#515f74]">&quot;{buildArchitectView(data, activeTab)}&quot;</p>
+              </div>
             </div>
           ) : null}
-        </div>
-      </div>
+        </section>
+      </article>
     </div>
   );
 }
