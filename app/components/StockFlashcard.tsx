@@ -17,6 +17,19 @@ import {
 import type { FlashcardResponse, MetricItem, PeriodInfo, SummaryCard, SummaryCardTone } from '@/app/api/stocks/[ticker]/flashcard/route';
 
 type FlashcardTab = 'summary' | 'valuation' | 'quality' | 'risk';
+type FlashcardMeta = {
+  readMode?: string;
+  summarySource?: string;
+  warnings?: string[];
+  fallbackUsed?: boolean;
+  canonicalCoverage?: {
+    selectedPeriodId: string;
+    metricCount: number;
+    factCount: number;
+    sufficient: boolean;
+  };
+};
+type FlashcardViewData = FlashcardResponse & { meta?: FlashcardMeta };
 
 const DISPLAY_FONT = { fontFamily: 'Manrope, Inter, system-ui, sans-serif' } as const;
 const TAB_CONFIG = [
@@ -158,7 +171,7 @@ interface Props {
 }
 
 export default function StockFlashcard({ ticker, entityName, entitySector, onClose }: Props) {
-  const [data, setData] = useState<FlashcardResponse | null>(null);
+  const [data, setData] = useState<FlashcardViewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedPeriodId, setSelectedPeriodId] = useState<string | null>(null);
@@ -172,7 +185,7 @@ export default function StockFlashcard({ ticker, entityName, entitySector, onClo
       const response = await fetch(`/api/stocks/${encodeURIComponent(ticker)}/flashcard${query}`);
       const payload = await response.json().catch(() => null);
       if (!response.ok) throw new Error(payload?.error ?? 'Unable to load stock flashcard');
-      const nextData = payload as FlashcardResponse;
+      const nextData = payload as FlashcardViewData;
       setData(nextData);
       setSelectedPeriodId(nextData.selectedPeriod.id);
     } catch (err) {
