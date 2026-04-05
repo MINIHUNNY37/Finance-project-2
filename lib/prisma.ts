@@ -7,9 +7,13 @@ const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 // even under concurrent requests or during heavy migration runs.
 function createPrismaClient() {
   const url = process.env.DATABASE_URL;
-  if (!url) throw new Error('DATABASE_URL is not set');
 
-  // Append connection_limit if not already present
+  // During Next.js build, DATABASE_URL may not be present — return a bare client
+  // so the build succeeds. At runtime on Vercel the env var is always set.
+  if (!url) return new PrismaClient();
+
+  // Append connection_limit if not already present to avoid exhausting
+  // Neon free-tier's ~10 simultaneous connection cap.
   const separator = url.includes('?') ? '&' : '?';
   const pooledUrl = url.includes('connection_limit')
     ? url
