@@ -1,187 +1,157 @@
 'use client';
 
 /**
- * StockFlashcard — "Sovereign Architect" design.
+ * StockFlashcard — NexaTech-style single-card modal.
  *
- * Two-panel modal (light theme):
- *   Left sidebar (1/3)  — identity, price, quality score, profitability bar
- *   Right panel  (2/3)  — score rings, key metric grid, risk tags, full metrics
- *
- * Triggered from MapCanvas when a stock entity is clicked.
+ * Light theme, single white card with:
+ *   • Header: gradient avatar + company name + ticker pill + market status
+ *   • Large price + signed % change with arrow
+ *   • Optional sparkline chart on the right
+ *   • 2-col metric grid (8 metrics) with circular icon badges
+ *   • Footer with period info
  */
 
 import { useEffect, useState, useCallback } from 'react';
 import type { FlashcardResponse, MetricItem, PeriodInfo } from '@/app/api/stocks/[ticker]/flashcard/route';
 
-// ── Design tokens ──────────────────────────────────────────────────────────────
+// ── Color palette ──────────────────────────────────────────────────────────────
 const C = {
-  primary:          '#001a38',
-  primaryMid:       '#002e5d',
-  green:            '#4edea3',
-  red:              '#ba1a1a',
-  redBg:            '#ffdad6',
-  redText:          '#93000a',
-  amber:            '#F59E0B',
-  surface:          '#faf8ff',
-  surfaceLow:       '#f2f3ff',
-  surfaceHigh:      '#dae2fd',
-  onSurface:        '#131b2e',
-  onSurfaceVar:     '#43474f',
-  outlineVar:       '#c4c6d1',
+  cardBg:     '#ffffff',
+  pageBg:     '#f7f8fa',
+  text:       '#0f172a',
+  textMuted:  '#64748b',
+  textFaint:  '#94a3b8',
+  divider:    '#f1f5f9',
+  green:      '#16a34a',
+  greenBg:    '#dcfce7',
+  greenIcon:  '#22c55e',
+  red:        '#dc2626',
+  redBg:      '#fee2e2',
+  blue:       '#3b82f6',
+  blueBg:     '#eff6ff',
+  amber:      '#f59e0b',
+  amberBg:    '#fef3c7',
+  purple:     '#8b5cf6',
+  purpleBg:   '#ede9fe',
+  pink:       '#ec4899',
+  pinkBg:     '#fce7f3',
 };
 
-// ── Metric traffic-light colouring ────────────────────────────────────────────
-function metricColor(code: string, value: number | null): string {
-  if (value == null) return '#9CA3AF';
-
-  const higherBetter: Record<string, { good: number; bad: number }> = {
-    valuation_fcf_yield:      { good: 0.04, bad: 0.01 },
-    quality_revenue_growth:   { good: 0.10, bad: 0 },
-    quality_operating_margin: { good: 0.15, bad: 0.05 },
-    quality_roe:              { good: 0.15, bad: 0.05 },
-    quality_roic:             { good: 0.10, bad: 0.05 },
-    quality_cfo_net_income:   { good: 0.9,  bad: 0.5 },
-    risk_interest_coverage:   { good: 5,    bad: 2 },
-    risk_cash_short_debt:     { good: 1.5,  bad: 0.5 },
-    risk_shareholder_yield:   { good: 0.04, bad: 0.01 },
-  };
-  const lowerBetter: Record<string, { good: number; bad: number }> = {
-    valuation_pe:         { good: 15, bad: 30 },
-    valuation_pb:         { good: 2,  bad: 5 },
-    valuation_ev_ebit:    { good: 12, bad: 25 },
-    valuation_percentile: { good: 30, bad: 70 },
-    risk_net_debt_ebitda: { good: 1.5, bad: 4 },
-  };
-
-  if (higherBetter[code]) {
-    const { good, bad } = higherBetter[code];
-    if (value >= good) return C.green;
-    if (value >= bad)  return C.amber;
-    return C.red;
-  }
-  if (lowerBetter[code]) {
-    const { good, bad } = lowerBetter[code];
-    if (value <= good) return C.green;
-    if (value <= bad)  return C.amber;
-    return C.red;
-  }
-  if (code === 'risk_fcf') return value > 0 ? C.green : C.red;
-  return '#9CA3AF';
-}
-
-// ── Score (0–10) derived from traffic-light results ───────────────────────────
-function computeScore(metrics: MetricItem[]): number | null {
-  const scored = metrics.filter(m => m.numericValue != null);
-  if (scored.length === 0) return null;
-  const pts = scored.map(m => {
-    const col = metricColor(m.code, m.numericValue);
-    if (col === C.green) return 10;
-    if (col === C.amber) return 5;
-    return 1;
-  });
-  const avg = pts.reduce((a, b) => a + b, 0) / pts.length;
-  return Math.round(avg * 10) / 10;
-}
-
-function moatLabel(score: number | null) {
-  if (score == null) return 'Unknown';
-  if (score >= 7.5) return 'Wide Moat';
-  if (score >= 5)   return 'Narrow Moat';
-  return 'No Moat';
-}
-
-// ── Sector icon (Material Symbols name) ───────────────────────────────────────
-const SECTOR_ICONS: Record<string, string> = {
-  'Technology':             'memory',
-  'Communication Services': 'cell_tower',
-  'Consumer Discretionary': 'shopping_bag',
-  'Consumer Staples':       'local_grocery_store',
-  'Healthcare':             'health_and_safety',
-  'Financials':             'account_balance',
-  'Industrials':            'factory',
-  'Energy':                 'bolt',
-  'Materials':              'diamond',
-  'Real Estate':            'apartment',
-  'Utilities':              'electric_bolt',
+// ── Gradient avatar by initial ────────────────────────────────────────────────
+const GRADS: Record<string, string> = {
+  A: 'linear-gradient(135deg,#6366f1,#8b5cf6)', B: 'linear-gradient(135deg,#3b82f6,#06b6d4)',
+  C: 'linear-gradient(135deg,#10b981,#3b82f6)', D: 'linear-gradient(135deg,#f59e0b,#ef4444)',
+  E: 'linear-gradient(135deg,#8b5cf6,#ec4899)', F: 'linear-gradient(135deg,#06b6d4,#3b82f6)',
+  G: 'linear-gradient(135deg,#10b981,#6366f1)', H: 'linear-gradient(135deg,#f97316,#ef4444)',
+  I: 'linear-gradient(135deg,#6366f1,#3b82f6)', J: 'linear-gradient(135deg,#ec4899,#8b5cf6)',
+  K: 'linear-gradient(135deg,#14b8a6,#06b6d4)', L: 'linear-gradient(135deg,#84cc16,#10b981)',
+  M: 'linear-gradient(135deg,#3b82f6,#6366f1)', N: 'linear-gradient(135deg,#10b981,#06b6d4)',
+  O: 'linear-gradient(135deg,#f59e0b,#f97316)', P: 'linear-gradient(135deg,#8b5cf6,#6366f1)',
+  Q: 'linear-gradient(135deg,#06b6d4,#10b981)', R: 'linear-gradient(135deg,#ef4444,#f97316)',
+  S: 'linear-gradient(135deg,#6366f1,#8b5cf6)', T: 'linear-gradient(135deg,#3b82f6,#06b6d4)',
+  U: 'linear-gradient(135deg,#10b981,#84cc16)', V: 'linear-gradient(135deg,#8b5cf6,#ec4899)',
+  W: 'linear-gradient(135deg,#f59e0b,#ef4444)', X: 'linear-gradient(135deg,#06b6d4,#6366f1)',
+  Y: 'linear-gradient(135deg,#ec4899,#f97316)', Z: 'linear-gradient(135deg,#14b8a6,#3b82f6)',
 };
-function sectorIcon(s: string | null) { return SECTOR_ICONS[s ?? ''] ?? 'business'; }
 
-// ── Risk exposure tags ────────────────────────────────────────────────────────
-interface RiskTag { label: string; icon: string; hot: boolean; }
-
-function getRiskTags(riskMetrics: MetricItem[], sector: string | null): RiskTag[] {
-  const tags: RiskTag[] = [];
-  const byCode = Object.fromEntries(riskMetrics.map(m => [m.code, m]));
-
-  const netDebt  = byCode['risk_net_debt_ebitda']?.numericValue;
-  const coverage = byCode['risk_interest_coverage']?.numericValue;
-  const fcf      = byCode['risk_fcf']?.numericValue;
-
-  if (netDebt  != null && netDebt  > 4) tags.push({ label: 'High Leverage',      icon: 'trending_down', hot: true });
-  if (coverage != null && coverage < 2) tags.push({ label: 'Debt Service Risk',   icon: 'warning',       hot: true });
-  if (fcf      != null && fcf      < 0) tags.push({ label: 'Negative FCF',        icon: 'money_off',     hot: true });
-
-  const contextual: Record<string, { label: string; icon: string }> = {
-    'Technology':             { label: 'Regulatory Risk',  icon: 'policy' },
-    'Communication Services': { label: 'Regulatory Risk',  icon: 'policy' },
-    'Energy':                 { label: 'Commodity Risk',   icon: 'local_gas_station' },
-    'Materials':              { label: 'Commodity Risk',   icon: 'diamond' },
-    'Financials':             { label: 'Rate Sensitivity', icon: 'percent' },
-    'Real Estate':            { label: 'Rate Sensitivity', icon: 'percent' },
-    'Consumer Discretionary': { label: 'Cycle Risk',       icon: 'currency_exchange' },
-    'Industrials':            { label: 'Supply Chain',     icon: 'factory' },
-  };
-  if (sector && contextual[sector]) tags.push({ ...contextual[sector], hot: false });
-  if (['Technology', 'Energy', 'Industrials'].includes(sector ?? '')) {
-    tags.push({ label: 'Geopolitical', icon: 'public', hot: false });
-  }
-
-  return tags.slice(0, 5);
+// ── Metric → icon + color mapping ─────────────────────────────────────────────
+interface MetricSlot {
+  code: string;
+  label: string;
+  icon: string;        // Material Symbol name
+  iconColor: string;
+  iconBg: string;
 }
 
-// ── Donut ring ────────────────────────────────────────────────────────────────
-function DonutRing({ score, label, color }: { score: number | null; label: string; color: string }) {
-  const pct = score != null ? score * 10 : 0;
+const METRIC_SLOTS: MetricSlot[] = [
+  { code: 'market_cap',                label: 'Market Cap',       icon: 'paid',                  iconColor: C.greenIcon, iconBg: C.greenBg },
+  { code: 'valuation_pe',              label: 'P/E Ratio',        icon: 'trending_up',           iconColor: C.blue,      iconBg: C.blueBg },
+  { code: 'quality_revenue_growth',    label: 'Revenue Growth',   icon: 'bar_chart',             iconColor: C.greenIcon, iconBg: C.greenBg },
+  { code: 'quality_operating_margin',  label: 'Operating Margin', icon: 'donut_small',           iconColor: C.blue,      iconBg: C.blueBg },
+  { code: 'quality_roe',               label: 'ROE',              icon: 'shield',                iconColor: C.blue,      iconBg: C.blueBg },
+  { code: 'valuation_fcf_yield',       label: 'FCF Yield',        icon: 'account_balance_wallet',iconColor: C.greenIcon, iconBg: C.greenBg },
+  { code: 'risk_net_debt_ebitda',      label: 'Net Debt/EBITDA',  icon: 'balance',               iconColor: C.purple,    iconBg: C.purpleBg },
+  { code: 'week52_range',              label: '52W Range',        icon: 'calendar_month',        iconColor: C.blue,      iconBg: C.blueBg },
+];
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+function findMetric(data: FlashcardResponse | null, code: string): MetricItem | null {
+  if (!data) return null;
+  return [...data.metrics.valuation, ...data.metrics.quality, ...data.metrics.risk]
+    .find(m => m.code === code) ?? null;
+}
+
+function formatMetricValue(slot: MetricSlot, data: FlashcardResponse | null): { value: string; color?: string } {
+  if (!data) return { value: '—' };
+
+  // Special cases not in the metrics arrays
+  if (slot.code === 'market_cap') {
+    // Market cap isn't in the new schema response — show '—' for now
+    return { value: '—' };
+  }
+  if (slot.code === 'week52_range') {
+    return { value: '—' };
+  }
+
+  const m = findMetric(data, slot.code);
+  if (!m) return { value: '—' };
+
+  // Color positive growth metrics green
+  let color: string | undefined;
+  if (slot.code === 'quality_revenue_growth' && m.numericValue != null) {
+    color = m.numericValue >= 0 ? C.green : C.red;
+  }
+  return { value: m.displayValue, color };
+}
+
+// ── Sparkline (placeholder line chart) ────────────────────────────────────────
+function Sparkline({ up }: { up: boolean }) {
+  const stroke = up ? C.green : C.red;
+  // Synthetic upward/downward path
+  const path = up
+    ? 'M0,40 L10,38 L20,42 L30,35 L40,30 L50,28 L60,32 L70,22 L80,18 L90,15 L100,8 L110,12 L120,5'
+    : 'M0,8 L10,12 L20,5 L30,15 L40,18 L50,22 L60,30 L70,28 L80,35 L90,38 L100,42 L110,40 L120,45';
   return (
-    <div className="flex flex-col items-center p-5 rounded-lg border bg-white"
-      style={{ borderColor: `${C.outlineVar}33`, boxShadow: '0 8px 32px -8px rgba(19,27,46,0.10)' }}>
-      <div className="relative mb-3" style={{ width: 72, height: 72 }}>
-        <svg viewBox="0 0 36 36" style={{ width: '100%', height: '100%' }}>
-          {/* Track */}
-          <path fill="none" stroke={C.surfaceHigh} strokeWidth="3"
-            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-          {/* Fill */}
-          <path fill="none" stroke={score != null ? color : C.outlineVar} strokeWidth="3"
-            strokeLinecap="round" strokeDasharray={`${pct}, 100`}
-            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center"
-          style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 800, fontSize: '1.1rem', color: C.primary }}>
-          {score != null ? score.toFixed(1) : '—'}
-        </div>
-      </div>
-      <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '9px', fontWeight: 800,
-        color: C.onSurfaceVar, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-        {label}
-      </span>
-    </div>
+    <svg viewBox="0 0 120 50" style={{ width: '100%', height: '100%' }}>
+      <defs>
+        <linearGradient id="spark-grad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={stroke} stopOpacity="0.25" />
+          <stop offset="100%" stopColor={stroke} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={`${path} L120,50 L0,50 Z`} fill="url(#spark-grad)" />
+      <path d={path} fill="none" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="120" cy={up ? 5 : 45} r="3" fill={stroke} />
+    </svg>
   );
 }
 
-// ── Metric card (key metrics grid) ────────────────────────────────────────────
-function MetricCard({ metric }: { metric: MetricItem }) {
-  const col    = metricColor(metric.code, metric.numericValue);
-  const isGrey = metric.numericValue == null;
+// ── Metric tile ────────────────────────────────────────────────────────────────
+function MetricTile({ slot, data }: { slot: MetricSlot; data: FlashcardResponse | null }) {
+  const { value, color } = formatMetricValue(slot, data);
   return (
-    <div className="p-4 rounded-lg border"
-      style={{ background: C.surface, borderColor: `${C.outlineVar}33` }}>
-      <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '9px', fontWeight: 700,
-        color: C.onSurfaceVar, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
-        {metric.label}
-      </p>
-      <div style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 700, fontSize: '1.15rem',
-        color: isGrey ? C.outlineVar : col }}>
-        {metric.displayValue}
+    <div style={{
+      background: C.pageBg, borderRadius: 14, padding: '14px 16px',
+      display: 'flex', alignItems: 'center', gap: 12,
+    }}>
+      <div style={{
+        width: 40, height: 40, borderRadius: '50%', background: slot.iconBg,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+      }}>
+        <span className="material-symbols-outlined" style={{ fontSize: 22, color: slot.iconColor }}>
+          {slot.icon}
+        </span>
+      </div>
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div style={{ fontSize: 12, color: C.textMuted, fontFamily: 'Inter, sans-serif', marginBottom: 2 }}>
+          {slot.label}
+        </div>
+        <div style={{
+          fontSize: 18, fontWeight: 800, color: color ?? C.text,
+          fontFamily: 'Manrope, sans-serif', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>
+          {value}
+        </div>
       </div>
     </div>
   );
@@ -189,10 +159,10 @@ function MetricCard({ metric }: { metric: MetricItem }) {
 
 // ── Main component ─────────────────────────────────────────────────────────────
 interface Props {
-  ticker:       string;
-  entityName:   string;
+  ticker: string;
+  entityName: string;
   entitySector: string | null;
-  onClose:      () => void;
+  onClose: () => void;
 }
 
 export default function StockFlashcard({ ticker, entityName, entitySector, onClose }: Props) {
@@ -219,311 +189,198 @@ export default function StockFlashcard({ ticker, entityName, entitySector, onClo
     return () => window.removeEventListener('keydown', handleKey);
   }, [handleKey]);
 
-  // Derived values
-  const sector    = data?.sector ?? entitySector;
-  const valScore  = data ? computeScore(data.metrics.valuation) : null;
-  const qualScore = data ? computeScore(data.metrics.quality)   : null;
-  const riskScore = data ? computeScore(data.metrics.risk)      : null;
-  const moat      = moatLabel(qualScore);
-  const priceUp   = (data?.priceChangePct ?? 0) >= 0;
-  const riskTags  = data ? getRiskTags(data.metrics.risk, sector) : [];
+  const initial = ticker.charAt(0).toUpperCase();
+  const grad    = GRADS[initial] ?? GRADS['A'];
+  const priceUp = (data?.priceChangePct ?? 0) >= 0;
+  const sector  = data?.sector ?? entitySector;
 
-  // 4 key metrics for the highlight grid
-  const highlight = [
-    data?.metrics.valuation.find(m => m.code === 'valuation_pe'),
-    data?.metrics.quality.find(m => m.code === 'quality_revenue_growth'),
-    data?.metrics.quality.find(m => m.code === 'quality_operating_margin'),
-    data?.metrics.valuation.find(m => m.code === 'valuation_ev_ebit'),
-  ].filter(Boolean) as MetricItem[];
-
-  // All 15 metrics for full detail section
-  const allMetrics = data
-    ? [...data.metrics.valuation, ...data.metrics.quality, ...data.metrics.risk]
-    : [];
+  const formattedDate = data?.selectedPeriod.endDate
+    ? new Date(data.selectedPeriod.endDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    : '';
 
   return (
     /* Backdrop */
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)' }}
+      style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(8px)' }}
       onClick={onClose}
     >
       {/* Card */}
       <article
-        className="relative w-full flex flex-col md:flex-row overflow-hidden rounded-xl"
+        className="relative rounded-3xl overflow-hidden"
         style={{
-          maxWidth: 900, maxHeight: '92vh',
-          background: C.surfaceLow,
-          boxShadow: '0 24px 80px -16px rgba(0,26,56,0.4)',
+          width: '100%', maxWidth: 480, maxHeight: '92vh', overflowY: 'auto',
+          background: C.cardBg,
+          boxShadow: '0 24px 80px -16px rgba(0,0,0,0.25), 0 8px 32px -8px rgba(0,0,0,0.15)',
+          padding: '28px 28px 24px',
+          fontFamily: 'Inter, sans-serif',
         }}
         onClick={e => e.stopPropagation()}
       >
-        {/* ──────────────────── LEFT SIDEBAR ──────────────────── */}
-        <section
-          className="flex flex-col w-full md:w-80 flex-shrink-0 p-8"
-          style={{ background: C.surfaceHigh, minHeight: 560 }}
-        >
-          {loading ? (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
-                style={{ borderColor: C.primary }} />
-            </div>
-          ) : error ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center gap-3">
-              <span className="material-symbols-outlined" style={{ fontSize: 40, color: C.red }}>error</span>
-              <p style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 700, color: C.primary }}>
-                No data for {ticker}
-              </p>
-              <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: C.onSurfaceVar }}>
-                Run migration steps in /dashboard
-              </p>
-            </div>
-          ) : (
-            <div className="flex flex-col h-full justify-between">
-              <div>
-                {/* Company identity */}
-                <div className="flex items-center gap-4 mb-8">
-                  <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white flex-shrink-0"
-                    style={{ background: C.primary }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 26 }}>
-                      {sectorIcon(sector)}
-                    </span>
-                  </div>
-                  <div className="min-w-0">
-                    <h1 className="truncate"
-                      style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 900,
-                        fontSize: '1.35rem', color: C.primary, lineHeight: 1.1 }}>
-                      {data?.name ?? entityName}
-                    </h1>
-                    <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '10px', fontWeight: 500,
-                      color: C.onSurfaceVar, letterSpacing: '0.10em', textTransform: 'uppercase' }}>
-                      {data?.exchange ? `${data.exchange}: ` : ''}{ticker}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Price */}
-                <div className="mb-8">
-                  <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12,
-                    color: C.onSurfaceVar, marginBottom: 4 }}>Current Price</p>
-                  <div className="flex items-baseline gap-3 flex-wrap">
-                    <span style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 800,
-                      fontSize: '2.1rem', color: C.primary, letterSpacing: '-0.02em' }}>
-                      {data?.price != null ? `$${data.price.toFixed(2)}` : '—'}
-                    </span>
-                    {data?.priceChangePct != null && (
-                      <span className="flex items-center gap-0.5"
-                        style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 700,
-                          fontSize: '0.85rem', color: priceUp ? C.green : C.red }}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
-                          {priceUp ? 'trending_up' : 'trending_down'}
-                        </span>
-                        {priceUp ? '+' : ''}{data.priceChangePct.toFixed(2)}%
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Quality cards */}
-                <div className="space-y-3">
-                  <div className="p-4 rounded-xl" style={{ background: C.surface }}>
-                    <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '9px', fontWeight: 700,
-                      color: C.onSurfaceVar, textTransform: 'uppercase', letterSpacing: '0.07em',
-                      marginBottom: 8 }}>Institutional Quality</p>
-                    <div className="flex items-center justify-between">
-                      <span style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 700,
-                        fontSize: '1rem', color: C.primary }}>{moat}</span>
-                      {qualScore != null && qualScore >= 7.5 && (
-                        <span className="material-symbols-outlined"
-                          style={{ color: C.green, fontVariationSettings: "'FILL' 1", fontSize: 22 }}>
-                          verified
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="p-4 rounded-xl" style={{ background: C.surface }}>
-                    <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '9px', fontWeight: 700,
-                      color: C.onSurfaceVar, textTransform: 'uppercase', letterSpacing: '0.07em',
-                      marginBottom: 8 }}>Quality Score</p>
-                    <div className="flex items-center justify-between gap-3">
-                      <span style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 800,
-                        fontSize: '1.5rem', color: C.primary }}>
-                        {qualScore != null ? qualScore.toFixed(1) : '—'}
-                        <span style={{ fontSize: '0.7rem', fontWeight: 500,
-                          color: `${C.onSurfaceVar}88` }}>/10</span>
-                      </span>
-                      <div className="flex-1 rounded-full overflow-hidden"
-                        style={{ height: 6, background: C.surfaceHigh }}>
-                        <div style={{
-                          width: `${qualScore != null ? qualScore * 10 : 0}%`,
-                          height: '100%', background: C.green, borderRadius: 9999,
-                          transition: 'width 0.6s ease',
-                        }} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Period picker */}
-              {data && data.availablePeriods.length > 1 && selPeriodId && (
-                <div className="mt-5">
-                  <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '9px', fontWeight: 700,
-                    color: C.onSurfaceVar, textTransform: 'uppercase', letterSpacing: '0.07em',
-                    marginBottom: 6 }}>Period</p>
-                  <select
-                    value={selPeriodId}
-                    onChange={e => { setSelPeriodId(e.target.value); loadData(e.target.value); }}
-                    className="w-full rounded-lg px-3 py-2 text-xs focus:outline-none"
-                    style={{ background: C.surface, border: `1px solid ${C.outlineVar}`,
-                      color: C.onSurface, fontFamily: 'Inter, sans-serif' }}
-                  >
-                    {data.availablePeriods.map((p: PeriodInfo) => (
-                      <option key={p.id} value={p.id}>
-                        {p.label}{p.endDate ? ` (${p.endDate.slice(0, 7)})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* CTA */}
-              <button
-                onClick={onClose}
-                className="w-full mt-6 py-3.5 rounded-xl text-sm flex items-center justify-center gap-2 transition-transform active:scale-95 text-white"
-                style={{ background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryMid} 100%)`,
-                  fontFamily: 'Manrope, sans-serif', fontWeight: 700 }}
-              >
-                Close
-                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
-              </button>
-            </div>
-          )}
-        </section>
-
-        {/* ──────────────────── RIGHT PANEL ──────────────────── */}
-        <section
-          className="flex-1 p-8 overflow-y-auto space-y-8"
-          style={{ scrollbarWidth: 'none' }}
-        >
-          {loading && (
-            <div className="flex items-center justify-center" style={{ minHeight: 400 }}>
-              <div className="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin"
-                style={{ borderColor: C.primary }} />
-            </div>
-          )}
-
-          {!loading && !error && data && (
-            <>
-              {/* ── Score rings ── */}
-              <div>
-                <div className="flex items-center gap-2 mb-5">
-                  <span className="material-symbols-outlined" style={{ color: C.primary, fontSize: 20 }}>leaderboard</span>
-                  <h2 style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 800, fontSize: 11,
-                    color: C.primary, textTransform: 'uppercase', letterSpacing: '0.09em' }}>
-                    Primary Performance Scores
-                  </h2>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <DonutRing score={valScore}
-                    label="Valuation"
-                    color={valScore != null && valScore >= 5 ? C.green : C.red} />
-                  <DonutRing score={qualScore}
-                    label="Quality"
-                    color={C.green} />
-                  <DonutRing score={riskScore}
-                    label="Risk Score"
-                    color={C.primary} />
-                </div>
-              </div>
-
-              {/* ── Key metrics highlight grid ── */}
-              {highlight.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className="material-symbols-outlined" style={{ color: C.primary, fontSize: 20 }}>analytics</span>
-                    <h2 style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 800, fontSize: 11,
-                      color: C.primary, textTransform: 'uppercase', letterSpacing: '0.09em' }}>
-                      Core Financials
-                    </h2>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    {highlight.map(m => <MetricCard key={m.code} metric={m} />)}
-                  </div>
-                </div>
-              )}
-
-              {/* ── Risk exposure tags ── */}
-              {riskTags.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="material-symbols-outlined" style={{ color: C.red, fontSize: 20 }}>warning</span>
-                    <h2 style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 800, fontSize: 11,
-                      color: C.primary, textTransform: 'uppercase', letterSpacing: '0.09em' }}>
-                      Risk Exposure
-                    </h2>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {riskTags.map(tag => (
-                      <span key={tag.label}
-                        className="flex items-center gap-1 px-3 py-1.5 rounded-full"
-                        style={{
-                          background: tag.hot ? C.redBg : C.surfaceHigh,
-                          color:      tag.hot ? C.redText : C.onSurfaceVar,
-                          border:     `1px solid ${tag.hot ? `${C.red}33` : `${C.outlineVar}55`}`,
-                          fontFamily: 'Inter, sans-serif', fontSize: '9px', fontWeight: 700,
-                          textTransform: 'uppercase', letterSpacing: '0.05em',
-                        }}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 12 }}>{tag.icon}</span>
-                        {tag.label}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* ── Full metrics ── */}
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="material-symbols-outlined" style={{ color: C.primary, fontSize: 20 }}>table_chart</span>
-                  <h2 style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 800, fontSize: 11,
-                    color: C.primary, textTransform: 'uppercase', letterSpacing: '0.09em' }}>
-                    All Metrics
-                  </h2>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {allMetrics.map(m => <MetricCard key={m.code} metric={m} />)}
-                </div>
-              </div>
-
-              {/* ── Architect's view footer ── */}
-              <div className="p-5 rounded-lg border-l-4"
-                style={{ background: `${C.primaryMid}09`, borderColor: C.primary }}>
-                <h3 style={{ fontFamily: 'Manrope, sans-serif', fontSize: '10px', fontWeight: 900,
-                  color: C.primary, textTransform: 'uppercase', letterSpacing: '0.12em',
-                  marginBottom: 6 }}>
-                  Architect's View
-                </h3>
-                <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 13,
-                  color: C.onSurfaceVar, lineHeight: 1.6, fontStyle: 'italic' }}>
-                  {[sector, data.industry].filter(Boolean).join(' · ')}
-                  {' · '}Period: {data.selectedPeriod.label}
-                  {data.selectedPeriod.endDate ? ` (${data.selectedPeriod.endDate.slice(0, 7)})` : ''}
-                </p>
-              </div>
-            </>
-          )}
-        </section>
-
-        {/* ── External close button ── */}
+        {/* ── Close button ── */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center transition-all"
-          style={{ background: 'rgba(0,26,56,0.12)', backdropFilter: 'blur(4px)', color: C.primary }}
+          className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+          style={{ background: '#f1f5f9', color: C.textMuted, border: 'none', cursor: 'pointer', zIndex: 2 }}
         >
-          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
+          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
         </button>
+
+        {loading && (
+          <div style={{ minHeight: 400, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{
+              width: 40, height: 40, borderRadius: '50%',
+              border: `3px solid ${C.divider}`, borderTopColor: C.blue,
+              animation: 'spin 1s linear infinite',
+            }} />
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          </div>
+        )}
+
+        {error && (
+          <div style={{ minHeight: 400, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, textAlign: 'center' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 40, color: C.red }}>error</span>
+            <p style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 700, color: C.text, fontSize: 16 }}>
+              No data for {ticker}
+            </p>
+            <p style={{ fontSize: 12, color: C.textMuted, maxWidth: 280, lineHeight: 1.5 }}>
+              This stock may not be in the market library yet, or stats haven&apos;t been fetched.
+            </p>
+          </div>
+        )}
+
+        {!loading && !error && data && (
+          <>
+            {/* ── Header ── */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 22 }}>
+              {/* Avatar */}
+              <div style={{
+                width: 56, height: 56, borderRadius: '50%',
+                background: grad, flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', fontWeight: 800, fontSize: 24,
+                fontFamily: 'Manrope, sans-serif',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+              }}>{initial}</div>
+
+              {/* Name + ticker */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                  fontFamily: 'Manrope, sans-serif', fontWeight: 800, fontSize: 22,
+                  color: C.text, lineHeight: 1.15, marginBottom: 6,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                  {data.name ?? entityName}
+                </div>
+                <span style={{
+                  display: 'inline-block',
+                  background: C.blueBg, color: C.blue,
+                  borderRadius: 999, padding: '3px 12px',
+                  fontSize: 11, fontWeight: 700,
+                  fontFamily: 'Inter, sans-serif',
+                }}>{ticker}</span>
+              </div>
+
+              {/* Market status pill */}
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                background: C.greenBg, color: C.green,
+                borderRadius: 999, padding: '4px 10px',
+                fontSize: 11, fontWeight: 600, marginRight: 28,
+                fontFamily: 'Inter, sans-serif',
+              }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: C.greenIcon }} />
+                Market Open
+              </div>
+            </div>
+
+            {/* ── Price + Sparkline row ── */}
+            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 24 }}>
+              {/* Price + change */}
+              <div>
+                <div style={{
+                  fontFamily: 'Manrope, sans-serif', fontWeight: 900, fontSize: 38,
+                  color: C.text, lineHeight: 1, letterSpacing: '-0.02em',
+                }}>
+                  {data.price != null ? `$${data.price.toFixed(2)}` : '—'}
+                </div>
+                {data.priceChangePct != null && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
+                    <div style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                      width: 24, height: 24, borderRadius: '50%',
+                      border: `2px solid ${priceUp ? C.green : C.red}`,
+                      color: priceUp ? C.green : C.red, justifyContent: 'center',
+                    }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 14, fontWeight: 700 }}>
+                        {priceUp ? 'arrow_upward' : 'arrow_downward'}
+                      </span>
+                    </div>
+                    <span style={{
+                      fontFamily: 'Manrope, sans-serif', fontWeight: 800, fontSize: 18,
+                      color: priceUp ? C.green : C.red,
+                    }}>
+                      {priceUp ? '+' : ''}{data.priceChangePct.toFixed(2)}%
+                    </span>
+                    <span style={{ fontSize: 13, color: C.textFaint, fontFamily: 'Inter, sans-serif' }}>Today</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Sparkline */}
+              <div style={{ width: 140, height: 60, flexShrink: 0 }}>
+                <Sparkline up={priceUp} />
+              </div>
+            </div>
+
+            {/* ── Metric grid 2 cols × 4 rows ── */}
+            <div style={{
+              display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10,
+              marginBottom: 18,
+            }}>
+              {METRIC_SLOTS.map(slot => (
+                <MetricTile key={slot.code} slot={slot} data={data} />
+              ))}
+            </div>
+
+            {/* ── Period picker (if multiple) ── */}
+            {data.availablePeriods.length > 1 && selPeriodId && (
+              <div style={{ marginBottom: 14 }}>
+                <select
+                  value={selPeriodId}
+                  onChange={e => { setSelPeriodId(e.target.value); loadData(e.target.value); }}
+                  style={{
+                    width: '100%', padding: '8px 12px', borderRadius: 10,
+                    border: `1px solid ${C.divider}`, background: C.pageBg,
+                    color: C.text, fontSize: 12, fontFamily: 'Inter, sans-serif',
+                    outline: 'none', cursor: 'pointer',
+                  }}
+                >
+                  {data.availablePeriods.map((p: PeriodInfo) => (
+                    <option key={p.id} value={p.id}>
+                      {p.label}{p.endDate ? ` — ${p.endDate.slice(0, 7)}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* ── Footer ── */}
+            <div style={{
+              textAlign: 'center', fontSize: 12, color: C.textFaint,
+              fontFamily: 'Inter, sans-serif',
+              borderTop: `1px solid ${C.divider}`, paddingTop: 14,
+            }}>
+              {[
+                formattedDate ? `Data as of ${formattedDate}` : null,
+                sector,
+              ].filter(Boolean).join(' • ')}
+              {!formattedDate && !sector && 'Latest available'}
+              <span style={{ display: 'inline-block', margin: '0 6px' }}>•</span>
+              <span style={{ color: C.textMuted }}>Delayed 15 min</span>
+            </div>
+          </>
+        )}
       </article>
     </div>
   );
