@@ -795,7 +795,7 @@ export default function Sidebar({
                         </div>
 
                         {/* Stock list */}
-                        <div style={{ maxHeight: 260, overflowY: 'auto' }}>
+                        <div style={{ maxHeight: 420, overflowY: 'auto', paddingRight: 2 }}>
                           {libLoading && libStocks.length === 0 ? (
                             <div style={{ color: '#64748b', fontSize: 11, textAlign: 'center', padding: 16 }}>Loading…</div>
                           ) : libStocks.length === 0 ? (
@@ -807,49 +807,166 @@ export default function Sidebar({
                               {libStocks.map((stock) => {
                                 const alreadyOnMap = currentMap.entities.some(e => e.ticker === stock.ticker);
                                 const justAdded    = libAdded.has(stock.ticker);
+                                const s            = stock.stats;
+                                const priceUp      = (s?.priceChangePct ?? 0) >= 0;
+                                // Gradient avatar from ticker initials
+                                const initial      = stock.ticker.charAt(0);
+                                const gradients: Record<string, string> = {
+                                  A: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                                  B: 'linear-gradient(135deg,#3b82f6,#06b6d4)',
+                                  C: 'linear-gradient(135deg,#10b981,#3b82f6)',
+                                  D: 'linear-gradient(135deg,#f59e0b,#ef4444)',
+                                  E: 'linear-gradient(135deg,#8b5cf6,#ec4899)',
+                                  F: 'linear-gradient(135deg,#06b6d4,#3b82f6)',
+                                  G: 'linear-gradient(135deg,#10b981,#6366f1)',
+                                  H: 'linear-gradient(135deg,#f97316,#ef4444)',
+                                  I: 'linear-gradient(135deg,#6366f1,#3b82f6)',
+                                  J: 'linear-gradient(135deg,#ec4899,#8b5cf6)',
+                                  K: 'linear-gradient(135deg,#14b8a6,#06b6d4)',
+                                  L: 'linear-gradient(135deg,#84cc16,#10b981)',
+                                  M: 'linear-gradient(135deg,#3b82f6,#6366f1)',
+                                  N: 'linear-gradient(135deg,#10b981,#06b6d4)',
+                                  O: 'linear-gradient(135deg,#f59e0b,#f97316)',
+                                  P: 'linear-gradient(135deg,#8b5cf6,#6366f1)',
+                                  Q: 'linear-gradient(135deg,#06b6d4,#10b981)',
+                                  R: 'linear-gradient(135deg,#ef4444,#f97316)',
+                                  S: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                                  T: 'linear-gradient(135deg,#3b82f6,#06b6d4)',
+                                  U: 'linear-gradient(135deg,#10b981,#84cc16)',
+                                  V: 'linear-gradient(135deg,#8b5cf6,#ec4899)',
+                                  W: 'linear-gradient(135deg,#f59e0b,#ef4444)',
+                                  X: 'linear-gradient(135deg,#06b6d4,#6366f1)',
+                                  Y: 'linear-gradient(135deg,#ec4899,#f97316)',
+                                  Z: 'linear-gradient(135deg,#14b8a6,#3b82f6)',
+                                };
+                                const grad = gradients[initial] ?? 'linear-gradient(135deg,#3b82f6,#6366f1)';
+
+                                // Metric rows: [icon(material symbol), label, value]
+                                const metrics: [string, string, string, string?][] = [
+                                  ['paid',           'Market Cap',      s?.marketCap      ?? '—'],
+                                  ['trending_up',    'P/E Ratio',       s?.peRatio ? `${s.peRatio}x` : '—'],
+                                  ['bar_chart',      'Revenue',         s?.revenue        ?? '—', priceUp ? '#16a34a' : undefined],
+                                  ['donut_small',    'Op. Margin',      s?.operatingMargin ?? '—'],
+                                  ['shield',         'P/B Ratio',       s?.priceToBook ? `${s.priceToBook}x` : '—'],
+                                  ['account_balance_wallet', 'FCF',     s?.freeCashFlow   ?? '—'],
+                                  ['balance',        'Debt/Equity',     s?.debtToEquity ? `${s.debtToEquity}x` : '—'],
+                                  ['calendar_month', '52W Range',
+                                    (s?.week52Low != null && s?.week52High != null)
+                                      ? `$${s.week52Low}–$${s.week52High}` : '—'],
+                                ];
+
                                 return (
                                   <div
                                     key={stock.ticker}
                                     style={{
-                                      display: 'flex', alignItems: 'center', gap: 8,
-                                      padding: '5px 6px', borderRadius: 6, marginBottom: 2,
-                                      background: alreadyOnMap ? 'rgba(16,185,129,0.06)' : 'transparent',
-                                      transition: 'background 0.1s',
+                                      background: '#ffffff',
+                                      borderRadius: 14,
+                                      padding: '12px 12px 10px',
+                                      marginBottom: 10,
+                                      boxShadow: alreadyOnMap
+                                        ? '0 0 0 2px #10b981, 0 4px 16px rgba(0,0,0,0.08)'
+                                        : '0 2px 12px rgba(0,0,0,0.08)',
+                                      transition: 'box-shadow 0.15s',
                                     }}
-                                    onMouseEnter={e => { if (!alreadyOnMap) (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.07)'; }}
-                                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = alreadyOnMap ? 'rgba(16,185,129,0.06)' : 'transparent'; }}
                                   >
-                                    <div style={{ minWidth: 42 }}>
-                                      <span style={{ fontSize: 11, fontWeight: 700, color: '#93c5fd' }}>{stock.ticker}</span>
+                                    {/* ── Header row ── */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                                      {/* Logo avatar */}
+                                      <div style={{
+                                        width: 36, height: 36, borderRadius: '50%',
+                                        background: grad, flexShrink: 0,
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        color: '#fff', fontWeight: 800, fontSize: 15,
+                                        fontFamily: 'Manrope, sans-serif',
+                                      }}>{initial}</div>
+                                      {/* Name + ticker badge */}
+                                      <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', fontFamily: 'Manrope, sans-serif', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                          {stock.name}
+                                        </div>
+                                        <span style={{
+                                          display: 'inline-block', fontSize: 9, fontWeight: 600,
+                                          background: '#eff6ff', color: '#3b82f6',
+                                          borderRadius: 20, padding: '1px 7px', marginTop: 2,
+                                          fontFamily: 'Inter, sans-serif',
+                                        }}>{stock.ticker}</span>
+                                      </div>
+                                      {/* Status + add button */}
+                                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                                        <span style={{
+                                          fontSize: 8, fontWeight: 600, borderRadius: 20,
+                                          padding: '2px 7px', display: 'flex', alignItems: 'center', gap: 3,
+                                          background: alreadyOnMap ? 'rgba(16,185,129,0.1)' : 'rgba(16,185,129,0.08)',
+                                          color: alreadyOnMap ? '#059669' : '#10b981',
+                                          fontFamily: 'Inter, sans-serif',
+                                        }}>
+                                          <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+                                          {alreadyOnMap ? 'On Map' : 'Live'}
+                                        </span>
+                                        {alreadyOnMap ? null : (
+                                          <button
+                                            onClick={() => handleAddFromLibrary(stock)}
+                                            title={`Add ${stock.ticker} to map`}
+                                            style={{
+                                              background: justAdded ? 'rgba(16,185,129,0.15)' : 'rgba(59,130,246,0.1)',
+                                              border: 'none', borderRadius: 6, cursor: 'pointer',
+                                              color: justAdded ? '#10b981' : '#3b82f6',
+                                              padding: '3px 5px', display: 'flex', alignItems: 'center',
+                                            }}
+                                          >
+                                            <PlusCircle size={13} />
+                                          </button>
+                                        )}
+                                      </div>
                                     </div>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                      <div style={{ fontSize: 10, color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stock.name}</div>
-                                      <div style={{ fontSize: 9, color: '#64748b' }}>{stock.sector ?? ''}</div>
-                                    </div>
-                                    <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
-                                      {stock.isNasdaq100 && (
-                                        <span style={{ fontSize: 8, background: 'rgba(59,130,246,0.15)', color: '#60a5fa', borderRadius: 3, padding: '1px 4px' }}>NDQ</span>
-                                      )}
-                                      {stock.isSP500 && (
-                                        <span style={{ fontSize: 8, background: 'rgba(16,185,129,0.15)', color: '#34d399', borderRadius: 3, padding: '1px 4px' }}>S&P</span>
-                                      )}
-                                      {alreadyOnMap ? (
-                                        <span style={{ fontSize: 9, color: '#10b981' }}>✓ on map</span>
-                                      ) : (
-                                        <button
-                                          onClick={() => handleAddFromLibrary(stock)}
-                                          title={`Add ${stock.ticker} to map`}
-                                          style={{
-                                            background: justAdded ? 'rgba(16,185,129,0.2)' : 'rgba(59,130,246,0.15)',
-                                            border: 'none', borderRadius: 5, cursor: 'pointer',
-                                            color: justAdded ? '#10b981' : '#60a5fa',
-                                            padding: '3px 5px', display: 'flex', alignItems: 'center',
-                                          }}
-                                        >
-                                          <PlusCircle size={13} />
-                                        </button>
+
+                                    {/* ── Price row ── */}
+                                    <div style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid #f1f5f9' }}>
+                                      <div style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', fontFamily: 'Manrope, sans-serif', lineHeight: 1 }}>
+                                        {s?.price != null ? `$${s.price.toFixed(2)}` : '—'}
+                                      </div>
+                                      {s?.priceChangePct != null && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3 }}>
+                                          <span style={{ fontSize: 11, fontWeight: 600, color: priceUp ? '#16a34a' : '#dc2626', fontFamily: 'Inter, sans-serif' }}>
+                                            {priceUp ? '↑' : '↓'} {priceUp ? '+' : ''}{s.priceChangePct.toFixed(2)}%
+                                          </span>
+                                          <span style={{ fontSize: 10, color: '#94a3b8', fontFamily: 'Inter, sans-serif' }}>Today</span>
+                                        </div>
                                       )}
                                     </div>
+
+                                    {/* ── 2-col metric grid ── */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 8px' }}>
+                                      {metrics.map(([icon, label, value, color]) => (
+                                        <div key={label} style={{
+                                          display: 'flex', alignItems: 'center', gap: 7,
+                                          background: '#f8fafc', borderRadius: 8, padding: '5px 7px',
+                                        }}>
+                                          <div style={{
+                                            width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
+                                            background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                          }}>
+                                            <span className="material-symbols-outlined" style={{ fontSize: 13, color: '#3b82f6' }}>{icon}</span>
+                                          </div>
+                                          <div style={{ minWidth: 0 }}>
+                                            <div style={{ fontSize: 8, color: '#94a3b8', fontFamily: 'Inter, sans-serif', fontWeight: 500 }}>{label}</div>
+                                            <div style={{ fontSize: 11, fontWeight: 700, color: color ?? '#0f172a', fontFamily: 'Manrope, sans-serif', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+
+                                    {/* ── Index badges footer ── */}
+                                    {(stock.isNasdaq100 || stock.isSP500) && (
+                                      <div style={{ display: 'flex', gap: 4, marginTop: 8 }}>
+                                        {stock.isNasdaq100 && (
+                                          <span style={{ fontSize: 8, background: 'rgba(59,130,246,0.1)', color: '#3b82f6', borderRadius: 20, padding: '2px 7px', fontWeight: 600 }}>NASDAQ-100</span>
+                                        )}
+                                        {stock.isSP500 && (
+                                          <span style={{ fontSize: 8, background: 'rgba(16,185,129,0.1)', color: '#10b981', borderRadius: 20, padding: '2px 7px', fontWeight: 600 }}>S&P 500</span>
+                                        )}
+                                      </div>
+                                    )}
                                   </div>
                                 );
                               })}
@@ -858,7 +975,7 @@ export default function Sidebar({
                                 <button
                                   onClick={() => setLibOffset(o => o + LIB_LIMIT)}
                                   disabled={libLoading}
-                                  style={{ width: '100%', marginTop: 6, padding: '5px', background: 'none', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 6, color: '#60a5fa', fontSize: 11, cursor: 'pointer' }}
+                                  style={{ width: '100%', marginTop: 2, marginBottom: 4, padding: '7px', background: 'none', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 8, color: '#3b82f6', fontSize: 11, cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
                                 >
                                   {libLoading ? 'Loading…' : `Load more (${libTotal - libStocks.length} remaining)`}
                                 </button>
